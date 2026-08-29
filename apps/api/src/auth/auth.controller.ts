@@ -59,10 +59,7 @@ export class AuthController {
   @Header('Cache-Control', 'no-store')
   csrf(@Res({ passthrough: true }) response: Response) {
     const csrfToken = createCsrfToken();
-    response.cookie(CSRF_COOKIE_NAME, csrfToken, {
-      ...CSRF_COOKIE_OPTIONS,
-      maxAge: SESSION_DURATION_SECONDS * 1_000,
-    });
+    this.setCsrfCookie(response, csrfToken);
     return { csrfToken };
   }
 
@@ -113,7 +110,11 @@ export class AuthController {
       ...AUTH_COOKIE_OPTIONS,
       maxAge: SESSION_DURATION_SECONDS * 1_000,
     });
-    response.cookie(CSRF_COOKIE_NAME, createCsrfToken(), {
+    this.setCsrfCookie(response, createCsrfToken());
+  }
+
+  private setCsrfCookie(response: Response, token: string): void {
+    response.cookie(CSRF_COOKIE_NAME, token, {
       ...CSRF_COOKIE_OPTIONS,
       maxAge: SESSION_DURATION_SECONDS * 1_000,
     });

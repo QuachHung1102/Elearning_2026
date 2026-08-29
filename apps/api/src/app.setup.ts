@@ -3,7 +3,6 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 
 export function configureApp(app: NestExpressApplication): void {
-  app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
   app.setGlobalPrefix('api/v1');
   app.use(cookieParser());
   app.useGlobalPipes(

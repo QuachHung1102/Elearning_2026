@@ -27,6 +27,16 @@ describe('App (e2e)', () => {
     return cookie.slice(cookie.indexOf('=') + 1);
   }
 
+  function csrfHeaders(
+    csrf: { cookie: string; token: string },
+    ...cookies: string[]
+  ): Record<string, string> {
+    return {
+      Cookie: [...cookies, csrf.cookie].join('; '),
+      'X-CSRF-Token': csrf.token,
+    };
+  }
+
   async function fetchCsrf() {
     const response = await request(app.getHttpServer())
       .get('/api/v1/auth/csrf')
@@ -66,8 +76,7 @@ describe('App (e2e)', () => {
     const initialCsrf = await fetchCsrf();
     const registration = await request(app.getHttpServer())
       .post('/api/v1/auth/register')
-      .set('Cookie', initialCsrf.cookie)
-      .set('X-CSRF-Token', initialCsrf.token)
+      .set(csrfHeaders(initialCsrf))
       .send({
         email: email.toUpperCase(),
         password,
@@ -88,6 +97,7 @@ describe('App (e2e)', () => {
     const authCookie = cookieFrom(setCookie, 'elearning_session');
     const csrfCookie = cookieFrom(setCookie, 'elearning_csrf');
     const csrfToken = cookieValue(csrfCookie);
+    const rotatedCsrf = { cookie: csrfCookie, token: csrfToken };
     const authSetCookie = setCookie.find((value) =>
       value.startsWith('elearning_session='),
     );
@@ -96,8 +106,7 @@ describe('App (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/v1/auth/register')
-      .set('Cookie', csrfCookie)
-      .set('X-CSRF-Token', csrfToken)
+      .set(csrfHeaders(rotatedCsrf))
       .send({ email, password, displayName: 'Duplicate' })
       .expect(409);
 
@@ -111,8 +120,7 @@ describe('App (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/v1/auth/logout')
-      .set('Cookie', [authCookie, csrfCookie])
-      .set('X-CSRF-Token', csrfToken)
+      .set(csrfHeaders(rotatedCsrf, authCookie))
       .expect(204);
 
     await request(app.getHttpServer())
@@ -123,15 +131,13 @@ describe('App (e2e)', () => {
     const loginCsrf = await fetchCsrf();
     await request(app.getHttpServer())
       .post('/api/v1/auth/login')
-      .set('Cookie', loginCsrf.cookie)
-      .set('X-CSRF-Token', loginCsrf.token)
+      .set(csrfHeaders(loginCsrf))
       .send({ email, password: 'wrong password' })
       .expect(401);
 
     await request(app.getHttpServer())
       .post('/api/v1/auth/login')
-      .set('Cookie', loginCsrf.cookie)
-      .set('X-CSRF-Token', loginCsrf.token)
+      .set(csrfHeaders(loginCsrf))
       .send({ email: `  ${email.toUpperCase()}  `, password })
       .expect(200)
       .expect(({ body, headers }) => {
@@ -156,8 +162,7 @@ describe('App (e2e)', () => {
     const csrf = await fetchCsrf();
     await request(app.getHttpServer())
       .post('/api/v1/auth/register')
-      .set('Cookie', csrf.cookie)
-      .set('X-CSRF-Token', csrf.token)
+      .set(csrfHeaders(csrf))
       .send(invalidInput)
       .expect(400);
   });
@@ -165,32 +170,39 @@ describe('App (e2e)', () => {
   it('rate-limits each forwarded client IP independently', async () => {
     const csrf = await fetchCsrf();
     const invalidLogin = { email: 'invalid', password: 'short' };
+    const previousRailwayEnvironment = process.env.RAILWAY_ENVIRONMENT_ID;
+    process.env.RAILWAY_ENVIRONMENT_ID = 'test';
 
-    for (let attempt = 0; attempt < 10; attempt += 1) {
+    try {
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/login')
+          .set(csrfHeaders(csrf))
+          .set('X-Real-IP', '203.0.113.10')
+          .send(invalidLogin)
+          .expect(400);
+      }
+
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .set('Cookie', csrf.cookie)
-        .set('X-CSRF-Token', csrf.token)
-        .set('X-Forwarded-For', '203.0.113.10')
+        .set(csrfHeaders(csrf))
+        .set('X-Real-IP', '203.0.113.10')
+        .send(invalidLogin)
+        .expect('Retry-After', /\d+/)
+        .expect(429);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .set(csrfHeaders(csrf))
+        .set('X-Real-IP', '203.0.113.11')
         .send(invalidLogin)
         .expect(400);
+    } finally {
+      if (previousRailwayEnvironment === undefined) {
+        delete process.env.RAILWAY_ENVIRONMENT_ID;
+      } else {
+        process.env.RAILWAY_ENVIRONMENT_ID = previousRailwayEnvironment;
+      }
     }
-
-    await request(app.getHttpServer())
-      .post('/api/v1/auth/login')
-      .set('Cookie', csrf.cookie)
-      .set('X-CSRF-Token', csrf.token)
-      .set('X-Forwarded-For', '203.0.113.10')
-      .send(invalidLogin)
-      .expect('Retry-After', /\d+/)
-      .expect(429);
-
-    await request(app.getHttpServer())
-      .post('/api/v1/auth/login')
-      .set('Cookie', csrf.cookie)
-      .set('X-CSRF-Token', csrf.token)
-      .set('X-Forwarded-For', '203.0.113.11')
-      .send(invalidLogin)
-      .expect(400);
   });
 });

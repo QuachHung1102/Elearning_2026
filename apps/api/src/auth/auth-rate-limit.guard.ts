@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import {
   CanActivate,
   ExecutionContext,
@@ -23,7 +24,7 @@ export class AuthRateLimitGuard implements CanActivate {
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
     const now = Date.now();
-    const key = `${request.ip}:${request.path}`;
+    const key = `${this.clientIp(request)}:${request.path}`;
     const attempt = this.attempts.get(key);
 
     if (!attempt || attempt.resetsAt <= now) {
@@ -45,5 +46,13 @@ export class AuthRateLimitGuard implements CanActivate {
 
     attempt.count += 1;
     return true;
+  }
+
+  private clientIp(request: Request): string {
+    if (process.env.RAILWAY_ENVIRONMENT_ID) {
+      const railwayIp = request.get('x-real-ip');
+      if (railwayIp && isIP(railwayIp)) return railwayIp;
+    }
+    return request.ip ?? request.socket.remoteAddress ?? 'unknown';
   }
 }
