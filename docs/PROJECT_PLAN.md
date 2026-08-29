@@ -257,7 +257,7 @@ Việc đăng ký merchant cần bắt đầu sớm vì ZaloPay cung cấp sandb
 | Model | Dữ liệu chính và constraint |
 |---|---|
 | `User` | email normalized unique, password hash, display name, role, status, verifiedAt |
-| `Session` | userId, tokenHash unique, expiresAt, revokedAt |
+| `Session` | id/JWT session id, userId, expiresAt, revokedAt |
 | `AuthToken` | verify/reset token hash, type, expiresAt, consumedAt |
 | `Course` | slug unique, title, description Markdown, priceVnd, status, publishedAt |
 | `Section` | courseId, title, position; unique `(courseId, position)` |
@@ -280,17 +280,19 @@ Các index quan trọng:
 - `PaymentAttempt.zpTransId`
 - `Enrollment(userId, courseId)`
 - `LessonProgress(userId, lessonId)`
-- `Session.tokenHash`
+- `Session(userId)` và `Session.expiresAt`
 
 ## Authentication và quyền truy cập
 
-Vì hiện chỉ có website, chọn session opaque lưu trong PostgreSQL thay vì access/refresh JWT:
+Theo quyết định triển khai hiện tại, dùng JWT trong cookie kết hợp bản ghi session PostgreSQL. JWT chỉ chứa `sub` (user id) và `sid` (session id); backend vẫn kiểm tra session trong database ở mỗi request được bảo vệ để có thể thu hồi ngay:
 
-- Cookie `HttpOnly`, `Secure`, `SameSite`.
-- Database chỉ lưu hash của session token.
-- Rotate session sau đăng nhập.
+- Cookie `HttpOnly`, `SameSite=Lax`; bật `Secure` trong production.
+- JWT ký bằng `HS256`, secret tối thiểu 32 byte và có thời hạn khớp với session.
+- Mật khẩu được băm bằng `scrypt` với salt ngẫu nhiên; không bao giờ trả password hash qua API.
+- Mỗi lần đăng ký hoặc đăng nhập tạo session mới; đăng xuất đánh dấu session hiện tại đã bị thu hồi.
 - Thu hồi toàn bộ session khi đổi mật khẩu hoặc khóa tài khoản.
 - Dùng CSRF token cho các thao tác thay đổi dữ liệu.
+- Giới hạn request đăng ký/đăng nhập theo IP; chuyển bộ đếm sang shared storage trước khi chạy nhiều API instance.
 - Tài khoản admin được tạo bằng seed/CLI có kiểm soát; người đăng ký đầu tiên không tự động thành admin.
 
 Mỗi lần phát video:

@@ -14,10 +14,20 @@ Yêu cầu Node.js có Corepack và một PostgreSQL đang chạy tại URL đư
 Copy-Item apps/api/.env.example apps/api/.env
 corepack pnpm install
 corepack pnpm --filter api prisma:generate
+corepack pnpm --filter api prisma:migrate
 corepack pnpm dev
 ```
 
 Web chạy tại `http://localhost:3000`; API chạy tại `http://localhost:3001`.
+
+## API authentication
+
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/logout`
+
+Session JWT được gửi bằng cookie `HttpOnly`; cấu hình `AUTH_JWT_SECRET` trong `apps/api/.env` và không commit file này.
 
 ## Kiểm tra
 
