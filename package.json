@@ -1,0 +1,12 @@
+{
+  "name": "elearning",
+  "private": true,
+  "packageManager": "pnpm@11.24.0",
+  "scripts": {
+    "dev": "corepack pnpm --recursive --parallel dev",
+    "build": "corepack pnpm --recursive build",
+    "lint": "corepack pnpm --recursive lint",
+    "test": "corepack pnpm --recursive --if-present test",
+    "typecheck": "corepack pnpm --recursive --if-present typecheck"
+  }
+}
