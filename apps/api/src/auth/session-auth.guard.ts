@@ -4,15 +4,14 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Request } from 'express';
-import { AUTH_COOKIE_NAME, AuthService, AuthUser } from './auth.service.js';
+import type { Request } from 'express';
+import { AUTH_COOKIE_NAME } from './auth.constants.js';
+import { AuthService, type AuthContext } from './auth.service.js';
 
-export type AuthenticatedRequest = Request & {
-  auth: { user: AuthUser; sessionId: string };
-};
+export type AuthenticatedRequest = Request & { auth: AuthContext };
 
 @Injectable()
-export class JwtAuthGuard implements CanActivate {
+export class SessionAuthGuard implements CanActivate {
   constructor(private readonly authService: AuthService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

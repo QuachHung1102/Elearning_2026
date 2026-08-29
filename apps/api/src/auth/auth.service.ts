@@ -6,10 +6,8 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, UserStatus, type User } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { SESSION_DURATION_SECONDS } from './auth.constants.js';
 import { hashPassword, verifyPassword } from './password.js';
-
-export const AUTH_COOKIE_NAME = 'elearning_session';
-export const SESSION_DURATION_SECONDS = 7 * 24 * 60 * 60;
 
 export type AuthUser = Pick<
   User,
@@ -22,6 +20,7 @@ export type AuthUser = Pick<
   | 'createdAt'
 >;
 
+export type AuthContext = { user: AuthUser; sessionId: string };
 type AuthResult = { token: string; user: AuthUser };
 type JwtClaims = { sub?: unknown; sid?: unknown };
 
@@ -81,9 +80,7 @@ export class AuthService {
     return this.issueSession(user);
   }
 
-  async authenticate(
-    token: string,
-  ): Promise<{ user: AuthUser; sessionId: string } | null> {
+  async authenticate(token: string): Promise<AuthContext | null> {
     let claims: JwtClaims;
 
     try {

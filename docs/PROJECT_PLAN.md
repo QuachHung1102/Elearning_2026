@@ -291,7 +291,7 @@ Theo quyết định triển khai hiện tại, dùng JWT trong cookie kết h�
 - Mật khẩu được băm bằng `scrypt` với salt ngẫu nhiên; không bao giờ trả password hash qua API.
 - Mỗi lần đăng ký hoặc đăng nhập tạo session mới; đăng xuất đánh dấu session hiện tại đã bị thu hồi.
 - Thu hồi toàn bộ session khi đổi mật khẩu hoặc khóa tài khoản.
-- Dùng CSRF token cho các thao tác thay đổi dữ liệu.
+- Dùng double-submit CSRF token: lấy token từ `GET /api/v1/auth/csrf`, gửi lại bằng header `X-CSRF-Token` và cookie tương ứng cho các thao tác thay đổi dữ liệu.
 - Giới hạn request đăng ký/đăng nhập theo IP; chuyển bộ đếm sang shared storage trước khi chạy nhiều API instance.
 - Tài khoản admin được tạo bằng seed/CLI có kiểm soát; người đăng ký đầu tiên không tự động thành admin.
 

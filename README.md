@@ -20,14 +20,21 @@ corepack pnpm dev
 
 Web chạy tại `http://localhost:3000`; API chạy tại `http://localhost:3001`.
 
+Tạo `AUTH_JWT_SECRET` bằng lệnh dưới đây rồi lưu kết quả vào `apps/api/.env`:
+
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
+```
+
 ## API authentication
 
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/csrf`
 
-Session JWT được gửi bằng cookie `HttpOnly`; cấu hình `AUTH_JWT_SECRET` trong `apps/api/.env` và không commit file này.
+Session JWT được gửi bằng cookie `HttpOnly`. Trước các request `POST`, gọi endpoint CSRF rồi gửi token nhận được qua header `X-CSRF-Token`; trình duyệt đồng thời gửi cookie CSRF tương ứng.
 
 ## Kiểm tra
 
