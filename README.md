@@ -25,5 +25,6 @@ Web chạy tại `http://localhost:3000`; API chạy tại `http://localhost:300
 corepack pnpm lint
 corepack pnpm typecheck
 corepack pnpm test
+corepack pnpm --filter api test:e2e
 corepack pnpm build
 ```
