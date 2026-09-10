@@ -25,6 +25,7 @@ colors:
   accent-hover: "#b45309"
   accent-foreground: "#431407"
   accent-subtle: "#fef3c7"
+  on-accent-subtle: "#431407"
   ring: "#0d9488"
   ring-offset: "#f8fafc"
   success: "#15803d"

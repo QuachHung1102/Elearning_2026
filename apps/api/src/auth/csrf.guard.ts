@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  NotFoundException,
   SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -12,6 +13,8 @@ import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from './auth.constants.js';
 
 const SKIP_CSRF = 'skipCsrf';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+/** Prefixes whose whole surface answers 404 to anyone who is not an admin. */
+const HIDDEN_PREFIX = /^\/api\/v1\/(admin|dev)\//;
 
 export const SkipCsrf = () => SetMetadata(SKIP_CSRF, true);
 
@@ -43,6 +46,11 @@ export class CsrfGuard implements CanActivate {
       typeof headerToken !== 'string' ||
       !this.tokensMatch(cookieToken, headerToken)
     ) {
+      // Global guards run before route guards, so on `/admin/*` this would be
+      // the first answer an anonymous caller sees — and a 403 here tells them
+      // the route exists, which is exactly what `AdminGuard`'s blanket 404 is
+      // there to prevent (API_CONTRACT.md §3.3, ROADMAP.md N2.4).
+      if (HIDDEN_PREFIX.test(request.path)) throw new NotFoundException();
       throw appError(403, ERROR_CODE.CSRF_INVALID, 'Invalid CSRF token');
     }
 

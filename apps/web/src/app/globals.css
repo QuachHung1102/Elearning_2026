@@ -25,6 +25,7 @@
   --color-accent-hover: #b45309;
   --color-accent-foreground: #431407;
   --color-accent-subtle: #fef3c7;
+  --color-on-accent-subtle: #431407;
   --color-ring: #0d9488;
   --color-ring-offset: #f8fafc;
   --color-success: #15803d;
@@ -130,6 +131,7 @@
   --color-accent-hover: #fbbf24;
   --color-accent-foreground: #431407;
   --color-accent-subtle: #78350f;
+  --color-on-accent-subtle: #fcd34d;
   --color-ring: #2dd4bf;
   --color-ring-offset: #0f172a;
   --color-success: #4ade80;
@@ -301,4 +303,88 @@ dialog::backdrop {
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Markdown output. Scoped here instead of a typography plugin: the allowlist
+   in src/lib/markdown.ts is short, so the rules it needs are short too. */
+.prose-body :where(h2) {
+  margin-block: calc(var(--spacing) * 2) 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.prose-body :where(h3) {
+  margin-block: calc(var(--spacing) * 2) 0;
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.prose-body :where(ul, ol) {
+  margin: 0;
+  padding-inline-start: calc(var(--spacing) * 5);
+  display: grid;
+  gap: calc(var(--spacing) * 1);
+}
+
+.prose-body :where(ul) {
+  list-style: disc;
+}
+
+.prose-body :where(ol) {
+  list-style: decimal;
+}
+
+.prose-body :where(p) {
+  margin: 0;
+}
+
+.prose-body :where(a) {
+  color: var(--color-primary-text);
+  text-decoration: underline;
+}
+
+.prose-body :where(strong) {
+  font-weight: var(--font-weight-semibold);
+}
+
+.prose-body :where(code) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--color-muted);
+  border-radius: var(--radius-sm);
+  padding: 0.1em 0.35em;
+}
+
+.prose-body :where(pre) {
+  overflow-x: auto;
+  padding: calc(var(--spacing) * 4);
+  border-radius: var(--radius-md);
+  background: var(--color-muted);
+}
+
+.prose-body :where(pre code) {
+  background: none;
+  padding: 0;
+}
+
+.prose-body :where(blockquote) {
+  margin: 0;
+  padding-inline-start: calc(var(--spacing) * 4);
+  border-inline-start: 3px solid var(--color-border);
+  color: var(--color-muted-foreground-strong);
+}
+
+.prose-body :where(table) {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.prose-body :where(th, td) {
+  border: 1px solid var(--color-border);
+  padding: calc(var(--spacing) * 2);
+  text-align: start;
+}
+
+.table-scroll {
+  overflow-x: auto;
 }

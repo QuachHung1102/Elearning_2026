@@ -74,6 +74,7 @@ PAIRS = [
     ("L  on-success-subtle / success-subtle", "#166534", "#DCFCE7", 4.5),
     ("L  on-warning-subtle / warning-subtle", "#B45309", "#FEF3C7", 4.5),
     ("L  on-info-subtle / info-subtle",       "#075985", "#E0F2FE", 4.5),
+    ("L  on-accent-subtle / accent-subtle",   "#431407", "#FEF3C7", 4.5),
     # ---- light: UI boundaries (3:1) ----
     ("L  ring / background",                  "#0D9488", "#F8FAFC", 3.0),
     ("L  input / card",                       "#64748B", "#FFFFFF", 3.0),
@@ -100,6 +101,7 @@ PAIRS = [
     ("D  on-success-subtle / success-subtle", "#86EFAC", "#14532D", 4.5),
     ("D  on-warning-subtle / warning-subtle", "#FCD34D", "#78350F", 4.5),
     ("D  on-info-subtle / info-subtle",       "#7DD3FC", "#0C4A6E", 4.5),
+    ("D  on-accent-subtle / accent-subtle",   "#FCD34D", "#78350F", 4.5),
     # ---- dark: UI boundaries (3:1) ----
     ("D  ring / background",                  "#2DD4BF", "#0F172A", 3.0),
     ("D  input / card",       "rgba(255,255,255,0.40) over #1E293B", "#1E293B", 3.0),

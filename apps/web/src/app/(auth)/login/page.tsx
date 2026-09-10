@@ -1,3 +1,4 @@
+import { LEARNER_HOME } from "@/lib/routes";
 import type { Metadata } from "next";
 import { LoginForm } from "@/components/auth-forms";
 
@@ -6,7 +7,7 @@ export const metadata: Metadata = { title: "Đăng nhập" };
 function destination(value?: string): string {
   return value?.startsWith("/") && !value.startsWith("//")
     ? value
-    : "/my-courses";
+    : LEARNER_HOME;
 }
 
 export default async function LoginPage({

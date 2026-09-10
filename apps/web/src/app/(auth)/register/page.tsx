@@ -1,3 +1,4 @@
+import { LEARNER_HOME } from "@/lib/routes";
 import type { Metadata } from "next";
 import { RegisterForm } from "@/components/auth-forms";
 
@@ -10,7 +11,7 @@ export default async function RegisterPage({
 }) {
   const { next } = await searchParams;
   const destination =
-    next?.startsWith("/") && !next.startsWith("//") ? next : "/my-courses";
+    next?.startsWith("/") && !next.startsWith("//") ? next : LEARNER_HOME;
   return (
     <section className="grid gap-8">
       <div className="grid gap-2">

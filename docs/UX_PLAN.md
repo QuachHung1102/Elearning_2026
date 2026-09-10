@@ -89,6 +89,7 @@ Cột "Vai trò" là quy tắc dùng, không phải mô tả. Vi phạm vai trò
 | `--color-accent-hover` | `#B45309` | `#FBBF24` | Hover của `accent` |
 | `--color-accent-foreground` | `#431407` | `#431407` | Chữ trên `accent`. Chữ tối, không phải trắng — trắng trên `#D97706` chỉ đạt 3.19:1 |
 | `--color-accent-subtle` | `#FEF3C7` | `#78350F` | Nền badge giá khuyến mãi |
+| `--color-on-accent-subtle` | `#431407` | `#FCD34D` | Chữ trên `accent-subtle`. Bắt buộc vì `accent-foreground` (`#431407`) đặt trên `accent-subtle` dark (`#78350F`) chỉ đạt 1,4:1 |
 | `--color-ring` | `#0D9488` | `#2DD4BF` | Focus ring, luôn kèm `--color-ring-offset` |
 | `--color-ring-offset` | `#F8FAFC` | `#0F172A` | Vòng đệm 2px giữa control và ring |
 

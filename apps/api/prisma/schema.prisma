@@ -65,3 +65,158 @@ model AuthToken {
   @@index([expiresAt])
   @@map("auth_tokens")
 }
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  ALL_LEVELS
+}
+
+enum LessonType {
+  VIDEO
+  ARTICLE
+}
+
+enum VideoProvider {
+  DEMO
+  CLOUDFLARE_STREAM
+}
+
+enum VideoAssetStatus {
+  PENDING
+  PROCESSING
+  READY
+  ERRORED
+}
+
+enum StorageProvider {
+  DEMO
+  CLOUDFLARE_R2
+}
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique @db.VarChar(80)
+  name        String   @db.VarChar(80)
+  description String?  @db.VarChar(280)
+  icon        String?  @db.VarChar(40)
+  position    Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  courses     Course[]
+
+  @@index([position])
+  @@map("categories")
+}
+
+model Course {
+  id                   String           @id @default(uuid()) @db.Uuid
+  categoryId           String?          @map("category_id") @db.Uuid
+  slug                 String           @unique @db.VarChar(120)
+  title                String           @db.VarChar(160)
+  subtitle             String?          @db.VarChar(240)
+  description          String           @db.Text
+  searchText           String           @default("") @map("search_text") @db.VarChar(400)
+  level                CourseLevel      @default(ALL_LEVELS)
+  language             String           @default("vi") @db.VarChar(10)
+  learningOutcomes     String[]         @map("learning_outcomes")
+  requirements         String[]
+  targetAudience       String[]         @map("target_audience")
+  priceVnd             Int              @map("price_vnd")
+  compareAtPriceVnd    Int?             @map("compare_at_price_vnd")
+  status               CourseStatus     @default(DRAFT)
+  coverImageStorage    StorageProvider? @map("cover_image_storage")
+  coverImageKey        String?          @map("cover_image_key") @db.VarChar(400)
+  lessonCount          Int              @default(0) @map("lesson_count")
+  totalDurationSeconds Int              @default(0) @map("total_duration_seconds")
+  enrollmentCount      Int              @default(0) @map("enrollment_count")
+  ratingAverage        Decimal?         @map("rating_average") @db.Decimal(2, 1)
+  ratingCount          Int              @default(0) @map("rating_count")
+  demoStats            Boolean          @default(false) @map("demo_stats")
+  publishedAt          DateTime?        @map("published_at") @db.Timestamptz(3)
+  archivedAt           DateTime?        @map("archived_at") @db.Timestamptz(3)
+  createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  category Category?  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  sections Section[]
+
+  @@index([status, publishedAt])
+  @@index([categoryId, status])
+  @@map("courses")
+}
+
+model Section {
+  id        String   @id @default(uuid()) @db.Uuid
+  courseId  String   @map("course_id") @db.Uuid
+  title     String   @db.VarChar(160)
+  position  Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons   Lesson[]
+
+  @@unique([courseId, position])
+  @@map("sections")
+}
+
+model Lesson {
+  id              String     @id @default(uuid()) @db.Uuid
+  sectionId       String     @map("section_id") @db.Uuid
+  videoAssetId    String?    @unique @map("video_asset_id") @db.Uuid
+  title           String     @db.VarChar(160)
+  type            LessonType @default(VIDEO)
+  content         String?    @db.Text
+  isPreview       Boolean    @default(false) @map("is_preview")
+  durationSeconds Int        @default(0) @map("duration_seconds")
+  position        Int
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  section    Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  videoAsset VideoAsset?      @relation(fields: [videoAssetId], references: [id], onDelete: Restrict)
+  resources  LessonResource[]
+
+  @@unique([sectionId, position])
+  @@map("lessons")
+}
+
+model VideoAsset {
+  id              String           @id @default(uuid()) @db.Uuid
+  provider        VideoProvider    @default(DEMO)
+  externalId      String           @map("external_id") @db.VarChar(120)
+  status          VideoAssetStatus @default(PENDING)
+  durationSeconds Int              @default(0) @map("duration_seconds")
+  thumbnailUrl    String?          @map("thumbnail_url") @db.VarChar(500)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  lesson          Lesson?
+
+  @@unique([provider, externalId])
+  @@map("video_assets")
+}
+
+model LessonResource {
+  id          String          @id @default(uuid()) @db.Uuid
+  lessonId    String          @map("lesson_id") @db.Uuid
+  storage     StorageProvider @default(DEMO)
+  objectKey   String          @map("object_key") @db.VarChar(400)
+  filename    String          @db.VarChar(200)
+  contentType String          @map("content_type") @db.VarChar(120)
+  sizeBytes   Int             @map("size_bytes")
+  position    Int
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  lesson      Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, position])
+  @@unique([storage, objectKey])
+  @@map("lesson_resources")
+}

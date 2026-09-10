@@ -1,11 +1,9 @@
-import { BookOpen, Menu, UserRound } from "lucide-react";
+import { BookOpen, Menu } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { getSession, type User } from "@/lib/session";
 import { SITE_OWNER } from "@/lib/site";
-import { LogoutButton } from "./logout-button";
 import { ThemeToggle } from "./theme-toggle";
-import { buttonClass } from "./ui/button";
+import { UserMenu } from "./user-menu";
 
 function Logo() {
   return (
@@ -23,60 +21,18 @@ function Logo() {
   );
 }
 
-function UserNavigation({ user }: { user: User }) {
-  return (
-    <details className="relative">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md px-3 text-sm font-semibold hover:bg-muted">
-        <UserRound aria-hidden="true" className="size-5" strokeWidth={1.75} />
-        <span className="max-w-36 truncate">{user.displayName}</span>
-      </summary>
-      <div className="absolute right-0 top-full z-40 mt-2 grid w-56 rounded-lg border border-border bg-card p-2 shadow-[var(--shadow-overlay)] dark:border-white/10">
-        <Link
-          className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
-          href="/account"
-        >
-          Hồ sơ
-        </Link>
-        <Link
-          className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
-          href="/account/password"
-        >
-          Đổi mật khẩu
-        </Link>
-        <Link
-          className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
-          href="/account/sessions"
-        >
-          Phiên đăng nhập
-        </Link>
-        {user.role === "ADMIN" && (
-          <Link
-            className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
-            href="/admin"
-          >
-            Quản trị
-          </Link>
-        )}
-        <div className="my-1 border-t border-border" />
-        <LogoutButton />
-      </div>
-    </details>
-  );
-}
+const LINKS = [
+  ["Khóa học", "/courses"],
+  ["Giới thiệu", "/about"],
+  ["Liên hệ", "/contact"],
+] as const;
 
-function Header({ user }: { user: User | null }) {
-  const links = user
-    ? [
-        ["Khóa học", "/courses"],
-        ["Khóa học của tôi", "/my-courses"],
-      ]
-    : [
-        ["Khóa học", "/courses"],
-        ["Danh mục", "/courses#danh-muc"],
-        ["Giới thiệu", "/about"],
-        ["Liên hệ", "/contact"],
-      ];
-
+/**
+ * No cookie read anywhere in this tree: the marketing shell has to stay
+ * statically renderable so the catalog can be cached for everyone. The
+ * signed-in bits live in `UserMenu`, a client island.
+ */
+function Header() {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card text-card-foreground">
       <div className="page-shell flex h-16 items-center justify-between gap-4">
@@ -85,7 +41,7 @@ function Header({ user }: { user: User | null }) {
           className="hidden items-center gap-1 md:flex"
           aria-label="Điều hướng chính"
         >
-          {links.map(([label, href]) => (
+          {LINKS.map(([label, href]) => (
             <Link
               key={href}
               href={href}
@@ -97,18 +53,7 @@ function Header({ user }: { user: User | null }) {
         </nav>
         <div className="hidden items-center gap-2 md:flex">
           <ThemeToggle />
-          {user ? (
-            <UserNavigation user={user} />
-          ) : (
-            <>
-              <Link href="/login" className={buttonClass("ghost")}>
-                Đăng nhập
-              </Link>
-              <Link href="/register" className={buttonClass("primary")}>
-                Đăng ký
-              </Link>
-            </>
-          )}
+          <UserMenu variant="desktop" />
         </div>
         <details className="relative md:hidden">
           <summary
@@ -121,7 +66,7 @@ function Header({ user }: { user: User | null }) {
             className="absolute right-0 top-full z-40 mt-2 grid w-[calc(100vw-2rem)] max-w-sm rounded-lg border border-border bg-card p-3 shadow-[var(--shadow-overlay)] dark:border-white/10"
             aria-label="Điều hướng di động"
           >
-            {links.map(([label, href]) => (
+            {LINKS.map(([label, href]) => (
               <Link
                 key={href}
                 href={href}
@@ -130,18 +75,7 @@ function Header({ user }: { user: User | null }) {
                 {label}
               </Link>
             ))}
-            {user ? (
-              <UserNavigation user={user} />
-            ) : (
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <Link href="/login" className={buttonClass("outline")}>
-                  Đăng nhập
-                </Link>
-                <Link href="/register" className={buttonClass("primary")}>
-                  Đăng ký
-                </Link>
-              </div>
-            )}
+            <UserMenu variant="mobile" />
             <div className="mt-2 border-t border-border pt-2">
               <ThemeToggle />
             </div>
@@ -184,16 +118,10 @@ function Footer() {
   );
 }
 
-export async function SiteShell({ children }: { children: ReactNode }) {
-  let user: User | null = null;
-  try {
-    user = await getSession();
-  } catch {
-    user = null;
-  }
+export function SiteShell({ children }: { children: ReactNode }) {
   return (
     <>
-      <Header user={user} />
+      <Header />
       <main id="main" tabIndex={-1}>
         {children}
       </main>

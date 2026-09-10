@@ -1,3 +1,4 @@
+import { LEARNER_HOME } from "@/lib/routes";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
@@ -13,7 +14,7 @@ export default async function LearnerLayout({
 }) {
   const user = await getSession();
   if (!user) {
-    const pathname = (await headers()).get("x-elearning-path") ?? "/my-courses";
+    const pathname = (await headers()).get("x-elearning-path") ?? LEARNER_HOME;
     redirect(`/login?next=${encodeURIComponent(pathname)}`);
   }
   return (

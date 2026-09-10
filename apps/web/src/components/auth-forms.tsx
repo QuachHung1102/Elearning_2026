@@ -1,5 +1,6 @@
 "use client";
 
+import { LEARNER_HOME } from "@/lib/routes";
 import { MailCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -524,7 +525,7 @@ export function VerifyEmail({ token }: { token: string }) {
         <Alert variant="success" title="Email đã được xác minh">
           Bạn có thể bắt đầu học ngay.
         </Alert>
-        <Link href="/my-courses" className={buttonClass("primary", "lg")}>
+        <Link href={LEARNER_HOME} className={buttonClass("primary", "lg")}>
           Về khóa học của tôi
         </Link>
       </div>

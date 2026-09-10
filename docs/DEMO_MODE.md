@@ -827,8 +827,10 @@ TZ="Asia/Ho_Chi_Minh"
 AUTH_JWT_SECRET=""
 # Origin người dùng thấy — dùng để dựng link trong email (API_CONTRACT.md §5.1).
 WEB_ORIGIN="http://localhost:3000"
-# Origin của API — dùng để dựng signed URL tuyệt đối.
-API_PUBLIC_URL="http://localhost:3001"
+# Origin mà TRÌNH DUYỆT thấy, không phải cổng nội bộ của API: /api/* được
+# next.config.ts rewrite sang API nên mọi signed URL phải mang origin này,
+# nếu không lệnh PUT của uploader thành cross-origin và bị CORS chặn.
+API_PUBLIC_URL="http://localhost:3000"
 
 # ── Chọn driver (mặc định demo; production phải set hết) ──────
 # demo | cloudflare

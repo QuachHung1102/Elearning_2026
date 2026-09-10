@@ -6,9 +6,12 @@ import {
 } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
+import { raw } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { AppExceptionFilter } from './common/error-filter.js';
 import { ERROR_CODE } from './common/error-codes.js';
 import { requestIdMiddleware } from './common/request-id.middleware.js';
+import { config } from './config.js';
 
 function validationException(errors: ValidationError[]): HttpException {
   const message = errors.flatMap((error) =>
@@ -33,10 +36,30 @@ function validationException(errors: ValidationError[]): HttpException {
   );
 }
 
+/** Everything under /admin is per-admin data; none of it may be cached. */
+function noStoreForAdmin(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): void {
+  if (request.path.startsWith('/api/v1/admin')) {
+    response.setHeader('Cache-Control', 'no-store');
+  }
+  next();
+}
+
 export function configureApp(app: NestExpressApplication): void {
   app.setGlobalPrefix('/api/v1');
   app.use(requestIdMiddleware);
+  app.use(noStoreForAdmin);
   app.use(cookieParser());
+  // Raw body only for the demo upload route, and with the size limit applied
+  // by the parser itself — without it the whole body is already in memory
+  // before the handler can reject it.
+  app.use(
+    '/api/v1/media/local',
+    raw({ type: '*/*', limit: config.maxUploadBytes }),
+  );
   app.useBodyParser('json', { limit: '256kb' });
   app.useGlobalFilters(new AppExceptionFilter());
   app.useGlobalPipes(
