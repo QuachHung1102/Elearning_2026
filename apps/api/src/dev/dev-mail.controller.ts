@@ -74,6 +74,16 @@ export class DevMailController {
       .split(/\r?\n\r?\n/)
       .slice(1)
       .join('\n\n');
+
+    // This renders stored bytes as HTML on the same origin that holds the
+    // session cookie, and DEMO_MODE.md §4 wants it rendered so the layout and
+    // the Vietnamese diacritics can be checked. Every mail template escapes
+    // its input today, but one forgotten escapeHtml would turn this into
+    // stored XSS against an admin. `sandbox` puts the response in an opaque
+    // origin — no scripts, no same-origin access — which removes that path
+    // without changing what the page looks like.
+    response.setHeader('Content-Security-Policy', 'sandbox');
+    response.setHeader('X-Content-Type-Options', 'nosniff');
     response.type('html').send(body);
   }
 
