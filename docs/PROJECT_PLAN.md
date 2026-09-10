@@ -9,7 +9,7 @@ Chọn:
 - **Prisma + PostgreSQL**.
 - **ZaloPay Gateway** với QR động, callback và truy vấn đối soát.
 - **Cloudflare Stream** để lưu trữ, mã hóa và phát video.
-- **Cloudflare R2** cho ảnh bìa, PDF và tài liệu tải xuống.
+- **Cloudflare R2** cho ảnh bìa (prefix công khai) và cho PDF, tài liệu tải xuống (private bucket + presigned URL).
 - Triển khai ban đầu trên **Railway** dưới dạng modular monolith, chưa dùng microservice.
 
 Giả định ban đầu: mỗi lần mua một khóa học, thanh toán VND một lần và được học lâu dài; chưa có subscription, giỏ hàng, nhiều giảng viên hoặc chia doanh thu.
@@ -122,7 +122,9 @@ Cách làm tối giản khi ra mắt:
 
 Chỉ xây uploader trực tiếp trong admin khi thao tác dashboard thực sự bất tiện. Khi đó trình duyệt upload thẳng lên Cloudflare bằng URL dùng một lần; không chuyển file lớn qua NestJS. Cloudflare hỗ trợ cả direct upload và webhook có chữ ký. [Direct uploads](https://developers.cloudflare.com/stream/uploading-videos/direct-creator-uploads/), [Stream webhooks](https://developers.cloudflare.com/stream/manage-video-library/using-webhooks/)
 
-Ảnh bìa và tài liệu PDF dùng R2 private bucket cùng presigned URL; R2 hỗ trợ API tương thích S3 và URL tạm thời cho upload/download. [R2 presigned URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/)
+Tài liệu tải xuống của bài học (`LessonResource`) dùng R2 **private bucket cùng presigned URL**; R2 hỗ trợ API tương thích S3 và URL tạm thời cho upload/download. [R2 presigned URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/)
+
+Ảnh bìa khóa học thì **không**: nó nằm ở bucket/prefix công khai (`public/`) và được đọc bằng URL **không ký**. Ảnh bìa xuất hiện trên trang bán hàng công khai, nên ký nó không bảo vệ được gì mà lại làm hỏng cache CDN và cache trình duyệt của toàn bộ catalog — mỗi lần re-sign là một cache miss cho từng ảnh. Upload thì vẫn đi qua presigned PUT như mọi file khác; chỉ **đường đọc** được miễn chữ ký. Chi tiết ở `API_CONTRACT.md` §9.1–§9.2 và `DEMO_MODE.md` §3.
 
 Hạn chế cần hiểu: signed URL ngăn chia sẻ link trực tiếp nhưng không thể ngăn quay màn hình. Chưa cần DRM. Nếu sau này nội dung có giá trị cao hoặc bắt buộc 4K, đánh giá lại Bunny MediaCage hoặc Mux DRM.
 

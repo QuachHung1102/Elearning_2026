@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: elearning_test
+          POSTGRES_PASSWORD: elearning_test
+          POSTGRES_DB: elearning_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U elearning_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://elearning_test:elearning_test@localhost:5432/elearning_test
+      NODE_ENV: test
+      AUTH_JWT_SECRET: test-only-secret-at-least-32-bytes-long
+      WEB_ORIGIN: http://localhost:3000
+      API_PUBLIC_URL: http://localhost:3001
+      VIDEO_DRIVER: demo
+      STORAGE_DRIVER: demo
+      MAIL_DRIVER: demo
+      PAYMENT_DRIVER: demo
+      LOCAL_MAIL_DIR: .mail/test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm --filter api exec prisma generate
+      - run: corepack pnpm lint
+      - run: corepack pnpm typecheck
+      - run: corepack pnpm test
+      - run: corepack pnpm --filter api test:e2e
+      - run: corepack pnpm build
+      - name: Replay migrations and seed twice
+        env:
+          PGPASSWORD: elearning_test
+          DATABASE_URL: postgresql://elearning_test:elearning_test@localhost:5432/elearning_ci
+        run: |
+          createdb -h localhost -U elearning_test elearning_ci
+          corepack pnpm --filter api exec prisma migrate deploy
+          corepack pnpm --filter api exec prisma db seed
+          corepack pnpm --filter api exec prisma db seed
+          test "$(psql "$DATABASE_URL" -tAc "SELECT count(*) FROM users WHERE email = 'admin@elearning.local'")" -eq 1

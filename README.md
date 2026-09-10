@@ -12,13 +12,17 @@ Yêu cầu Node.js có Corepack và một PostgreSQL đang chạy tại URL đư
 
 ```powershell
 Copy-Item apps/api/.env.example apps/api/.env
+Copy-Item apps/web/.env.example apps/web/.env.local
 corepack pnpm install
 corepack pnpm --filter api prisma:generate
 corepack pnpm --filter api prisma:migrate
+corepack pnpm --filter api seed
 corepack pnpm dev
 ```
 
 Web chạy tại `http://localhost:3000`; API chạy tại `http://localhost:3001`.
+
+Seed tạo bốn tài khoản demo; email và mật khẩu được ghi trong `apps/api/prisma/seed.ts`. Seed tự từ chối chạy khi `NODE_ENV=production`.
 
 Tạo `AUTH_JWT_SECRET` bằng lệnh dưới đây rồi lưu kết quả vào `apps/api/.env`:
 
@@ -45,3 +49,5 @@ corepack pnpm test
 corepack pnpm --filter api test:e2e
 corepack pnpm build
 ```
+
+E2E dùng riêng database `elearning_test` với tài khoản PostgreSQL cùng tên, theo `apps/api/.env.test`. Không trỏ file này vào database dev hoặc production.

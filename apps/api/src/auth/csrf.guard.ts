@@ -2,11 +2,18 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import {
   CanActivate,
   ExecutionContext,
-  ForbiddenException,
   Injectable,
+  SetMetadata,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
+import { ERROR_CODE, appError } from '../common/error-codes.js';
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from './auth.constants.js';
+
+const SKIP_CSRF = 'skipCsrf';
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+export const SkipCsrf = () => SetMetadata(SKIP_CSRF, true);
 
 export function createCsrfToken(): string {
   return randomBytes(32).toString('base64url');
@@ -14,8 +21,20 @@ export function createCsrfToken(): string {
 
 @Injectable()
 export class CsrfGuard implements CanActivate {
+  constructor(private readonly reflector: Reflector) {}
+
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
+    if (
+      SAFE_METHODS.has(request.method) ||
+      this.reflector.getAllAndOverride<boolean>(SKIP_CSRF, [
+        context.getHandler(),
+        context.getClass(),
+      ])
+    ) {
+      return true;
+    }
+
     const cookieToken = request.cookies?.[CSRF_COOKIE_NAME];
     const headerToken = request.get(CSRF_HEADER_NAME);
 
@@ -24,7 +43,7 @@ export class CsrfGuard implements CanActivate {
       typeof headerToken !== 'string' ||
       !this.tokensMatch(cookieToken, headerToken)
     ) {
-      throw new ForbiddenException('Invalid CSRF token');
+      throw appError(403, ERROR_CODE.CSRF_INVALID, 'Invalid CSRF token');
     }
 
     return true;

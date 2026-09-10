@@ -1,29 +1,33 @@
-import 'dotenv/config';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { config } from '../config.js';
+import { MailModule } from '../mail/mail.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
+import { AdminGuard } from './admin.guard.js';
 import { AuthRateLimitGuard } from './auth-rate-limit.guard.js';
-import { AuthController } from './auth.controller.js';
+import { AuthController, UsersController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
-import { CsrfGuard } from './csrf.guard.js';
+import { AuthTokenService } from './auth-token.service.js';
 import { SessionAuthGuard } from './session-auth.guard.js';
-
-const jwtSecret = process.env.AUTH_JWT_SECRET;
-
-if (!jwtSecret || Buffer.byteLength(jwtSecret) < 32) {
-  throw new Error('AUTH_JWT_SECRET must contain at least 32 bytes');
-}
 
 @Module({
   imports: [
     PrismaModule,
+    MailModule,
     JwtModule.register({
-      secret: jwtSecret,
+      secret: config.jwtSecret,
       signOptions: { algorithm: 'HS256' },
       verifyOptions: { algorithms: ['HS256'] },
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, SessionAuthGuard, CsrfGuard, AuthRateLimitGuard],
+  controllers: [AuthController, UsersController],
+  providers: [
+    AuthService,
+    AuthTokenService,
+    SessionAuthGuard,
+    AdminGuard,
+    AuthRateLimitGuard,
+  ],
+  exports: [AuthService, SessionAuthGuard, AdminGuard, AuthRateLimitGuard],
 })
 export class AuthModule {}
