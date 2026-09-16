@@ -37,20 +37,17 @@ Hình dáng catalog Udemy cần thêm dữ liệu mà bảng 13 model của PROJ
 
 ### 1.1 Cơ chế khai báo
 
-Tailwind v4 CSS-first, không có `tailwind.config.js`. Toàn bộ token nằm trong `apps/web/src/app/globals.css` theo bốn khối, đúng thứ tự:
+Tailwind v4 CSS-first, không có `tailwind.config.js`. Toàn bộ token nằm trong `apps/web/src/app/globals.css` theo hai khối, đúng thứ tự:
 
 ```
 @import "tailwindcss";
-@custom-variant dark (&:where(.dark, .dark *));
-@theme static { …giá trị light… }
-.dark { …ghi đè biến màu… }
+@theme static { …giá trị token… }
 ```
 
-Bốn điểm bắt buộc:
+Ba điểm bắt buộc:
 
-- **`@theme static`, không phải `@theme`.** Đã kiểm bằng cách biên dịch đúng bốn khối trên với `tailwindcss` 4.3.3 đang cài trong `apps/web`: dưới `@theme` thường, mọi biến **không** được một tiện ích nào sinh ra sẽ bị loại khỏi `:root` của CSS đầu ra — `--duration-fast`, `--duration-base`, `--shadow-overlay`, `--container-prose` đều biến mất, trong khi `--color-primary` và `--size-icon-md` sống sót vì có tiện ích tham chiếu chúng. Với `@theme static` cả bốn đều có mặt. Token nào chỉ được đọc bằng CSS viết tay (`var(--shadow-overlay)`) mà khai báo trong `@theme` thường thì ở runtime nó là giá trị rỗng — hỏng im lặng, không có cảnh báo build.
-- `@theme` chứa giá trị **light**. Khối `.dark` chỉ ghi đè biến màu, không khai báo lại font, spacing hay radius.
-- Dark mode dùng class `.dark` trên `<html>`, đặt bởi một script đồng bộ chèn trong `<head>` của root layout, đọc `localStorage` rồi tới `prefers-color-scheme`. Dùng class thay vì chỉ media query vì người dùng cần đổi được chủ đề độc lập với hệ điều hành.
+- **`@theme static`, không phải `@theme`.** Đã kiểm bằng cách biên dịch đúng hai khối trên với `tailwindcss` 4.3.3 đang cài trong `apps/web`: dưới `@theme` thường, mọi biến **không** được một tiện ích nào sinh ra sẽ bị loại khỏi `:root` của CSS đầu ra — `--duration-fast`, `--duration-base`, `--shadow-overlay`, `--container-prose` đều biến mất, trong khi `--color-primary` và `--size-icon-md` sống sót vì có tiện ích tham chiếu chúng. Với `@theme static` cả bốn đều có mặt. Token nào chỉ được đọc bằng CSS viết tay (`var(--shadow-overlay)`) mà khai báo trong `@theme` thường thì ở runtime nó là giá trị rỗng — hỏng im lặng, không có cảnh báo build.
+- **Chỉ có giao diện sáng.** Không có dark mode, không có `ThemeToggle`, không có biến thể `dark:`; không đọc `prefers-color-scheme`.
 - Token nào không có trong bảng dưới thì không tồn tại. Không dùng giá trị màu, khoảng cách hay bo góc viết thẳng trong component.
 
 ### 1.2 Token màu
@@ -59,58 +56,58 @@ Cột "Vai trò" là quy tắc dùng, không phải mô tả. Vi phạm vai trò
 
 #### Nền và chữ
 
-| Token | Light | Dark | Vai trò |
-|---|---|---|---|
-| `--color-background` | `#F8FAFC` | `#0F172A` | Nền trang |
-| `--color-foreground` | `#0F172A` | `#F8FAFC` | Chữ chính |
-| `--color-card` | `#FFFFFF` | `#1E293B` | Nền card, panel, modal, header dính |
-| `--color-card-foreground` | `#0F172A` | `#F8FAFC` | Chữ chính trên card |
-| `--color-muted` | `#F1F5F9` | `#334155` | Nền phụ: chip, header bảng, ô code, vùng rỗng |
-| `--color-muted-foreground` | `#64748B` | `#94A3B8` | Chữ phụ **chỉ trên** `background` và `card` |
-| `--color-muted-foreground-strong` | `#475569` | `#CBD5E1` | Chữ phụ **trên** `muted`. Bắt buộc, vì `muted-foreground` trên `muted` chỉ đạt 4.34:1 (light) và 4.04:1 (dark) |
-| `--color-border` | `#E2E8F0` | `rgba(255,255,255,0.08)` | Đường phân cách và viền card. Trang trí, không mang thông tin |
-| `--color-input` | `#64748B` | `rgba(255,255,255,0.40)` | Viền của mọi control nhập liệu. Phải khác `border` vì WCAG 1.4.11 yêu cầu 3:1 cho ranh giới control |
-| `--color-overlay` | `rgba(15,23,42,0.55)` | `rgba(2,6,23,0.70)` | Lớp phủ sau modal và drawer |
-| `--color-skeleton` | `#E2E8F0` | `#334155` | Nền khối skeleton |
+| Token | Giá trị | Vai trò |
+|---|---|---|
+| `--color-background` | `#F8FAFC` | Nền trang |
+| `--color-foreground` | `#0F172A` | Chữ chính |
+| `--color-card` | `#FFFFFF` | Nền card, panel, modal, header dính |
+| `--color-card-foreground` | `#0F172A` | Chữ chính trên card |
+| `--color-muted` | `#F1F5F9` | Nền phụ: chip, header bảng, ô code, vùng rỗng |
+| `--color-muted-foreground` | `#64748B` | Chữ phụ **chỉ trên** `background` và `card` |
+| `--color-muted-foreground-strong` | `#475569` | Chữ phụ **trên** `muted`. Bắt buộc, vì `muted-foreground` trên `muted` chỉ đạt 4.34:1 |
+| `--color-border` | `#E2E8F0` | Đường phân cách và viền card. Trang trí, không mang thông tin |
+| `--color-input` | `#64748B` | Viền của mọi control nhập liệu. Phải khác `border` vì WCAG 1.4.11 yêu cầu 3:1 cho ranh giới control |
+| `--color-overlay` | `rgba(15,23,42,0.55)` | Lớp phủ sau modal và drawer |
+| `--color-skeleton` | `#E2E8F0` | Nền khối skeleton |
 
 #### Thương hiệu và hành động
 
-| Token | Light | Dark | Vai trò |
-|---|---|---|---|
-| `--color-primary` | `#0D9488` | `#2DD4BF` | Màu nhận diện. Dùng cho **phần không chứa chữ**: focus ring, thanh tiến độ, chỉ báo tab đang chọn, nền checkbox đã tick, viền trạng thái active |
-| `--color-primary-strong` | `#0F766E` | `#2DD4BF` | Nền đặc của mọi bề mặt **có chữ** màu `primary-foreground`: nút solid, badge có chữ |
-| `--color-primary-hover` | `#115E59` | `#5EEAD4` | Trạng thái hover của `primary-strong` |
-| `--color-primary-foreground` | `#FFFFFF` | `#042F2E` | Chữ/icon đặt trên `primary-strong` |
-| `--color-primary-text` | `#0F766E` | `#2DD4BF` | Link và chữ mang màu thương hiệu trên nền `background`/`card` |
-| `--color-primary-subtle` | `#CCFBF1` | `#134E4A` | Nền badge nhạt, hàng được chọn trong bảng |
-| `--color-primary-on-subtle` | `#0F766E` | `#5EEAD4` | Chữ trên `primary-subtle` |
-| `--color-secondary` | `#2DD4BF` | `#14B8A6` | Trang trí không mang thông tin: gạch chân tiêu đề, đường viền minh họa, cột phụ trong biểu đồ. **Không bao giờ làm màu chữ trên nền sáng** — chỉ đạt 1.86:1 |
-| `--color-accent` | `#D97706` | `#F59E0B` | CTA chuyển đổi (mua/đăng ký học), sao rating, nhấn giá |
-| `--color-accent-hover` | `#B45309` | `#FBBF24` | Hover của `accent` |
-| `--color-accent-foreground` | `#431407` | `#431407` | Chữ trên `accent`. Chữ tối, không phải trắng — trắng trên `#D97706` chỉ đạt 3.19:1 |
-| `--color-accent-subtle` | `#FEF3C7` | `#78350F` | Nền badge giá khuyến mãi |
-| `--color-on-accent-subtle` | `#431407` | `#FCD34D` | Chữ trên `accent-subtle`. Bắt buộc vì `accent-foreground` (`#431407`) đặt trên `accent-subtle` dark (`#78350F`) chỉ đạt 1,4:1 |
-| `--color-ring` | `#0D9488` | `#2DD4BF` | Focus ring, luôn kèm `--color-ring-offset` |
-| `--color-ring-offset` | `#F8FAFC` | `#0F172A` | Vòng đệm 2px giữa control và ring |
+| Token | Giá trị | Vai trò |
+|---|---|---|
+| `--color-primary` | `#0D9488` | Màu nhận diện. Dùng cho **phần không chứa chữ**: focus ring, thanh tiến độ, chỉ báo tab đang chọn, nền checkbox đã tick, viền trạng thái active |
+| `--color-primary-strong` | `#0F766E` | Nền đặc của mọi bề mặt **có chữ** màu `primary-foreground`: nút solid, badge có chữ |
+| `--color-primary-hover` | `#115E59` | Trạng thái hover của `primary-strong` |
+| `--color-primary-foreground` | `#FFFFFF` | Chữ/icon đặt trên `primary-strong` |
+| `--color-primary-text` | `#0F766E` | Link và chữ mang màu thương hiệu trên nền `background`/`card` |
+| `--color-primary-subtle` | `#CCFBF1` | Nền badge nhạt, hàng được chọn trong bảng |
+| `--color-primary-on-subtle` | `#0F766E` | Chữ trên `primary-subtle` |
+| `--color-secondary` | `#2DD4BF` | Trang trí không mang thông tin: gạch chân tiêu đề, đường viền minh họa, cột phụ trong biểu đồ. **Không bao giờ làm màu chữ trên nền sáng** — chỉ đạt 1.86:1 |
+| `--color-accent` | `#D97706` | CTA chuyển đổi (mua/đăng ký học), sao rating, nhấn giá |
+| `--color-accent-hover` | `#B45309` | Hover của `accent` |
+| `--color-accent-foreground` | `#431407` | Chữ trên `accent`. Chữ tối, không phải trắng — trắng trên `#D97706` chỉ đạt 3.19:1 |
+| `--color-accent-subtle` | `#FEF3C7` | Nền badge giá khuyến mãi |
+| `--color-on-accent-subtle` | `#431407` | Chữ trên `accent-subtle` |
+| `--color-ring` | `#0D9488` | Focus ring, luôn kèm `--color-ring-offset` |
+| `--color-ring-offset` | `#F8FAFC` | Vòng đệm 2px giữa control và ring |
 
 #### Trạng thái ngữ nghĩa
 
-| Token | Light | Dark | Vai trò |
-|---|---|---|---|
-| `--color-success` | `#15803D` | `#4ADE80` | Đã xuất bản, đã hoàn thành, thanh toán thành công |
-| `--color-success-subtle` | `#DCFCE7` | `#14532D` | Nền badge/alert thành công |
-| `--color-on-success-subtle` | `#166534` | `#86EFAC` | Chữ trên `success-subtle` |
-| `--color-warning` | `#B45309` | `#FBBF24` | Chờ xử lý, video đang encode, sắp hết hạn |
-| `--color-warning-subtle` | `#FEF3C7` | `#78350F` | Nền badge/alert cảnh báo |
-| `--color-on-warning-subtle` | `#B45309` | `#FCD34D` | Chữ trên `warning-subtle` |
-| `--color-destructive` | `#DC2626` | `#F87171` | Lỗi, xóa, thu hồi, khóa tài khoản |
-| `--color-destructive-hover` | `#B91C1C` | `#FCA5A5` | Hover của nút destructive |
-| `--color-destructive-foreground` | `#FFFFFF` | `#450A0A` | Chữ trên nền `destructive` |
-| `--color-destructive-subtle` | `#FEE2E2` | `#7F1D1D` | Nền alert lỗi |
-| `--color-on-destructive-subtle` | `#991B1B` | `#FCA5A5` | Chữ trên `destructive-subtle` |
-| `--color-info` | `#0369A1` | `#38BDF8` | Thông báo trung tính, banner demo |
-| `--color-info-subtle` | `#E0F2FE` | `#0C4A6E` | Nền alert thông tin |
-| `--color-on-info-subtle` | `#075985` | `#7DD3FC` | Chữ trên `info-subtle` |
+| Token | Giá trị | Vai trò |
+|---|---|---|
+| `--color-success` | `#15803D` | Đã xuất bản, đã hoàn thành, thanh toán thành công |
+| `--color-success-subtle` | `#DCFCE7` | Nền badge/alert thành công |
+| `--color-on-success-subtle` | `#166534` | Chữ trên `success-subtle` |
+| `--color-warning` | `#B45309` | Chờ xử lý, video đang encode, sắp hết hạn |
+| `--color-warning-subtle` | `#FEF3C7` | Nền badge/alert cảnh báo |
+| `--color-on-warning-subtle` | `#B45309` | Chữ trên `warning-subtle` |
+| `--color-destructive` | `#DC2626` | Lỗi, xóa, thu hồi, khóa tài khoản |
+| `--color-destructive-hover` | `#B91C1C` | Hover của nút destructive |
+| `--color-destructive-foreground` | `#FFFFFF` | Chữ trên nền `destructive` |
+| `--color-destructive-subtle` | `#FEE2E2` | Nền alert lỗi |
+| `--color-on-destructive-subtle` | `#991B1B` | Chữ trên `destructive-subtle` |
+| `--color-info` | `#0369A1` | Thông báo trung tính, banner demo |
+| `--color-info-subtle` | `#E0F2FE` | Nền alert thông tin |
+| `--color-on-info-subtle` | `#075985` | Chữ trên `info-subtle` |
 
 ### 1.3 Sai lệch có đo đạc so với palette gốc
 
@@ -200,8 +197,6 @@ Flat design: **không có đổ bóng cho phần tử nằm trong luồng tài l
 |---|---|---|
 | `--shadow-overlay` | `0 8px 24px rgba(15,23,42,0.12)` | Dropdown, tooltip, popover |
 | `--shadow-modal` | `0 16px 48px rgba(15,23,42,0.20)` | Dialog, drawer |
-
-Ở dark mode hai bóng này gần như vô hình, nên modal và dropdown ở dark mode bắt buộc thêm `border: 1px solid rgba(255,255,255,0.12)`.
 
 ### 1.6 Motion
 
@@ -625,7 +620,6 @@ Biến thể `forbidden` bị **xóa khỏi `ErrorState`**: không màn hình n�
 | `SiteHeader` | `guest` `authed` | 64px, dính đầu trang | `d` + đổ bóng khi cuộn | `(marketing)`, `(learner)` |
 | `MobileNav` | trong `Drawer` | full | `d` + đóng/mở | < 768px |
 | `UserMenu` | `DropdownMenu` | — | `d h f s` | Header khi đã đăng nhập |
-| `ThemeToggle` | 3 chế độ: hệ thống / sáng / tối | `md` | `d h f a s` | Header, footer |
 | `SiteFooter` | `full` `slim` | — | `d` | `(marketing)` full, `(learner)` slim |
 | `Breadcrumb` | — | — | `d h f` | Chi tiết khóa, trang pháp lý, trang admin lồng nhau |
 | `Tabs` | `underline` `pill` | `md` | `d h f a s x` | Hồ sơ, khóa học của tôi, editor admin, MarkdownEditor |
@@ -640,7 +634,7 @@ Nhãn điều hướng chỉ có ở đây. Đây là danh sách nguyên văn, �
 | `SiteHeader` `guest` | Khóa học · Danh mục · Giới thiệu · Liên hệ · **Đăng nhập** (`ghost`) · **Đăng ký** (`primary`) |
 | `SiteHeader` `authed` | Khóa học · Khóa học của tôi · `UserMenu` (avatar + tên hiển thị cắt 1 dòng) |
 | `UserMenu` | Hồ sơ · Đổi mật khẩu · Phiên đăng nhập · Đơn hàng · Quản trị *(chỉ `role === 'ADMIN'`)* · `Divider` · Đăng xuất |
-| `MobileNav` (< 768px) | Cùng danh sách header theo trạng thái, xếp dọc, mỗi mục cao 48px; `ThemeToggle` ở đáy drawer |
+| `MobileNav` (< 768px) | Cùng danh sách header theo trạng thái, xếp dọc, mỗi mục cao 48px |
 | `AdminSidebar` | Tổng quan · Khóa học · Danh mục · Người dùng · Quyền học · Đơn hàng · Nhật ký |
 
 `SiteFooter` `full` có bốn nhóm, tên nhóm là tiêu đề `--text-sm` `600`:
@@ -652,7 +646,7 @@ Nhãn điều hướng chỉ có ở đây. Đây là danh sách nguyên văn, �
 | Pháp lý | Điều khoản sử dụng · Chính sách bảo mật · Chính sách hoàn tiền · Chính sách thanh toán |
 | Tài khoản | Đăng nhập · Đăng ký · Khóa học của tôi *(chỉ khi đã đăng nhập, do `AuthNav` bật)* |
 
-Dưới bốn nhóm là một hàng: tên chủ sở hữu, năm, `ThemeToggle`. `SiteFooter` `slim` chỉ giữ hàng đó cộng nhóm Pháp lý. Ở 375px mỗi nhóm là một mục `Accordion`, đóng sẵn, trừ nhóm Pháp lý mở sẵn.
+Dưới bốn nhóm là một hàng: tên chủ sở hữu, năm. `SiteFooter` `slim` chỉ giữ hàng đó cộng nhóm Pháp lý. Ở 375px mỗi nhóm là một mục `Accordion`, đóng sẵn, trừ nhóm Pháp lý mở sẵn.
 
 `Pagination` là phân trang thật với đường dẫn `?page=n`, không phải cuộn vô hạn. Lý do: cả catalog và bảng admin đều cần link chia sẻ được và cần nút Back của trình duyệt hoạt động đúng.
 
@@ -1128,26 +1122,26 @@ Sàn: WCAG 2.2 AA. Kiểm tra bàn phím trước, chuột sau.
 
 Số đo bằng công thức tương phản WCAG 2.x. Đây là bộ hồi quy — mọi lần đổi token phải chạy lại.
 
-Bộ hồi quy chạy được nằm ở **`design/contrast-check.py`**, và nó đo **đúng bộ token của §1.2 ở tài liệu này**, không phải một bộ nào khác. Chạy `py -3 design/contrast-check.py`: kết quả hiện tại **44/44 pass**, cộng ba cặp bị cấm ở bảng dưới được khẳng định là **vẫn trượt** ngưỡng (nếu một cặp bị cấm bỗng đạt ngưỡng thì ai đó đã đổi palette và script báo đỏ). Script gộp `rgba()` lên nền đã nêu trước khi tính, nên `--color-input` dark (`rgba(255,255,255,0.40)`) được đo đúng như trình duyệt vẽ. Bảng 16 dòng dưới đây là phần tối thiểu; script còn đo thêm các cặp `on-*-subtle`, viền và ring.
+Bộ hồi quy chạy được nằm ở **`design/contrast-check.py`**, và nó đo **đúng bộ token của §1.2 ở tài liệu này**, không phải một bộ nào khác. Chạy `py -3 design/contrast-check.py`: kết quả hiện tại **23/23 pass**, cộng ba cặp bị cấm ở bảng dưới được khẳng định là **vẫn trượt** ngưỡng (nếu một cặp bị cấm bỗng đạt ngưỡng thì ai đó đã đổi palette và script báo đỏ). Bảng 16 dòng dưới đây là phần tối thiểu; script còn đo thêm các cặp `on-*-subtle`, viền và ring.
 
-| Cặp | Light | Dark | Ngưỡng | Kết quả |
-|---|---|---|---|---|
-| `foreground` / `background` | 17.06 | 17.06 | 4.5 | Đạt |
-| `foreground` / `card` | 17.85 | 13.98 | 4.5 | Đạt |
-| `muted-foreground` / `card` | 4.76 | 5.71 | 4.5 | Đạt |
-| `muted-foreground` / `background` | 4.55 | 6.96 | 4.5 | Đạt |
-| `muted-foreground-strong` / `muted` | 6.92 | 6.97 | 4.5 | Đạt |
-| `primary-foreground` / `primary-strong` | 5.47 | 7.77 | 4.5 | Đạt |
-| `primary-text` / `card` | 5.47 | 7.86 | 4.5 | Đạt |
-| `accent-foreground` / `accent` | 4.91 | 7.29 | 4.5 | Đạt |
-| `destructive` / `card` | 4.83 | 5.29 | 4.5 | Đạt |
-| `destructive-foreground` / `destructive` | 4.83 | 5.84 | 4.5 | Đạt |
-| `success` / `card` | 5.02 | 8.40 | 4.5 | Đạt |
-| `on-warning-subtle` / `warning-subtle` | 4.51 | 6.29 | 4.5 | Đạt |
-| `on-primary-subtle` / `primary-subtle` | 4.86 | 6.41 | 4.5 | Đạt |
-| `ring` / `background` | 3.58 | 9.59 | 3.0 | Đạt |
-| `input` / `card` | 4.76 | 3.61 | 3.0 | Đạt |
-| `accent` (icon sao) / `card` | 3.19 | 6.81 | 3.0 | Đạt |
+| Cặp | Đo được | Ngưỡng | Kết quả |
+|---|---|---|---|
+| `foreground` / `background` | 17.06 | 4.5 | Đạt |
+| `foreground` / `card` | 17.85 | 4.5 | Đạt |
+| `muted-foreground` / `card` | 4.76 | 4.5 | Đạt |
+| `muted-foreground` / `background` | 4.55 | 4.5 | Đạt |
+| `muted-foreground-strong` / `muted` | 6.92 | 4.5 | Đạt |
+| `primary-foreground` / `primary-strong` | 5.47 | 4.5 | Đạt |
+| `primary-text` / `card` | 5.47 | 4.5 | Đạt |
+| `accent-foreground` / `accent` | 4.91 | 4.5 | Đạt |
+| `destructive` / `card` | 4.83 | 4.5 | Đạt |
+| `destructive-foreground` / `destructive` | 4.83 | 4.5 | Đạt |
+| `success` / `card` | 5.02 | 4.5 | Đạt |
+| `on-warning-subtle` / `warning-subtle` | 4.51 | 4.5 | Đạt |
+| `on-primary-subtle` / `primary-subtle` | 4.86 | 4.5 | Đạt |
+| `ring` / `background` | 3.58 | 3.0 | Đạt |
+| `input` / `card` | 4.76 | 3.0 | Đạt |
+| `accent` (icon sao) / `card` | 3.19 | 3.0 | Đạt |
 
 Ba cặp bị cấm dùng, ghi lại để không ai vô tình dựng lại:
 
@@ -1157,7 +1151,7 @@ Ba cặp bị cấm dùng, ghi lại để không ai vô tình dựng lại:
 | `#FFFFFF` trên `--color-accent` `#D97706` | 3.19 | `--color-accent-foreground` `#431407` |
 | `--color-secondary` `#2DD4BF` làm chữ trên nền sáng | 1.86 | `--color-primary-text` |
 
-`--color-border` trên `card` chỉ đạt 1.23 (light) và 1.28 (dark). Chấp nhận được vì đó là đường phân cách trang trí, không phải ranh giới của control — mọi control nhập liệu dùng `--color-input`. Hệ quả bắt buộc: **không có control nào chỉ được nhận ra nhờ `--color-border`**.
+`--color-border` trên `card` chỉ đạt 1.23. Chấp nhận được vì đó là đường phân cách trang trí, không phải ranh giới của control — mọi control nhập liệu dùng `--color-input`. Hệ quả bắt buộc: **không có control nào chỉ được nhận ra nhờ `--color-border`**.
 
 ### 8.2 Focus và điều hướng bàn phím
 

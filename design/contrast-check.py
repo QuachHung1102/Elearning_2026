@@ -10,9 +10,8 @@ Thresholds: 4.5 = body text (WCAG 1.4.3), 3.0 = UI component boundary /
 large text (WCAG 1.4.11, 1.4.3 large).
 
 Colors may be written as "#RRGGBB" or as "rgba(r,g,b,a) over #RRGGBB" —
-alpha tokens (--color-input and --color-border in dark mode) are composited
-over their stated backdrop before the ratio is computed, which is what the
-browser actually paints.
+alpha colors are composited over their stated backdrop before the ratio is
+computed, which is what the browser actually paints.
 """
 import re
 import sys
@@ -81,33 +80,6 @@ PAIRS = [
     ("L  input / background",                 "#64748B", "#F8FAFC", 3.0),
     ("L  accent star icon / card",            "#D97706", "#FFFFFF", 3.0),
     ("L  primary / background",               "#0D9488", "#F8FAFC", 3.0),
-    # ---- dark: surfaces & text ----
-    ("D  foreground / background",            "#F8FAFC", "#0F172A", 4.5),
-    ("D  foreground / card",                  "#F8FAFC", "#1E293B", 4.5),
-    ("D  muted-foreground / background",      "#94A3B8", "#0F172A", 4.5),
-    ("D  muted-foreground / card",            "#94A3B8", "#1E293B", 4.5),
-    ("D  muted-foreground-strong / muted",    "#CBD5E1", "#334155", 4.5),
-    # ---- dark: brand & action ----
-    ("D  primary-foreground / primary-strong", "#042F2E", "#2DD4BF", 4.5),
-    ("D  primary-text / card",                "#2DD4BF", "#1E293B", 4.5),
-    ("D  primary-text / background",          "#2DD4BF", "#0F172A", 4.5),
-    ("D  on-primary-subtle / primary-subtle", "#5EEAD4", "#134E4A", 4.5),
-    ("D  accent-foreground / accent",         "#431407", "#F59E0B", 4.5),
-    # ---- dark: semantic status ----
-    ("D  destructive / card",                 "#F87171", "#1E293B", 4.5),
-    ("D  destructive-foreground / destructive", "#450A0A", "#F87171", 4.5),
-    ("D  on-destructive-subtle / destr-subtle", "#FCA5A5", "#7F1D1D", 4.5),
-    ("D  success / card",                     "#4ADE80", "#1E293B", 4.5),
-    ("D  on-success-subtle / success-subtle", "#86EFAC", "#14532D", 4.5),
-    ("D  on-warning-subtle / warning-subtle", "#FCD34D", "#78350F", 4.5),
-    ("D  on-info-subtle / info-subtle",       "#7DD3FC", "#0C4A6E", 4.5),
-    ("D  on-accent-subtle / accent-subtle",   "#FCD34D", "#78350F", 4.5),
-    # ---- dark: UI boundaries (3:1) ----
-    ("D  ring / background",                  "#2DD4BF", "#0F172A", 3.0),
-    ("D  input / card",       "rgba(255,255,255,0.40) over #1E293B", "#1E293B", 3.0),
-    ("D  input / background", "rgba(255,255,255,0.40) over #0F172A", "#0F172A", 3.0),
-    ("D  accent star icon / card",            "#F59E0B", "#1E293B", 3.0),
-    ("D  primary / background",               "#2DD4BF", "#0F172A", 3.0),
 ]
 
 # Pairs UX_PLAN.md section 8.1 forbids. The script asserts they really do fail,

@@ -59,7 +59,7 @@ export function UserMenu({ variant }: { variant: "desktop" | "mobile" }) {
         <UserRound aria-hidden="true" className="size-5" strokeWidth={1.75} />
         <span className="max-w-36 truncate">{user.displayName}</span>
       </summary>
-      <div className="absolute right-0 top-full z-40 mt-2 grid w-56 rounded-lg border border-border bg-card p-2 shadow-[var(--shadow-overlay)] dark:border-white/10">
+      <div className="absolute right-0 top-full z-40 mt-2 grid w-56 rounded-lg border border-border bg-card p-2 shadow-[var(--shadow-overlay)]">
         <Link
           className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
           href="/account"

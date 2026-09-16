@@ -296,7 +296,7 @@ export function CurriculumEditor({ course }: { course: AdminCourseDetail }) {
 
       <dialog
         ref={dialog}
-        className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-border bg-card p-6 text-card-foreground shadow-[var(--shadow-modal)] backdrop:bg-overlay dark:border-white/10"
+        className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-border bg-card p-6 text-card-foreground shadow-[var(--shadow-modal)] backdrop:bg-overlay"
         aria-labelledby="curriculum-dialog-title"
       >
         <form className="grid gap-5" action={save} key={JSON.stringify(draft)}>

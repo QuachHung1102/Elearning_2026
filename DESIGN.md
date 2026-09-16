@@ -148,7 +148,7 @@ components:
 
 Every screen should make the learner's next useful step obvious. The visual world is a flat, adult marketplace translated into an Operate-mode product: slate surfaces keep attention on the work, teal establishes trust and orientation, and amber is reserved for commercial conversion. The approved seed is `operate-marketplace-flat-20260904`.
 
-The system feels practical, calm, and exact rather than playful or aspirational. Crisp one-pixel boundaries, compact corners, generous Vietnamese line-height, and a disciplined type hierarchy create clarity without decorative noise. Light and dark themes preserve the same semantic relationships instead of becoming separate identities.
+The system feels practical, calm, and exact rather than playful or aspirational. Crisp one-pixel boundaries, compact corners, generous Vietnamese line-height, and a disciplined type hierarchy create clarity without decorative noise.
 
 **Key Characteristics:**
 
@@ -160,7 +160,7 @@ The system feels practical, calm, and exact rather than playful or aspirational.
 
 ## Colors
 
-The palette pairs cool slate neutrals with trustworthy teal and a deliberately scarce amber conversion signal. Frontmatter values are the light-theme defaults; the same CSS variables receive these dark-theme overrides: background `#0f172a`, foreground `#f8fafc`, card `#1e293b`, muted `#334155`, muted foreground `#94a3b8`, strong muted foreground `#cbd5e1`, border `rgba(255,255,255,0.08)`, and input `rgba(255,255,255,0.40)`.
+The palette pairs cool slate neutrals with trustworthy teal and a deliberately scarce amber conversion signal. The product ships a light theme only; there is no dark mode.
 
 ### Primary
 
@@ -168,15 +168,14 @@ The palette pairs cool slate neutrals with trustworthy teal and a deliberately s
 - **Action Teal:** `primary-strong` is the accessible filled surface for brand actions that carry text; `primary-hover` is its hover state.
 - **Reading Teal:** `primary-text` is the brand color for links and icons on page or card surfaces.
 - **Trail Teal:** `primary-subtle` with `primary-on-subtle` identifies selected rows and quiet brand badges.
-- In dark mode these roles become `#2dd4bf`, `#2dd4bf`, `#5eead4`, `#2dd4bf`, `#134e4a`, and `#5eead4` respectively; on-primary text becomes `#042f2e`.
 
 ### Secondary
 
-- **Guide Aqua:** `secondary` is decoration only: illustration strokes, heading rules, and non-semantic chart details. In dark mode it becomes `#14b8a6`.
+- **Guide Aqua:** `secondary` is decoration only: illustration strokes, heading rules, and non-semantic chart details.
 
 ### Tertiary
 
-- **Decision Amber:** `accent` is the conversion color for purchase and enrollment actions, ratings, and price emphasis. It becomes `#f59e0b` in dark mode; `accent-hover` becomes `#fbbf24`.
+- **Decision Amber:** `accent` is the conversion color for purchase and enrollment actions, ratings, and price emphasis. `accent-hover` is `#b45309`.
 - **Status Colors:** success, warning, destructive, and info stay semantic. They always pair with their corresponding subtle surface and `on-*-subtle` text token when used as an alert or badge.
 
 ### Neutral
@@ -188,7 +187,7 @@ The palette pairs cool slate neutrals with trustworthy teal and a deliberately s
 
 ### Named Rules
 
-**The Two Teals Rule.** Use `primary` for non-text signals and `primary-strong` for filled surfaces that carry text; never place white text on the light-theme `primary` value.
+**The Two Teals Rule.** Use `primary` for non-text signals and `primary-strong` for filled surfaces that carry text; never place white text on the `primary` value.
 
 **The Amber Means Decide Rule.** Reserve amber for conversion, rating, and price emphasis; routine navigation and account actions remain teal or neutral.
 
@@ -223,7 +222,7 @@ Forms and reading content stay narrow rather than stretching across the viewport
 
 ## Elevation & Depth
 
-The system is flat by default. Document-flow surfaces use tonal contrast and one-pixel borders, never ambient card shadows. Only truly floating layers receive depth: dropdowns and popovers use the overlay shadow; dialogs and drawers use the modal shadow. In dark mode, floating layers also need a light translucent border because shadow alone is insufficient.
+The system is flat by default. Document-flow surfaces use tonal contrast and one-pixel borders, never ambient card shadows. Only truly floating layers receive depth: dropdowns and popovers use the overlay shadow; dialogs and drawers use the modal shadow.
 
 ### Shadow Vocabulary
 
@@ -280,14 +279,14 @@ Alerts combine an 8px container, one-pixel semantic border, subtle semantic surf
 - **Do** use teal for identity, focus, progress, and active navigation.
 - **Do** reserve amber for conversion, rating, and price emphasis.
 - **Do** keep controls at least 44px square and retain the global visible focus treatment.
-- **Do** preserve semantic color pairings and test both light and dark themes.
+- **Do** preserve semantic color pairings and run the contrast check after any token change.
 - **Do** use Lucide SVG icons at 1.75 stroke width and accompany state icons with text.
 
 ### Don't:
 
 - **Don't** add shadows to in-flow cards, fields, buttons, or page sections.
 - **Don't** use amber for routine actions or teal decoration as low-contrast body text.
-- **Don't** use white text on light-theme `primary` or `accent`; use the established foreground pairings.
+- **Don't** use white text on `primary` or `accent`; use the established foreground pairings.
 - **Don't** use uppercase UI copy, emoji, playful children's fonts, gradients, or oversized pill-shaped controls.
 - **Don't** hard-code spacing, color, or radius values inside components when a system token exists.
 - **Don't** introduce motion longer than 300ms or motion that survives the reduced-motion preference.

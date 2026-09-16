@@ -2,7 +2,6 @@ import { BookOpen, Menu } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SITE_OWNER } from "@/lib/site";
-import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 
 function Logo() {
@@ -52,7 +51,6 @@ function Header() {
           ))}
         </nav>
         <div className="hidden items-center gap-2 md:flex">
-          <ThemeToggle />
           <UserMenu variant="desktop" />
         </div>
         <details className="relative md:hidden">
@@ -63,7 +61,7 @@ function Header() {
             <Menu aria-hidden="true" className="size-6" strokeWidth={1.75} />
           </summary>
           <nav
-            className="absolute right-0 top-full z-40 mt-2 grid w-[calc(100vw-2rem)] max-w-sm rounded-lg border border-border bg-card p-3 shadow-[var(--shadow-overlay)] dark:border-white/10"
+            className="absolute right-0 top-full z-40 mt-2 grid w-[calc(100vw-2rem)] max-w-sm rounded-lg border border-border bg-card p-3 shadow-[var(--shadow-overlay)]"
             aria-label="Điều hướng di động"
           >
             {LINKS.map(([label, href]) => (
@@ -76,9 +74,6 @@ function Header() {
               </Link>
             ))}
             <UserMenu variant="mobile" />
-            <div className="mt-2 border-t border-border pt-2">
-              <ThemeToggle />
-            </div>
           </nav>
         </details>
       </div>

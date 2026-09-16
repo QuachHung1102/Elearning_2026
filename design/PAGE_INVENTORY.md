@@ -45,13 +45,121 @@ Có **36 route**: **35 trang có giao diện**, mỗi trang có bản desktop 14
 
 ## Các biến thể và trạng thái bổ sung
 
-- Dark: trang chủ, catalog, chi tiết khóa học, màn hình học, tổng quan quản trị và các trang nền tảng đã có.
 - Tablet: catalog, màn hình học, quản trị và đăng nhập.
 - Drawer bộ lọc, drawer chương trình học, modal học thử.
 - Không có kết quả tìm kiếm, chưa có khóa học, mất kết nối khi học.
 - Thanh toán thành công, hết hạn, chưa xác định kết quả.
 - Tạo danh mục/chương/bài học, cấp/thu hồi quyền, khóa tài khoản, xuất bản/lưu trữ, xóa bài học.
 - Yêu cầu hoàn tiền và xác nhận hoàn tiền sau khi chuyển tiền thủ công.
+
+Các trạng thái trên có bản mobile 375; bản desktop nằm ở bảng dưới (trừ drawer bộ lọc và drawer chương trình học, vốn chỉ có trên mobile).
+
+## Trạng thái bổ sung · desktop 1440
+
+98 màn trạng thái, hộp thoại và email, chỉ vẽ bản desktop 1440. Nằm bên dưới canvas, mỗi nhóm một hàng.
+
+| Nhóm | Màn | ID |
+|---|---|---|
+| Lỗi toàn cục | Không tìm thấy trang | `S0sCD` |
+| Lỗi toàn cục | Khóa học không tồn tại | `o7p0yc` |
+| Lỗi toàn cục | Đã xảy ra lỗi (`error.tsx`) | `dTK65` |
+| Lỗi toàn cục | Lỗi nghiêm trọng (`global-error.tsx`) | `xrGHQ` |
+| Xác thực | Xác minh email · Đang xác minh | `AfyPC` |
+| Xác thực | Xác minh email · Liên kết không hợp lệ | `OSVqY` |
+| Xác thực | Xác minh email · Liên kết hết hạn | `P1cWzo` |
+| Xác thực | Đặt mật khẩu mới · Thành công | `h62E7` |
+| Xác thực | Đặt mật khẩu mới · Liên kết không hợp lệ | `RGQsl` |
+| Xác thực | Đặt mật khẩu mới · Liên kết hết hạn | `L4I7V1` |
+| Xác thực | Tạo tài khoản · Email đã được đăng ký | `Roale` |
+| Xác thực | Tạo tài khoản · Nhiều lỗi | `EPN67` |
+| Xác thực | Đăng nhập · Thử quá nhiều lần | `RV0o8` |
+| Khám phá | Chi tiết khóa học · Chưa có quyền học | `TBzLr` |
+| Khám phá | Chi tiết khóa học · Giá đã thay đổi | `tTsoE` |
+| Khám phá | Khám phá khóa học · Chưa có khóa học | `aYGkF` |
+| Khám phá | Khám phá khóa học · Lỗi tải | `PmKrP` |
+| Khám phá | Khám phá khóa học · Tìm kiếm không có kết quả | `X35Yqx` |
+| Khám phá | Học thử · Không phát được video | `YIOmV` |
+| Học viên | Menu tài khoản đang mở | `K2B45A` |
+| Học viên | Khóa học của tôi · Đã xong rỗng | `YqORF` |
+| Học viên | Khóa học của tôi · Chưa xác minh email và khóa ngừng bán | `WwJKy` |
+| Học viên | Lịch sử đơn hàng · Rỗng | `I3wrL` |
+| Học viên | Chi tiết đơn hàng · Thất bại | `M18so` |
+| Học viên | Chi tiết đơn hàng · Đã hủy | `XyRa4` |
+| Học viên | Chi tiết đơn hàng · Chờ hoàn tiền | `WQZfT` |
+| Học viên | Chi tiết đơn hàng · Đã hoàn tiền | `Pw9A0` |
+| Màn hình học | Phiên xem hết hạn | `JI01K` |
+| Màn hình học | Video đang xử lý | `QH1bk` |
+| Màn hình học | Không phát được video | `g2uPbd` |
+| Màn hình học | Bài đọc | `o3qD2b` |
+| Màn hình học | Admin xem trước | `a0CTEL` |
+| Màn hình học | Hoàn thành khóa học | `i3KJZM` |
+| Thanh toán | Thất bại | `Dd50b` |
+| Thanh toán | Đã hủy | `rsLKr` |
+| Thanh toán | Không tạo được mã QR | `c3F9a` |
+| Thanh toán | Thông tin xuất hóa đơn | `JfDSS` |
+| Thanh toán | Chưa xác minh email khi đăng ký học | `EKTU2` |
+| Quản trị | Tổng quan · Đã bật thanh toán (5 ô số liệu) | `qAGju` |
+| Quản trị | Danh mục · Rỗng | `lKX74` |
+| Quản trị | Khóa học · Rỗng | `jFHvK` |
+| Quản trị | Chương trình học · Rỗng | `HVA4C` |
+| Quản trị | Người dùng · Rỗng | `r7QfH` |
+| Quản trị | Quyền học · Rỗng | `VGm43` |
+| Quản trị | Nhật ký · Rỗng | `TOsmg` |
+| Quản trị | Khóa học · Lỗi tải | `W5b3z5` |
+| Quản trị | Khóa học · Dữ liệu cũ | `p9wH0p` |
+| Quản trị | Khóa học · Phiên hết hạn | `mQeli` |
+| Quản trị | Tạo khóa học · Đường dẫn trùng | `xLS6Q` |
+| Quản trị | Thông tin khóa học · Lỗi tải ảnh bìa | `FhY3d` |
+| Quản trị | Soạn bài học · Mã video sai | `eE1LM` |
+| Quản trị | Thông tin khóa học · Đã lưu trữ | `t2B3s` |
+| Quản trị | Hồ sơ người dùng · Đã khóa | `JIxT9` |
+| Quản trị | Đơn hàng · Yêu cầu hoàn tiền | `wSSTC` |
+| Hộp thoại quản trị | Xóa chương · Chương còn bài | `r998s` |
+| Hộp thoại quản trị | Xóa khóa học · Đã có học viên | `L7lGk` |
+| Hộp thoại quản trị | Sửa danh mục | `uqG5r` |
+| Hộp thoại quản trị | Xóa danh mục · Còn khóa học | `F3748` |
+| Hộp thoại quản trị | Khóa tài khoản · Không thể khóa chính mình | `N3tGSt` |
+| Hộp thoại quản trị | Cấp quyền học · Không tìm thấy email | `Z3TgIk` |
+| Hộp thoại quản trị | Cấp quyền học · Đã có quyền học | `Nbo4S` |
+| Hộp thoại quản trị | Duyệt hoàn tiền | `w7nBDw` |
+| Hộp thoại quản trị | Từ chối hoàn tiền | `EA2sv` |
+| Hộp thoại quản trị | Xuất CSV hóa đơn | `ohs3v` |
+| Hộp thoại quản trị | Xuất bản · Server từ chối | `JeMVC` |
+| Email | Xác minh email | `PLb1i` |
+| Email | Đặt lại mật khẩu | `SrRYc` |
+| Email | Biên nhận mua hàng | `y7CUx` |
+| Email | Hoàn tiền được duyệt | `noBpk` |
+| Email | Hoàn tiền bị từ chối | `tFpjM` |
+| Email | Liên hệ mới (gửi chủ sở hữu) | `zAdH9` |
+| Xác thực | Đăng nhập · Sai thông tin | `oUMIg` |
+| Xác thực | Quên mật khẩu · Đã gửi | `pkQOr` |
+| Xác thực | Xác minh email · Chờ xác minh | `C2Inhs` |
+| Xác thực | Quên mật khẩu · Đã gửi · Chế độ demo | `gqRVS` |
+| Khám phá | Liên hệ · Đã gửi | `CNO2B` |
+| Khám phá | Liên hệ · Lỗi gửi | `h8lrGp` |
+| Khám phá | Trang chủ · Banner chế độ demo | `t1gmc` |
+| Khám phá | Khám phá khóa học · Đang tải | `r93kU4` |
+| Học viên | Phiên đăng nhập · Hộp thoại thu hồi | `vMzmN` |
+| Học viên | Khóa học của tôi · Rỗng | `xduYq` |
+| Khám phá | Chi tiết khóa học · Các trạng thái đăng ký | `iuPIf` |
+| Thanh toán | Mã QR hết hạn | `XuKqN` |
+| Thanh toán | Thành công | `X6jWX7` |
+| Thanh toán | Chưa xác định | `cAGTa` |
+| Màn hình học | Mất kết nối | `JNFHr` |
+| Khám phá | Học thử · Đang phát | `qdXOs` |
+| Học viên | Chi tiết đơn hàng · Hộp thoại yêu cầu hoàn tiền | `kGvxp` |
+| Hộp thoại quản trị | Cấp quyền học | `xOUBc` |
+| Hộp thoại quản trị | Thu hồi quyền học | `jQhkp` |
+| Hộp thoại quản trị | Thêm danh mục | `Y5vuaN` |
+| Hộp thoại quản trị | Thêm chương | `oqyYi` |
+| Hộp thoại quản trị | Thêm bài học | `mQu5p` |
+| Hộp thoại quản trị | Xuất bản | `p78UVw` |
+| Hộp thoại quản trị | Lưu trữ khóa học | `vXClw` |
+| Hộp thoại quản trị | Khóa tài khoản | `MchGJ` |
+| Hộp thoại quản trị | Xóa bài học | `SqHOy` |
+| Hộp thoại quản trị | Xác nhận đã hoàn tiền | `g42Z7r` |
+
+Sản phẩm chỉ có giao diện sáng. Không có biến thể dark.
 
 ## Phạm vi dữ liệu
 

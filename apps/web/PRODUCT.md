@@ -32,7 +32,7 @@ Learners use public catalog pages, account settings, and lesson pages. One admin
 
 ## Brand Commitments
 
-The product name is currently `E-learning`. The approved visual system is flat marketplace UI with teal brand color, amber conversion actions, Lexend headings, Inter body text, Lucide icons, light and dark themes, and the exact semantic tokens in `../../docs/UX_PLAN.md`.
+The product name is currently `E-learning`. The approved visual system is flat marketplace UI with teal brand color, amber conversion actions, Lexend headings, Inter body text, Lucide icons, a light theme only, and the exact semantic tokens in `../../docs/UX_PLAN.md`.
 
 ## Evidence on Hand
 
@@ -48,4 +48,4 @@ The repository contains executable contrast checks, API tests, deterministic dem
 
 ## Accessibility & Inclusion
 
-WCAG 2.2 AA is the floor. Keyboard access, visible focus, 44px touch targets, reduced motion, Vietnamese copy, and verified light/dark contrast apply from the first component.
+WCAG 2.2 AA is the floor. Keyboard access, visible focus, 44px touch targets, reduced motion, Vietnamese copy, and verified contrast apply from the first component.

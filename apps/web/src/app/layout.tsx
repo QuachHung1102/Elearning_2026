@@ -26,14 +26,6 @@ export const metadata: Metadata = {
   description: "Nền tảng khóa học trực tuyến.",
 };
 
-const themeScript = `
-try {
-  const saved = localStorage.getItem('elearning-theme') || 'system';
-  const dark = saved === 'dark' || (saved === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.classList.toggle('dark', dark);
-} catch {}
-`;
-
 const designContract = `<!--
 THESIS: Learning tasks should feel direct and trustworthy, never like a generic promotional template.
 OWN-WORLD: Flat slate surfaces, teal identity, amber conversion actions, compact radii, crisp borders, Lexend headings, Inter body copy.
@@ -50,11 +42,7 @@ export default function RootLayout({
     <html
       lang="vi"
       className={`${lexend.variable} ${inter.variable}`}
-      suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
       <body>
         <template dangerouslySetInnerHTML={{ __html: designContract }} />
         <a

@@ -8,7 +8,6 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/site-shell";
 import { LogoutButton } from "@/components/logout-button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Skeleton } from "@/components/ui/feedback";
 import { formatNumber } from "@/lib/format";
 
@@ -44,7 +43,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
             ))}
           </nav>
           <div className="flex items-center gap-2 lg:mt-auto lg:flex-col lg:items-stretch">
-            <ThemeToggle />
             <LogoutButton />
           </div>
         </div>

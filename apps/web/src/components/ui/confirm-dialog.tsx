@@ -24,7 +24,7 @@ export function ConfirmDialog({
       <span onClick={() => dialog.current?.showModal()}>{trigger}</span>
       <dialog
         ref={dialog}
-        className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-xl border border-border bg-card p-6 text-card-foreground shadow-[var(--shadow-modal)] backdrop:bg-overlay dark:border-white/10"
+        className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-xl border border-border bg-card p-6 text-card-foreground shadow-[var(--shadow-modal)] backdrop:bg-overlay"
         aria-labelledby="confirm-title"
       >
         <form method="dialog" className="grid gap-5">

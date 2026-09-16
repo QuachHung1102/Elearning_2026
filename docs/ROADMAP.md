@@ -162,7 +162,7 @@ Chạy song song, không chặn và không bị chặn bởi code:
 |---|---|---|
 | Mọi route admin | `AdminGuard` (P1b) | không có guard thì không có route admin an toàn. **Một** guard duy nhất, tự resolve session và ném `NotFoundException` ở mọi nhánh thất bại (API_CONTRACT.md §3.1) |
 | Web gọi API bằng cookie | `next.config.ts` rewrite (P1c) | khác origin thì cookie `SameSite=Lax` không đi kèm |
-| Mọi màn hình có giao diện | design token (P1d) | tránh phải sơn lại toàn bộ sau; bốn khối trong `globals.css` ở UX_PLAN.md §1.1 là bản duy nhất, không ai được tự chọn màu |
+| Mọi màn hình có giao diện | design token (P1d) | tránh phải sơn lại toàn bộ sau; hai khối trong `globals.css` ở UX_PLAN.md §1.1 là bản duy nhất, không ai được tự chọn màu |
 | Mọi trang gọi API | `src/lib/api.ts` + envelope lỗi (P1b) | shape lỗi và hành vi `401`/`403` của server component là contract chung, đổi sau thì phải sửa mọi trang |
 | P2 web | contract API catalog (P2 API) | chỉ cần **contract**, không cần implement xong: hai nửa chạy song song sau khi chốt DTO |
 | P3 | `Lesson` + `Course.status` (P2) | không có nội dung thì không có gì để học |
@@ -212,7 +212,7 @@ Không thêm test runner cho `apps/web` trước Phase 5. Kiểm chứng fronten
 | Đọc env | `throw` rải rác ở `auth.module.ts` và `prisma.service.ts` | gom vào `src/config.ts`, validate một lần lúc boot; `assertDriverValuesAreKnown()` chạy ở mọi môi trường (DEMO_MODE.md §6) |
 | Shape lỗi API | Nest trả mặc định `{ statusCode, message, error }` | envelope và danh mục `code` của API_CONTRACT.md §2.4–§2.6, cộng middleware `X-Request-Id` |
 | Rewrite `/api/*` | **không có `next.config.ts`** | tạo file, rewrite `/api/:path*` sang `API_ORIGIN` (cú pháp đúng ở API_CONTRACT.md §1.6) |
-| Design token | `globals.css` chỉ có một dòng `@import` | bốn khối của UX_PLAN.md §1.1 theo đúng thứ tự, `@theme static`; Lexend + Inter subset `vietnamese` qua `next/font`; `lucide-react` |
+| Design token | `globals.css` chỉ có một dòng `@import` | hai khối của UX_PLAN.md §1.1 theo đúng thứ tự, `@theme static`; Lexend + Inter subset `vietnamese` qua `next/font`; `lucide-react` |
 | Giao diện auth và hồ sơ | 1 trang `<h1>` | 8 trang: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email`, `/account`, `/account/password`, `/account/sessions` |
 | Trạng thái tải và lỗi | không có | `loading.tsx`, `error.tsx`, `not-found.tsx`, `global-error.tsx` theo UX_PLAN.md §6.6 |
 | Trang liên hệ | không có | `/contact` + `POST /contact` — đích của `EnrollCta` suốt Phase 2–3 (mục 2.2), nên nó là một form thật có rate limit, không phải trang thông tin (UX_PLAN.md §3.1) |
@@ -222,16 +222,16 @@ Không thêm test runner cho `apps/web` trước Phase 5. Kiểm chứng fronten
 
 Đây là artefact đòn bẩy cao nhất của Phase 1: mọi màn hình của bốn phase sau đi qua nó.
 
-**Giá trị token thuộc [UX_PLAN.md](./UX_PLAN.md), không thuộc tài liệu này.** Chép nguyên bốn khối và hai bảng màu ở §1.1–§1.2 vào `apps/web/src/app/globals.css`, cộng thang chữ §1.4, spacing/radius/shadow §1.5, motion §1.6, icon/breakpoint §1.7. Bản đầu của roadmap này có một khối CSS riêng cộng một bảng 44 cặp màu riêng — hai bộ giá trị khác nhau, cả hai tự nhận là bản duy nhất được chép. Bộ của UX_PLAN.md thắng vì nó có hai kết luận đã biên dịch thử mà bộ kia không có, và cả hai đều làm hỏng **im lặng** nếu làm sai:
+**Giá trị token thuộc [UX_PLAN.md](./UX_PLAN.md), không thuộc tài liệu này.** Chép nguyên hai khối và các bảng màu ở §1.1–§1.2 vào `apps/web/src/app/globals.css`, cộng thang chữ §1.4, spacing/radius/shadow §1.5, motion §1.6, icon/breakpoint §1.7. Bản đầu của roadmap này có một khối CSS riêng cộng một bảng 44 cặp màu riêng — hai bộ giá trị khác nhau, cả hai tự nhận là bản duy nhất được chép. Bộ của UX_PLAN.md thắng vì nó có hai kết luận đã biên dịch thử mà bộ kia không có, và cả hai đều làm hỏng **im lặng** nếu làm sai:
 
 - **`@theme static`, không phải `@theme`.** Dưới `@theme` thường, biến nào không được một tiện ích nào sinh ra sẽ bị loại khỏi `:root` — `--duration-fast`, `--duration-base`, `--shadow-overlay`, `--container-prose` đều biến mất. Khi đó khối `prefers-reduced-motion` ở §1.6 không có biến nào để ghi đè, và D12 fail mà không có lỗi build nào.
-- **Công tắc theme dùng class `.dark`, không dùng `[data-theme]`.** `@custom-variant dark (&:where(.dark, .dark *))` cộng một script đồng bộ trong `<head>` đặt class trên `<html>`. `layout.tsx` đặt class, không đặt thuộc tính `data-theme`.
+- **Chỉ có giao diện sáng.** Không có `.dark`, `ThemeToggle` hay script theme trong `<head>`.
 
 Giá trị `--color-primary` giữ nguyên `#0D9488` của chủ sở hữu cho phần **không chứa chữ** (ring, thanh tiến độ, chỉ báo tab: 3.58:1 > 3.0 cho UI phi văn bản); nền đặc có chữ dùng `--color-primary-strong` `#0F766E` (5.47:1). Chữ trên `--color-accent` là `#431407` (4.91:1), không phải trắng. Ba cặp bị cấm liệt kê ở UX_PLAN.md §8.1.
 
 `design/elearning.pen` phải khớp bảng token của UX_PLAN.md, không phải ngược lại — nguồn chân lý là `design/contrast-check.py` vì đó là thứ chạy được.
 
-**Cặp màu phải đo ở D11** nằm ở UX_PLAN.md §8.1 và trong `PAIRS` của `design/contrast-check.py`. Script đã được cập nhật sang bộ token của UX_PLAN.md và chạy lại: **44/44 pass**, cộng ba cặp bị cấm được khẳng định là vẫn trượt ngưỡng. Script gộp `rgba()` lên nền đã nêu trước khi tính, nên `--color-input` dark đo đúng như trình duyệt vẽ.
+**Cặp màu phải đo ở D11** nằm ở UX_PLAN.md §8.1 và trong `PAIRS` của `design/contrast-check.py`. Script đã được cập nhật sang bộ token của UX_PLAN.md và chạy lại: **23/23 pass**, cộng ba cặp bị cấm được khẳng định là vẫn trượt ngưỡng.
 
 ### Shape lỗi API và `src/lib/api.ts`
 
@@ -284,7 +284,7 @@ Hai sửa đổi, cả hai đều bắt buộc vì lint và typecheck không đi
 | Nơi | Thêm mới | Sửa | Xoá |
 |---|---|---|---|
 | `apps/api` | `src/config.ts`, `src/config/drivers.ts`, `src/common/error-filter.ts`, `src/common/error-codes.ts`, `src/common/request-id.middleware.ts`, `src/auth/admin.guard.ts`, `src/auth/rate-limit.decorator.ts`, `src/auth/auth-token.service.ts`, `src/mail/mailer.ts` + `dev-inbox.mailer.ts` + `smtp.mailer.ts`, `src/dev/dev-mail.controller.ts`, `src/contact/contact.controller.ts`, `src/health/health.controller.ts`, `prisma/seed.ts` | `src/app.module.ts` (`HealthModule`, `CsrfGuard` thành `APP_GUARD`, import `DevModule` có điều kiện), `src/app.setup.ts` (`error-filter`, `X-Request-Id`), `src/auth/auth.module.ts` + `src/prisma/prisma.service.ts` (đọc `config`), `src/auth/auth.controller.ts` (+ nhóm `/auth/verify-email/*`, `/auth/password/*`, `/users/me*`), `src/auth/auth.service.ts` (`changePassword` thu hồi session), `src/auth/auth-rate-limit.guard.ts` (tham số hoá `@RateLimit`), `src/main.ts` (`import './config/drivers.js'` là **dòng import đầu tiên**), `prisma.config.ts` (`migrations.seed`), `package.json` (`build` gọi `prisma generate`, devDep `tsx`, script `seed`), `.env.example`, `test/app.e2e-spec.ts` (bỏ case `serves the API root`, thay bằng assert health) | `src/app.controller.ts`, `src/app.controller.spec.ts` |
-| `apps/web` | `next.config.ts`, `src/proxy.ts`, `src/lib/api.ts`, `src/lib/session.ts` (`getSession()` server-side), `src/lib/site.ts` (`SITE_OWNER`), `src/messages/vi.ts` + hàm `t()` (PLAN_SUPPLEMENT.md §4.9 — tên file chốt là `src/messages/vi.ts`, không phải `src/lib/messages.ts`), `src/app/loading.tsx`, `error.tsx`, `not-found.tsx`, `global-error.tsx`, `src/app/(auth)/{login,register,forgot-password,reset-password,verify-email}/page.tsx`, `src/app/(learner)/account/{page,password/page,sessions/page}.tsx`, `src/app/(marketing)/contact/page.tsx`, `src/components/ui/*` (Button, Input, Field, Alert, Skeleton, EmptyState, ErrorState, Toast) | `src/app/globals.css` (bốn khối của UX_PLAN.md §1.1), `src/app/layout.tsx` (font, skip-link, script theme đặt **class `.dark`** trên `<html>`), `package.json` (`lucide-react`), `.env.example` | — |
+| `apps/web` | `next.config.ts`, `src/proxy.ts`, `src/lib/api.ts`, `src/lib/session.ts` (`getSession()` server-side), `src/lib/site.ts` (`SITE_OWNER`), `src/messages/vi.ts` + hàm `t()` (PLAN_SUPPLEMENT.md §4.9 — tên file chốt là `src/messages/vi.ts`, không phải `src/lib/messages.ts`), `src/app/loading.tsx`, `error.tsx`, `not-found.tsx`, `global-error.tsx`, `src/app/(auth)/{login,register,forgot-password,reset-password,verify-email}/page.tsx`, `src/app/(learner)/account/{page,password/page,sessions/page}.tsx`, `src/app/(marketing)/contact/page.tsx`, `src/components/ui/*` (Button, Input, Field, Alert, Skeleton, EmptyState, ErrorState, Toast) | `src/app/globals.css` (hai khối của UX_PLAN.md §1.1), `src/app/layout.tsx` (font, skip-link, không có script theme), `package.json` (`lucide-react`), `.env.example` | — |
 | gốc | `.github/workflows/ci.yml` | `README.md` | — |
 
 Cột "Xoá" tồn tại vì một lý do cụ thể: `src/app.controller.spec.ts` assert `getHello()` trả `'Hello World!'` (D3) và `test/app.e2e-spec.ts` có case `serves the API root` gọi `GET /api/v1` (D4). Gỡ `AppController` mà không đụng hai file đó thì Phase 1 không đạt được Definition of Done của chính nó.
@@ -333,8 +333,7 @@ Ba điểm về nhóm này là quyết định phạm vi phase, nên chúng ở 
 11. `/account/password` → đổi mật khẩu → bị đăng xuất ở **cả hai** trình duyệt, đăng nhập lại bằng mật khẩu mới.
 12. Mở `/my-courses` khi chưa đăng nhập → bị đẩy sang `/login?next=%2Fmy-courses`; đăng nhập xong quay lại đúng `/my-courses`.
 13. Tắt tiến trình `api`, tải lại `/account` → hiện skeleton rồi thông báo tiếng Việt của `error.tsx`, không phải stack trace. Bật lại api.
-14. Bấm `ThemeToggle` trên header → `<html>` nhận class `.dark`, toàn bộ trang đổi màu, không có vùng nào giữ nền cũ.
-15. Thu nhỏ cửa sổ xuống 375px, dùng `Tab` đi hết form đăng nhập, bấm `Enter` để submit.
+14. Thu nhỏ cửa sổ xuống 375px, dùng `Tab` đi hết form đăng nhập, bấm `Enter` để submit.
 
 ### Acceptance
 
@@ -753,7 +752,7 @@ Chạy với `PAYMENT_DRIVER=demo`.
 - Trang `/privacy`, `/terms`, `/refund-policy`. `/contact` đã có từ Phase 1 (mục 2.2) vì nó là đích của nút mua suốt Phase 2–3.
 - Playwright cho ba luồng: khách → đăng ký → được cấp quyền → học xong một bài; khách bị chặn khỏi bài trả phí; checkout demo đầu-cuối.
 - Backup: `pg_dump` định kỳ ngoài Railway, và **một lần restore thật** vào database trống rồi chạy lại toàn bộ e2e trên đó.
-- Rà accessibility ở bốn breakpoint, kiểm tra tương phản cả hai theme.
+- Rà accessibility ở bốn breakpoint, kiểm tra tương phản.
 
 ### File và module
 
