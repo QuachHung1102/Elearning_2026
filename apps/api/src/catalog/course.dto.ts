@@ -29,11 +29,11 @@ import {
 } from '../media/object-storage.js';
 import { SLUG_PATTERN } from './slug.js';
 
-const trim = () =>
+export const trim = () =>
   Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
 
 /** `a,b` → `['a','b']`, dropping empties. A single value stays a one-item list. */
-const csv = () =>
+export const csv = () =>
   Transform(({ value }) =>
     typeof value === 'string'
       ? value

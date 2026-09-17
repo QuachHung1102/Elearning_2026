@@ -41,6 +41,8 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
+      // Lets Next switch smooth scrolling off during route transitions.
+      data-scroll-behavior="smooth"
       className={`${lexend.variable} ${inter.variable}`}
     >
       <body>

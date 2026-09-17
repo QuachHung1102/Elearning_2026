@@ -87,6 +87,20 @@ export async function apiFetch<T = unknown>(
       await renewCsrf(signal);
       return apiFetch<T>(path, init, true);
     }
+    // `/admin/*` hides an expired session behind the same 404 as a missing
+    // page (API_CONTRACT.md §3.3), so the 401 branch below never sees it.
+    // `/auth/me` tells the two apart, and its own 401 raises the §6.3 toast.
+    if (
+      response.status === 404 &&
+      typeof window !== "undefined" &&
+      apiUrl(path).startsWith("/api/v1/admin/")
+    ) {
+      const expired = await apiFetch("/auth/me").then(
+        () => false,
+        (caught) => caught instanceof ApiError && caught.status === 401,
+      );
+      if (expired) throw new ApiError(401, "UNAUTHENTICATED");
+    }
     if (
       response.status === 401 &&
       error.code === "UNAUTHENTICATED" &&

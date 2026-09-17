@@ -26,12 +26,15 @@ export function Pagination({
   page,
   totalPages,
   total,
+  noun = "khóa học",
 }: {
   basePath: string;
   query: Record<string, string | string[] | undefined>;
   page: number;
   totalPages: number;
   total: number;
+  /** What `total` counts. */
+  noun?: string;
 }) {
   if (totalPages <= 1) return null;
   const window = [page - 1, page, page + 1].filter(
@@ -47,7 +50,7 @@ export function Pagination({
     >
       <p className="text-sm text-muted-foreground">
         Trang {formatNumber(page)} trên {formatNumber(totalPages)} ·{" "}
-        {formatNumber(total)} khóa học
+        {formatNumber(total)} {noun}
       </p>
       <ul className="flex list-none items-center gap-2 p-0">
         {page > 1 && (

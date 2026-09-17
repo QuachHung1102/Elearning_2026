@@ -40,3 +40,35 @@ export type ReportOverview = {
 
 export const CHECKOUT_ENABLED =
   process.env.NEXT_PUBLIC_CHECKOUT_ENABLED === "true";
+
+/** `AdminUserRow` (API_CONTRACT.md §4). */
+export type AdminUserRow = User & {
+  enrollmentCount: number;
+  purchaseCount: number;
+  activeSessionCount: number;
+};
+
+export type EnrollmentSource = "PURCHASE" | "MANUAL_GRANT";
+
+export type AdminEnrollment = {
+  id: string;
+  user: { id: string; email: string; displayName: string };
+  course: { id: string; title: string };
+  status: "ACTIVE" | "REVOKED";
+  source: EnrollmentSource;
+  grantedAt: string;
+  revokedAt: string | null;
+  grantedById: string | null;
+};
+
+export type AdminUserDetail = {
+  user: AdminUserRow;
+  enrollments: AdminEnrollment[];
+  /** Always empty until checkout exists. */
+  purchases: unknown[];
+};
+
+export const SOURCE_LABEL: Record<EnrollmentSource, string> = {
+  MANUAL_GRANT: "Cấp thủ công",
+  PURCHASE: "Mua",
+};

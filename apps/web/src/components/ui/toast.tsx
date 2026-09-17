@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { t } from "@/messages/vi";
 
 type Toast = {
   id: number;
@@ -37,10 +38,7 @@ export function Toaster() {
     }
     function sessionExpired(event: Event) {
       const next = (event as CustomEvent<string>).detail;
-      showToast(
-        "Phiên đăng nhập đã hết hạn. Bạn sẽ được chuyển tới trang đăng nhập.",
-        "error",
-      );
+      showToast(t("UNAUTHENTICATED"), "error");
       window.setTimeout(
         () => router.replace(`/login?next=${encodeURIComponent(next)}`),
         2_000,

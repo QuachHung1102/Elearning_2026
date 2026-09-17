@@ -28,7 +28,7 @@ export function buttonClass(
   size: keyof typeof sizes = "md",
   extra = "",
 ): string {
-  return `inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border font-semibold transition-colors duration-[var(--duration-fast)] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${sizes[size]} ${extra}`;
+  return `inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border font-semibold transition-colors duration-[var(--duration-fast)] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 ${variants[variant]} ${sizes[size]} ${extra}`;
 }
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -44,14 +44,20 @@ export function Button({
   className = "",
   children,
   disabled,
+  onClick,
   ...props
 }: ButtonProps) {
   return (
     <button
       {...props}
       className={buttonClass(variant, size, className)}
-      disabled={disabled || loading}
+      // Loading keeps the button focusable: a real `disabled` on the focused
+      // button drops focus to <body>, out of a modal's focus trap. Swallowing
+      // the click also blocks a form's implicit submission on Enter.
+      disabled={disabled}
+      aria-disabled={loading || undefined}
       aria-busy={loading || undefined}
+      onClick={loading ? (event) => event.preventDefault() : onClick}
     >
       {loading && (
         <LoaderCircle

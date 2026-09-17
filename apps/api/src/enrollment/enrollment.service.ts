@@ -73,6 +73,18 @@ export function resolveAccess(input: {
   return 'NOT_ENROLLED';
 }
 
+/** `AdminEnrollment` (API_CONTRACT.md §4): the select is the projection. */
+export const ADMIN_ENROLLMENT_SELECT = {
+  id: true,
+  user: { select: { id: true, email: true, displayName: true } },
+  course: { select: { id: true, title: true } },
+  status: true,
+  source: true,
+  grantedAt: true,
+  revokedAt: true,
+  grantedById: true,
+} satisfies Prisma.EnrollmentSelect;
+
 function notFound(): never {
   throw appError(HttpStatus.NOT_FOUND, ERROR_CODE.NOT_FOUND, 'Not Found');
 }

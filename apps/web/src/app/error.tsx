@@ -1,10 +1,9 @@
 "use client";
 
-import { Copy } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 import { Button, buttonClass } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/feedback";
+import { RequestId } from "@/components/ui/request-id";
 
 export default function ErrorPage({
   error,
@@ -13,7 +12,6 @@ export default function ErrorPage({
   error: Error & { digest?: string; requestId?: string };
   reset: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
   const requestId = error.requestId ?? error.digest;
 
   return (
@@ -31,20 +29,7 @@ export default function ErrorPage({
         }
       />
       {requestId && (
-        <div className="mx-auto flex max-w-prose flex-wrap items-center gap-2 pb-12 text-xs text-muted-foreground">
-          <span>Mã tra cứu: {requestId}</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              await navigator.clipboard.writeText(requestId);
-              setCopied(true);
-            }}
-          >
-            <Copy aria-hidden="true" className="size-4" strokeWidth={1.75} />
-            {copied ? "Đã sao chép" : "Sao chép"}
-          </Button>
-        </div>
+        <RequestId id={requestId} className="mx-auto max-w-prose pb-12" />
       )}
     </main>
   );

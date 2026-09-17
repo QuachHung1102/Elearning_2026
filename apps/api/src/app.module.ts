@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { AdminModule } from './admin/admin.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CsrfGuard } from './auth/csrf.guard.js';
 import { CatalogModule } from './catalog/catalog.module.js';
@@ -14,6 +15,7 @@ import { ReportingModule } from './reporting/reporting.module.js';
 @Module({
   imports: [
     AuthModule,
+    AdminModule,
     CatalogModule,
     EnrollmentModule,
     MediaModule,

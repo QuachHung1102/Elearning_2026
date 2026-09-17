@@ -42,7 +42,15 @@ export default async function AdminCoursesPage({
         </Link>
       </header>
 
-      <form method="get" action="/admin/courses" className="flex flex-wrap gap-3">
+      {/* Keyed on the applied filter: the nav link back to /admin/courses is a
+          client navigation that keeps this form, and React ignores a new
+          `defaultValue` on a mounted <select>. */}
+      <form
+        key={`${status.join(",")}:${firstValue(params.q) ?? ""}`}
+        method="get"
+        action="/admin/courses"
+        className="flex flex-wrap gap-3"
+      >
         <label className="sr-only" htmlFor="admin-q">
           Tìm khóa học
         </label>
