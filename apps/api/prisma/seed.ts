@@ -3,6 +3,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, UserRole, UserStatus } from '../src/generated/prisma/client.js';
 import { hashPassword } from '../src/auth/password.js';
 import { seedCatalog } from './seed-catalog.js';
+import { seedLearning } from './seed-learning.js';
 
 if (process.env.NODE_ENV === 'production') {
   throw new Error('Refusing to seed a production database');
@@ -74,6 +75,7 @@ try {
   }
   process.stdout.write(`Seeded ${users.length} demo accounts\n`);
   await seedCatalog(prisma);
+  await seedLearning(prisma);
 } finally {
   await prisma.$disconnect();
 }

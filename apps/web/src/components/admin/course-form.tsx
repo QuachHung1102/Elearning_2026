@@ -15,6 +15,7 @@ import { Button, buttonClass } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Alert } from "@/components/ui/feedback";
 import { showToast } from "@/components/ui/toast";
+import { contextMessages } from "@/messages/vi";
 import { TagListInput } from "./tag-list-input";
 
 /**
@@ -209,6 +210,12 @@ export function CourseForm({
       ) {
         setIssues((caught.details?.issues as PublishIssue[]) ?? []);
         setError("Khóa học chưa đủ điều kiện xuất bản.");
+      } else if (
+        caught instanceof ApiError &&
+        caught.code === "COURSE_HAS_ENROLLMENTS"
+      ) {
+        // t() carries the delete wording; this is the unpublish case.
+        setError(contextMessages.COURSE_HAS_ENROLLMENTS_UNPUBLISH);
       } else {
         setError("Không đổi được trạng thái. Thử lại sau ít phút.");
       }
@@ -424,7 +431,7 @@ export function CourseForm({
                 Gỡ xuất bản
               </Button>
             )}
-            {course.status === "ARCHIVED" ? (
+            {course.status === "ARCHIVED" && (
               <Button
                 variant="outline"
                 onClick={() => transition("unpublish", "Đã bỏ lưu trữ")}
@@ -432,7 +439,9 @@ export function CourseForm({
               >
                 Bỏ lưu trữ
               </Button>
-            ) : (
+            )}
+            {/* Only a published course can be archived; a draft is deleted instead. */}
+            {course.status === "PUBLISHED" && (
               <Button
                 variant="ghost"
                 onClick={() => transition("archive", "Đã lưu trữ khóa học")}

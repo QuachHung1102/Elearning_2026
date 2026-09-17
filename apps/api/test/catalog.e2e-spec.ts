@@ -1,10 +1,13 @@
 import { randomUUID } from 'node:crypto';
+import type { HttpException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
+import { AUDIT_VOCABULARY } from '../src/audit/actions.js';
 import { configureApp } from '../src/app.setup.js';
 import { hashPassword } from '../src/auth/password.js';
+import { EnrollmentService } from '../src/enrollment/enrollment.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
 const PASSWORD = 'correct horse battery staple';
@@ -29,17 +32,24 @@ describe('Phase 2 catalog (e2e)', () => {
     return headers.map((cookie) => cookie.split(';')[0]);
   }
 
-  async function signIn(role: 'ADMIN' | 'STUDENT'): Promise<Session> {
-    const email = `${role.toLowerCase()}-${randomUUID()}@example.com`;
-    await prisma.user.create({
-      data: {
-        email,
-        passwordHash: await hashPassword(PASSWORD),
-        displayName: role === 'ADMIN' ? 'Quản trị viên' : 'Học viên',
-        role,
-        emailVerifiedAt: new Date(),
-      },
-    });
+  /** Creates a fresh user, or opens another session for `existingEmail`. */
+  async function signIn(
+    role: 'ADMIN' | 'STUDENT',
+    existingEmail?: string,
+  ): Promise<Session> {
+    const email =
+      existingEmail ?? `${role.toLowerCase()}-${randomUUID()}@example.com`;
+    if (!existingEmail) {
+      await prisma.user.create({
+        data: {
+          email,
+          passwordHash: await hashPassword(PASSWORD),
+          displayName: role === 'ADMIN' ? 'Quản trị viên' : 'Học viên',
+          role,
+          emailVerifiedAt: new Date(),
+        },
+      });
+    }
 
     const csrf = await request(app.getHttpServer())
       .get('/api/v1/auth/csrf')
@@ -501,6 +511,34 @@ describe('Phase 2 catalog (e2e)', () => {
       .set(as(admin))
       .expect(200);
 
+    // Back to draft would lock out anyone still learning (PLAN_SUPPLEMENT
+    // §4.10: a DRAFT gives enrollments no access), so it waits for a revoke.
+    const learner = await prisma.user.create({
+      data: {
+        email: `learner-${randomUUID()}@example.com`,
+        passwordHash: 'not-a-real-hash',
+        displayName: 'Học viên',
+      },
+    });
+    const enrollment = await prisma.enrollment.create({
+      data: { userId: learner.id, courseId, source: 'MANUAL_GRANT' },
+    });
+    await request(app.getHttpServer())
+      .post(`/api/v1/admin/courses/${courseId}/unpublish`)
+      .set(as(admin))
+      .expect(409)
+      .expect(({ body }) => expect(body.code).toBe('COURSE_HAS_ENROLLMENTS'));
+    expect(
+      await prisma.course.findUniqueOrThrow({ where: { id: courseId } }),
+    ).toMatchObject({ status: 'ARCHIVED' });
+    expect(
+      await prisma.auditLog.count({ where: { action: 'course.unpublished' } }),
+    ).toBe(0);
+    await prisma.enrollment.update({
+      where: { id: enrollment.id },
+      data: { status: 'REVOKED', revokedAt: new Date() },
+    });
+
     // A2.15
     await request(app.getHttpServer())
       .post(`/api/v1/admin/courses/${courseId}/unpublish`)
@@ -522,6 +560,52 @@ describe('Phase 2 catalog (e2e)', () => {
       .post(`/api/v1/admin/courses/${courseId}/unpublish`)
       .set(as(admin))
       .expect(409);
+  });
+
+  it('makes a grant wait for a racing unpublish and then refuse the new draft', async () => {
+    const admin = await signIn('ADMIN');
+    const { courseId } = await buildCourse(admin);
+    await request(app.getHttpServer())
+      .post(`/api/v1/admin/courses/${courseId}/publish`)
+      .set(as(admin))
+      .expect(200);
+    const actor = await prisma.user.findFirstOrThrow({
+      where: { role: 'ADMIN' },
+    });
+    const learner = await prisma.user.create({
+      data: {
+        email: `learner-${randomUUID()}@example.com`,
+        passwordHash: 'not-a-real-hash',
+        displayName: 'Học viên',
+      },
+    });
+
+    // The open transaction holds the course row lock an unpublish holds
+    // between its status update and its commit. Without a lock of its own,
+    // the grant reads PUBLISHED, inserts, and lands on the draft.
+    let grant!: Promise<unknown>;
+    await prisma.$transaction(async (tx) => {
+      await tx.course.update({
+        where: { id: courseId },
+        data: { status: 'DRAFT' },
+      });
+      grant = app
+        .get(EnrollmentService)
+        .grant({
+          userId: learner.id,
+          courseId,
+          source: 'MANUAL_GRANT',
+          actorId: actor.id,
+        })
+        .catch((error: HttpException) => error.getStatus());
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+
+    expect(await grant).toBe(404);
+    expect(await prisma.enrollment.count({ where: { courseId } })).toBe(0);
+    expect(
+      await prisma.course.findUniqueOrThrow({ where: { id: courseId } }),
+    ).toMatchObject({ status: 'DRAFT', enrollmentCount: 0 });
   });
 
   it('registers a demo video that is ready immediately', async () => {
@@ -774,5 +858,219 @@ describe('Phase 2 catalog (e2e)', () => {
         expect(body.series.length).toBeGreaterThan(0);
         expect(body.series[0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       });
+  });
+
+  it('writes exactly one audit row per admin mutation, with the actor and the required metadata', async () => {
+    const admin = await signIn('ADMIN');
+    const { id: adminId } = await prisma.user.findFirstOrThrow({
+      where: { role: 'ADMIN' },
+    });
+    const { categoryId, courseId, lessonId, videoAssetId } =
+      await buildCourse(admin);
+
+    // buildCourse: category, course, section, video (not an audited action),
+    // lesson, the lesson PATCH that attaches the video, the course PATCH.
+    const built = await prisma.auditLog.findMany();
+    expect(built.map((row) => row.action).sort()).toEqual([
+      'category.created',
+      'course.created',
+      'course.updated',
+      'lesson.created',
+      'section.created',
+      'video.attached',
+    ]);
+
+    const archive = () =>
+      request(app.getHttpServer())
+        .post(`/api/v1/admin/courses/${courseId}/archive`)
+        .set(as(admin));
+    // Rejected mutations change nothing, so they record nothing. A draft was
+    // never sold, so it cannot be archived (DATA_MODEL §Chuyển trạng thái).
+    await archive().expect(409);
+    const publish = () =>
+      request(app.getHttpServer())
+        .post(`/api/v1/admin/courses/${courseId}/publish`)
+        .set(as(admin));
+    await publish().expect(200);
+    // PUBLISHED → PUBLISHED is not a transition.
+    await publish().expect(409);
+    await archive().expect(200);
+    // Archiving twice would rewrite archivedAt.
+    await archive().expect(409);
+    await request(app.getHttpServer())
+      .post(`/api/v1/admin/courses/${courseId}/unpublish`)
+      .set(as(admin))
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/admin/lessons/${lessonId}`)
+      .set(as(admin))
+      .send({ title: 'Bài 1: Cài đặt môi trường' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/admin/lessons/${lessonId}`)
+      .set(as(admin))
+      .send({ videoAssetId: null })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/api/v1/admin/courses/${courseId}/publish`)
+      .set(as(admin))
+      .expect(422);
+    await request(app.getHttpServer())
+      .delete(`/api/v1/admin/categories/${categoryId}`)
+      .set(as(admin))
+      .expect(409);
+
+    // Deleting a lesson reports how much learner progress went with it.
+    const learner = await prisma.user.create({
+      data: {
+        email: `learner-${randomUUID()}@example.com`,
+        passwordHash: 'not-a-real-hash',
+        displayName: 'Học viên',
+      },
+    });
+    await prisma.lessonProgress.create({
+      data: { userId: learner.id, lessonId, lastPositionSeconds: 30 },
+    });
+    await request(app.getHttpServer())
+      .delete(`/api/v1/admin/lessons/${lessonId}`)
+      .set(as(admin))
+      .expect(204);
+    expect(await prisma.lessonProgress.count({ where: { lessonId } })).toBe(0);
+
+    const rows = await prisma.auditLog.findMany();
+    expect(rows).toHaveLength(12);
+    for (const row of rows) {
+      const entry =
+        AUDIT_VOCABULARY[row.action as keyof typeof AUDIT_VOCABULARY];
+      expect(entry, row.action).toBeDefined();
+      expect(row.entityType).toBe(entry.entityType);
+      expect(row.actorId).toBe(adminId);
+      expect(row.ipAddress).toBeTruthy();
+      for (const key of entry.keys) {
+        expect(row.metadata, `${row.action}.${key}`).toHaveProperty(key);
+      }
+    }
+
+    const byAction = (action: string) =>
+      rows.filter((row) => row.action === action);
+    expect(byAction('lesson.updated')).toHaveLength(1);
+    expect(byAction('lesson.updated')[0].metadata).toMatchObject({
+      courseId,
+      title: 'Bài 1: Cài đặt môi trường',
+      changedFields: ['title'],
+    });
+    expect(byAction('video.detached')[0]).toMatchObject({
+      entityId: lessonId,
+      metadata: { videoAssetId, courseId, changedFields: ['videoAssetId'] },
+    });
+    expect(byAction('course.unpublished')[0].metadata).toMatchObject({
+      fromStatus: 'ARCHIVED',
+    });
+    expect(byAction('lesson.deleted')[0].metadata).toMatchObject({
+      deletedProgressRows: 1,
+    });
+    expect(byAction('course.published')).toHaveLength(1);
+    expect(byAction('course.archived')).toHaveLength(1);
+    expect(byAction('category.deleted')).toEqual([]);
+  });
+
+  it('enforces the learning tables at the database and counts real enrollments', async () => {
+    const admin = await signIn('ADMIN');
+    const { id: adminId } = await prisma.user.findFirstOrThrow({
+      where: { role: 'ADMIN' },
+    });
+    const { courseId, lessonId } = await buildCourse(admin);
+    const student = await prisma.user.create({
+      data: {
+        email: `student-${randomUUID()}@example.com`,
+        passwordHash: 'not-a-real-hash',
+        displayName: 'Học viên',
+      },
+    });
+
+    const enrollment = await prisma.enrollment.create({
+      data: {
+        userId: student.id,
+        courseId,
+        source: 'MANUAL_GRANT',
+        grantedById: adminId,
+        status: 'REVOKED',
+        revokedAt: new Date(),
+      },
+    });
+
+    // One row per (user, course) and per (user, lesson), enforced by the
+    // database rather than by the service that normally writes them.
+    await expect(
+      prisma.enrollment.create({
+        data: { userId: student.id, courseId, source: 'MANUAL_GRANT' },
+      }),
+    ).rejects.toThrow();
+    await prisma.lessonProgress.create({
+      data: { userId: student.id, lessonId },
+    });
+    await expect(
+      prisma.lessonProgress.create({ data: { userId: student.id, lessonId } }),
+    ).rejects.toThrow();
+
+    // Any enrollment row, a revoked one included, blocks a hard delete.
+    await request(app.getHttpServer())
+      .delete(`/api/v1/admin/courses/${courseId}`)
+      .set(as(admin))
+      .expect(409)
+      .expect(({ body }) => expect(body.code).toBe('COURSE_HAS_ENROLLMENTS'));
+    // And a user who ever held one cannot be hard-deleted (FK Restrict).
+    await expect(
+      prisma.user.delete({ where: { id: student.id } }),
+    ).rejects.toThrow();
+
+    const overview = async () =>
+      (
+        await request(app.getHttpServer())
+          .get('/api/v1/admin/reports/overview')
+          .set(as(admin))
+          .expect(200)
+      ).body.activeEnrollments;
+    expect(await overview()).toBe(0);
+    await prisma.enrollment.update({
+      where: { id: enrollment.id },
+      data: { status: 'ACTIVE', revokedAt: null },
+    });
+    expect(await overview()).toBe(1);
+  });
+
+  it('rate limits admin mutations per admin but never admin reads', async () => {
+    const admin = await signIn('ADMIN');
+    const missing = randomUUID();
+    const rename = (session: Session) =>
+      request(app.getHttpServer())
+        .patch(`/api/v1/admin/categories/${missing}`)
+        .set(as(session))
+        .send({ name: 'Không tồn tại' });
+
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      await rename(admin).expect(404);
+    }
+    await rename(admin)
+      .expect(429)
+      .expect('Retry-After', /^\d+$/)
+      .expect(({ body }) => expect(body.code).toBe('RATE_LIMITED'));
+
+    // Reads have no limit at all: more GETs than the mutation limit all pass.
+    for (let attempt = 0; attempt <= 120; attempt += 1) {
+      await request(app.getHttpServer())
+        .get('/api/v1/admin/categories')
+        .set(as(admin))
+        .expect(200);
+    }
+
+    // The bucket belongs to the admin (per method and route, like the auth
+    // limits): a second session of the same admin is still limited, while
+    // another admin is not. Every e2e request shares one IP, so not the IP.
+    const { email } = await prisma.user.findFirstOrThrow({
+      where: { role: 'ADMIN' },
+    });
+    await rename(await signIn('ADMIN', email)).expect(429);
+    await rename(await signIn('ADMIN')).expect(404);
   });
 });

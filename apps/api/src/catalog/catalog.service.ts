@@ -1,4 +1,8 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import {
+  AuditService,
+  type AuditActorContext,
+} from '../audit/audit.service.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
 import {
   paginated,
@@ -6,10 +10,11 @@ import {
   type Paginated,
 } from '../common/pagination.js';
 import { config } from '../config.js';
-import type { Prisma } from '../generated/prisma/client.js';
+import { Prisma } from '../generated/prisma/client.js';
 import {
   CourseLevel,
   CourseStatus,
+  EnrollmentStatus,
   LessonType,
   StorageProvider,
 } from '../generated/prisma/enums.js';
@@ -69,6 +74,7 @@ function notFound(): never {
 export class CatalogService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
     @Inject(STREAM_CLIENT) private readonly stream: StreamClient,
   ) {}
@@ -150,7 +156,7 @@ export class CatalogService {
     return { items: categories.map((category) => this.toCategory(category)) };
   }
 
-  async createCategory(input: CreateCategoryDto) {
+  async createCategory(input: CreateCategoryDto, actor: AuditActorContext) {
     const slug = await this.resolveSlug(input.slug, input.name, 80, (value) =>
       this.categorySlugTaken(value),
     );
@@ -158,20 +164,36 @@ export class CatalogService {
       orderBy: { position: 'desc' },
       select: { position: true },
     });
-    const category = await this.prisma.category.create({
-      data: {
-        slug,
-        name: input.name,
-        description: input.description ?? null,
-        icon: input.icon ?? null,
-        position: (last?.position ?? 0) + 1,
-      },
-      include: { _count: { select: { courses: true } } },
+    return this.prisma.$transaction(async (tx) => {
+      const category = await tx.category.create({
+        data: {
+          slug,
+          name: input.name,
+          description: input.description ?? null,
+          icon: input.icon ?? null,
+          position: (last?.position ?? 0) + 1,
+        },
+        include: { _count: { select: { courses: true } } },
+      });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'category.created',
+          entityType: 'CATEGORY',
+          entityId: category.id,
+          metadata: { slug: category.slug },
+        },
+        tx,
+      );
+      return this.toCategory(category);
     });
-    return this.toCategory(category);
   }
 
-  async updateCategory(id: string, input: UpdateCategoryDto) {
+  async updateCategory(
+    id: string,
+    input: UpdateCategoryDto,
+    actor: AuditActorContext,
+  ) {
     await this.mustFindCategory(id);
     if (input.slug && (await this.categorySlugTaken(input.slug, id))) {
       throw appError(
@@ -180,23 +202,35 @@ export class CatalogService {
         'Slug is already taken',
       );
     }
-    const category = await this.prisma.category.update({
-      where: { id },
-      data: {
-        ...(input.name === undefined ? {} : { name: input.name }),
-        ...(input.slug === undefined ? {} : { slug: input.slug }),
-        ...(input.description === undefined
-          ? {}
-          : { description: input.description || null }),
-        ...(input.icon === undefined ? {} : { icon: input.icon || null }),
-      },
-      include: { _count: { select: { courses: true } } },
+    return this.prisma.$transaction(async (tx) => {
+      const category = await tx.category.update({
+        where: { id },
+        data: {
+          ...(input.name === undefined ? {} : { name: input.name }),
+          ...(input.slug === undefined ? {} : { slug: input.slug }),
+          ...(input.description === undefined
+            ? {}
+            : { description: input.description || null }),
+          ...(input.icon === undefined ? {} : { icon: input.icon || null }),
+        },
+        include: { _count: { select: { courses: true } } },
+      });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'category.updated',
+          entityType: 'CATEGORY',
+          entityId: id,
+          metadata: { slug: category.slug },
+        },
+        tx,
+      );
+      return this.toCategory(category);
     });
-    return this.toCategory(category);
   }
 
-  async deleteCategory(id: string): Promise<void> {
-    await this.mustFindCategory(id);
+  async deleteCategory(id: string, actor: AuditActorContext): Promise<void> {
+    const category = await this.mustFindCategory(id);
     const courses = await this.prisma.course.count({
       where: { categoryId: id },
     });
@@ -207,10 +241,25 @@ export class CatalogService {
         'Category still has courses',
       );
     }
-    await this.prisma.category.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.category.delete({ where: { id } });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'category.deleted',
+          entityType: 'CATEGORY',
+          entityId: id,
+          metadata: { slug: category.slug },
+        },
+        tx,
+      );
+    });
   }
 
-  async reorderCategories(categoryIds: string[]): Promise<void> {
+  async reorderCategories(
+    categoryIds: string[],
+    actor: AuditActorContext,
+  ): Promise<void> {
     const current = await this.prisma.category.findMany({
       orderBy: { position: 'asc' },
       select: { id: true },
@@ -230,6 +279,15 @@ export class CatalogService {
           });
         }
       }
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'category.reordered',
+          entityType: 'CATEGORY',
+          metadata: { categoryIds },
+        },
+        tx,
+      );
     });
   }
 
@@ -294,29 +352,45 @@ export class CatalogService {
     };
   }
 
-  async createCourse(input: CreateCourseDto) {
+  async createCourse(input: CreateCourseDto, actor: AuditActorContext) {
     const slug = await this.resolveSlug(input.slug, input.title, 120, (value) =>
       this.courseSlugTaken(value),
     );
     if (input.categoryId) await this.mustFindCategory(input.categoryId);
-    const course = await this.prisma.course.create({
-      data: {
-        slug,
-        title: input.title,
-        description: '',
-        searchText: buildSearchText(input.title),
-        priceVnd: 0,
-        categoryId: input.categoryId ?? null,
-        learningOutcomes: [],
-        requirements: [],
-        targetAudience: [],
-      },
-      include: this.detailInclude,
+    return this.prisma.$transaction(async (tx) => {
+      const course = await tx.course.create({
+        data: {
+          slug,
+          title: input.title,
+          description: '',
+          searchText: buildSearchText(input.title),
+          priceVnd: 0,
+          categoryId: input.categoryId ?? null,
+          learningOutcomes: [],
+          requirements: [],
+          targetAudience: [],
+        },
+        include: this.detailInclude,
+      });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'course.created',
+          entityType: 'COURSE',
+          entityId: course.id,
+          metadata: { slug: course.slug },
+        },
+        tx,
+      );
+      return this.toCourseDetail(course);
     });
-    return this.toCourseDetail(course);
   }
 
-  async updateCourse(id: string, input: UpdateCourseDto) {
+  async updateCourse(
+    id: string,
+    input: UpdateCourseDto,
+    actor: AuditActorContext,
+  ) {
     const course = await this.mustFindCourse(id);
 
     if (input.slug !== undefined && input.slug !== course.slug) {
@@ -356,47 +430,61 @@ export class CatalogService {
       );
     }
 
-    const updated = await this.prisma.course.update({
-      where: { id },
-      data: {
-        title,
-        subtitle,
-        priceVnd,
-        compareAtPriceVnd,
-        searchText: buildSearchText(title, subtitle),
-        ...(input.slug === undefined ? {} : { slug: input.slug }),
-        ...(input.description === undefined
-          ? {}
-          : { description: input.description }),
-        ...(input.level === undefined ? {} : { level: input.level }),
-        ...(input.language === undefined ? {} : { language: input.language }),
-        ...(input.categoryId === undefined
-          ? {}
-          : { categoryId: input.categoryId ?? null }),
-        ...(input.learningOutcomes === undefined
-          ? {}
-          : { learningOutcomes: input.learningOutcomes }),
-        ...(input.requirements === undefined
-          ? {}
-          : { requirements: input.requirements }),
-        ...(input.targetAudience === undefined
-          ? {}
-          : { targetAudience: input.targetAudience }),
-        ...(input.coverImageKey === undefined
-          ? {}
-          : {
-              coverImageKey: input.coverImageKey || null,
-              coverImageStorage: input.coverImageKey
-                ? this.storageProvider()
-                : null,
-            }),
-      },
-      include: this.detailInclude,
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.course.update({
+        where: { id },
+        data: {
+          title,
+          subtitle,
+          priceVnd,
+          compareAtPriceVnd,
+          searchText: buildSearchText(title, subtitle),
+          ...(input.slug === undefined ? {} : { slug: input.slug }),
+          ...(input.description === undefined
+            ? {}
+            : { description: input.description }),
+          ...(input.level === undefined ? {} : { level: input.level }),
+          ...(input.language === undefined
+            ? {}
+            : { language: input.language }),
+          ...(input.categoryId === undefined
+            ? {}
+            : { categoryId: input.categoryId ?? null }),
+          ...(input.learningOutcomes === undefined
+            ? {}
+            : { learningOutcomes: input.learningOutcomes }),
+          ...(input.requirements === undefined
+            ? {}
+            : { requirements: input.requirements }),
+          ...(input.targetAudience === undefined
+            ? {}
+            : { targetAudience: input.targetAudience }),
+          ...(input.coverImageKey === undefined
+            ? {}
+            : {
+                coverImageKey: input.coverImageKey || null,
+                coverImageStorage: input.coverImageKey
+                  ? this.storageProvider()
+                  : null,
+              }),
+        },
+        include: this.detailInclude,
+      });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'course.updated',
+          entityType: 'COURSE',
+          entityId: id,
+          metadata: { slug: updated.slug },
+        },
+        tx,
+      );
+      return this.toCourseDetail(updated);
     });
-    return this.toCourseDetail(updated);
   }
 
-  async publishCourse(id: string) {
+  async publishCourse(id: string, actor: AuditActorContext) {
     const course = await this.prisma.course.findUnique({
       where: { id },
       include: this.adminDetailInclude(),
@@ -446,97 +534,234 @@ export class CatalogService {
       );
     }
 
-    const updated = await this.prisma.course.update({
-      where: { id },
-      data: {
-        status: CourseStatus.PUBLISHED,
-        publishedAt: course.publishedAt ?? new Date(),
-        archivedAt: null,
-      },
-      include: this.detailInclude,
+    return this.prisma.$transaction(async (tx) => {
+      // Only DRAFT or ARCHIVED → PUBLISHED; conditional like archiveCourse so
+      // a repeat or concurrent publish records nothing.
+      const { count } = await tx.course.updateMany({
+        where: {
+          id,
+          status: { in: [CourseStatus.DRAFT, CourseStatus.ARCHIVED] },
+        },
+        data: {
+          status: CourseStatus.PUBLISHED,
+          publishedAt: course.publishedAt ?? new Date(),
+          archivedAt: null,
+        },
+      });
+      if (count === 0) {
+        throw appError(
+          HttpStatus.CONFLICT,
+          ERROR_CODE.CONFLICT,
+          'Course is already published',
+        );
+      }
+      const updated = await tx.course.findUniqueOrThrow({
+        where: { id },
+        include: this.detailInclude,
+      });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'course.published',
+          entityType: 'COURSE',
+          entityId: id,
+          metadata: { slug: updated.slug },
+        },
+        tx,
+      );
+      return this.toCourseDetail(updated);
     });
-    return this.toCourseDetail(updated);
   }
 
-  async unpublishCourse(id: string) {
-    const course = await this.mustFindCourse(id);
-    if (course.status === CourseStatus.DRAFT) {
-      throw appError(
-        HttpStatus.CONFLICT,
-        ERROR_CODE.CONFLICT,
-        'Course is already a draft',
-      );
-    }
+  async unpublishCourse(id: string, actor: AuditActorContext) {
     // Accepts both PUBLISHED and ARCHIVED; `publishedAt` is never cleared, so
     // the slug stays locked.
-    const updated = await this.prisma.course.update({
-      where: { id },
-      data: { status: CourseStatus.DRAFT, archivedAt: null },
-      include: this.detailInclude,
-    });
-    return {
-      ...this.toCourseDetail(updated),
-      status: updated.status,
-      archivedAt: updated.archivedAt,
-    };
-  }
-
-  async archiveCourse(id: string) {
-    await this.mustFindCourse(id);
-    const updated = await this.prisma.course.update({
-      where: { id },
-      data: { status: CourseStatus.ARCHIVED, archivedAt: new Date() },
-      include: this.detailInclude,
-    });
-    return {
-      ...this.toCourseDetail(updated),
-      status: updated.status,
-      archivedAt: updated.archivedAt,
-    };
-  }
-
-  async deleteCourse(id: string): Promise<void> {
-    const course = await this.mustFindCourse(id);
-    // Phase 2 has no `enrollments` table yet; the denormalised counter is the
-    // only signal available and it is maintained in the same transaction as
-    // enrollment changes from phase 3 on.
-    if (course.enrollmentCount > 0) {
-      throw appError(
-        HttpStatus.CONFLICT,
-        ERROR_CODE.COURSE_HAS_ENROLLMENTS,
-        'Course still has students',
+    return this.prisma.$transaction(async (tx) => {
+      const course = await tx.course.findUnique({
+        where: { id },
+        select: { status: true },
+      });
+      if (!course) notFound();
+      const fromStatus = course.status;
+      // Conditional on the status just read, so `fromStatus` is exactly what
+      // this call replaced and a racing transition gets a 409.
+      const { count } = await tx.course.updateMany({
+        where: {
+          id,
+          status: { equals: fromStatus, not: CourseStatus.DRAFT },
+        },
+        data: { status: CourseStatus.DRAFT, archivedAt: null },
+      });
+      if (count === 0) {
+        throw appError(
+          HttpStatus.CONFLICT,
+          ERROR_CODE.CONFLICT,
+          'Only a published or archived course can be unpublished',
+        );
+      }
+      // A DRAFT gives enrollments no access (PLAN_SUPPLEMENT.md §4.10), so
+      // unpublishing would lock every current learner out. Counted after the
+      // update, whose row lock waits for any grant holding the course row.
+      const learners = await tx.enrollment.count({
+        where: { courseId: id, status: EnrollmentStatus.ACTIVE },
+      });
+      if (learners > 0) {
+        throw appError(
+          HttpStatus.CONFLICT,
+          ERROR_CODE.COURSE_HAS_ENROLLMENTS,
+          'Course still has students',
+        );
+      }
+      const updated = await tx.course.findUniqueOrThrow({
+        where: { id },
+        include: this.detailInclude,
+      });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'course.unpublished',
+          entityType: 'COURSE',
+          entityId: id,
+          metadata: { slug: updated.slug, fromStatus },
+        },
+        tx,
       );
-    }
-    await this.prisma.course.delete({ where: { id } });
+      return {
+        ...this.toCourseDetail(updated),
+        status: updated.status,
+        archivedAt: updated.archivedAt,
+      };
+    });
+  }
+
+  async archiveCourse(id: string, actor: AuditActorContext) {
+    await this.mustFindCourse(id);
+    return this.prisma.$transaction(async (tx) => {
+      // DATA_MODEL.md §Chuyển trạng thái: only PUBLISHED → ARCHIVED. A DRAFT
+      // was never sold (delete it instead), and re-archiving would rewrite
+      // `archivedAt`. Conditional so a concurrent transition cannot slip in.
+      const { count } = await tx.course.updateMany({
+        where: { id, status: CourseStatus.PUBLISHED },
+        data: { status: CourseStatus.ARCHIVED, archivedAt: new Date() },
+      });
+      if (count === 0) {
+        throw appError(
+          HttpStatus.CONFLICT,
+          ERROR_CODE.CONFLICT,
+          'Only a published course can be archived',
+        );
+      }
+      const updated = await tx.course.findUniqueOrThrow({
+        where: { id },
+        include: this.detailInclude,
+      });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'course.archived',
+          entityType: 'COURSE',
+          entityId: id,
+          metadata: { slug: updated.slug },
+        },
+        tx,
+      );
+      return {
+        ...this.toCourseDetail(updated),
+        status: updated.status,
+        archivedAt: updated.archivedAt,
+      };
+    });
+  }
+
+  async deleteCourse(id: string, actor: AuditActorContext): Promise<void> {
+    const course = await this.mustFindCourse(id);
+    await this.prisma.$transaction(async (tx) => {
+      try {
+        await tx.course.delete({ where: { id } });
+      } catch (error) {
+        // `enrollments.course_id` is the only Restrict FK onto courses, and
+        // any row blocks it, REVOKED included. Asking the FK instead of
+        // counting first keeps a grant racing this delete a 409, not a 500.
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2003'
+        ) {
+          throw appError(
+            HttpStatus.CONFLICT,
+            ERROR_CODE.COURSE_HAS_ENROLLMENTS,
+            'Course still has students',
+          );
+        }
+        throw error;
+      }
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'course.deleted',
+          entityType: 'COURSE',
+          entityId: id,
+          metadata: { slug: course.slug },
+        },
+        tx,
+      );
+    });
   }
 
   // ── Admin: curriculum ────────────────────────────────────────────
 
-  async createSection(courseId: string, title: string) {
+  async createSection(
+    courseId: string,
+    title: string,
+    actor: AuditActorContext,
+  ) {
     await this.mustFindCourse(courseId);
     const last = await this.prisma.section.findFirst({
       where: { courseId },
       orderBy: { position: 'desc' },
       select: { position: true },
     });
-    const section = await this.prisma.section.create({
-      data: { courseId, title, position: (last?.position ?? 0) + 1 },
-      include: { lessons: { orderBy: { position: 'asc' } } },
+    return this.prisma.$transaction(async (tx) => {
+      const section = await tx.section.create({
+        data: { courseId, title, position: (last?.position ?? 0) + 1 },
+        include: { lessons: { orderBy: { position: 'asc' } } },
+      });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'section.created',
+          entityType: 'SECTION',
+          entityId: section.id,
+          metadata: { courseId, title },
+        },
+        tx,
+      );
+      return this.toSectionOutline(section);
     });
-    return this.toSectionOutline(section);
   }
 
-  async updateSection(id: string, title: string) {
-    await this.mustFindSection(id);
-    const section = await this.prisma.section.update({
-      where: { id },
-      data: { title },
-      include: { lessons: { orderBy: { position: 'asc' } } },
+  async updateSection(id: string, title: string, actor: AuditActorContext) {
+    const current = await this.mustFindSection(id);
+    return this.prisma.$transaction(async (tx) => {
+      const section = await tx.section.update({
+        where: { id },
+        data: { title },
+        include: { lessons: { orderBy: { position: 'asc' } } },
+      });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'section.updated',
+          entityType: 'SECTION',
+          entityId: id,
+          metadata: { courseId: current.courseId, title },
+        },
+        tx,
+      );
+      return this.toSectionOutline(section);
     });
-    return this.toSectionOutline(section);
   }
 
-  async deleteSection(id: string): Promise<void> {
+  async deleteSection(id: string, actor: AuditActorContext): Promise<void> {
     const section = await this.mustFindSection(id);
     const lessons = await this.prisma.lesson.count({ where: { sectionId: id } });
     if (lessons > 0) {
@@ -549,10 +774,24 @@ export class CatalogService {
     await this.prisma.$transaction(async (tx) => {
       await tx.section.delete({ where: { id } });
       await this.recompute(tx, section.courseId);
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'section.deleted',
+          entityType: 'SECTION',
+          entityId: id,
+          metadata: { courseId: section.courseId, title: section.title },
+        },
+        tx,
+      );
     });
   }
 
-  async reorderSections(courseId: string, sectionIds: string[]): Promise<void> {
+  async reorderSections(
+    courseId: string,
+    sectionIds: string[],
+    actor: AuditActorContext,
+  ): Promise<void> {
     await this.mustFindCourse(courseId);
     const current = await this.prisma.section.findMany({
       where: { courseId },
@@ -572,10 +811,24 @@ export class CatalogService {
         }
       }
       await this.recompute(tx, courseId);
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'section.reordered',
+          entityType: 'COURSE',
+          entityId: courseId,
+          metadata: { sectionIds },
+        },
+        tx,
+      );
     });
   }
 
-  async createLesson(sectionId: string, input: CreateLessonDto) {
+  async createLesson(
+    sectionId: string,
+    input: CreateLessonDto,
+    actor: AuditActorContext,
+  ) {
     const section = await this.mustFindSection(sectionId);
     const last = await this.prisma.lesson.findFirst({
       where: { sectionId },
@@ -592,6 +845,16 @@ export class CatalogService {
         },
       });
       await this.recompute(tx, section.courseId);
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'lesson.created',
+          entityType: 'LESSON',
+          entityId: lesson.id,
+          metadata: { courseId: section.courseId, title: lesson.title },
+        },
+        tx,
+      );
       return this.toLessonOutline(lesson);
     });
   }
@@ -631,7 +894,11 @@ export class CatalogService {
     };
   }
 
-  async updateLesson(id: string, input: UpdateLessonDto) {
+  async updateLesson(
+    id: string,
+    input: UpdateLessonDto,
+    actor: AuditActorContext,
+  ) {
     const lesson = await this.mustFindLesson(id);
     const type = input.type ?? lesson.type;
 
@@ -683,6 +950,52 @@ export class CatalogService {
         },
       });
       await this.recompute(tx, lesson.section.courseId);
+
+      const changedFields = [
+        input.title !== undefined && input.title !== lesson.title && 'title',
+        type !== lesson.type && 'type',
+        input.content !== undefined &&
+          input.content !== lesson.content &&
+          'content',
+        input.isPreview !== undefined &&
+          input.isPreview !== lesson.isPreview &&
+          'isPreview',
+        videoAssetId !== lesson.videoAssetId && 'videoAssetId',
+      ].filter(Boolean);
+      const metadata = {
+        courseId: lesson.section.courseId,
+        title: updated.title,
+        changedFields,
+      };
+      // One row per request: a video change is the more specific event, so it
+      // replaces `lesson.updated` rather than being written alongside it.
+      if (videoAssetId !== lesson.videoAssetId) {
+        await this.audit.record(
+          {
+            ...actor,
+            action: videoAssetId ? 'video.attached' : 'video.detached',
+            entityType: 'LESSON',
+            entityId: id,
+            metadata: {
+              ...metadata,
+              videoAssetId: videoAssetId ?? lesson.videoAssetId,
+            },
+          },
+          tx,
+        );
+      } else {
+        await this.audit.record(
+          {
+            ...actor,
+            action: 'lesson.updated',
+            entityType: 'LESSON',
+            entityId: id,
+            metadata,
+          },
+          tx,
+        );
+      }
+
       return {
         ...this.toLessonOutline(updated),
         content: updated.content,
@@ -691,15 +1004,38 @@ export class CatalogService {
     });
   }
 
-  async deleteLesson(id: string): Promise<void> {
+  async deleteLesson(id: string, actor: AuditActorContext): Promise<void> {
     const lesson = await this.mustFindLesson(id);
     await this.prisma.$transaction(async (tx) => {
+      // Counted inside the transaction: the rows cascade with the lesson, and
+      // the audit row is the only trace of how much progress went with it.
+      const deletedProgressRows = await tx.lessonProgress.count({
+        where: { lessonId: id },
+      });
       await tx.lesson.delete({ where: { id } });
       await this.recompute(tx, lesson.section.courseId);
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'lesson.deleted',
+          entityType: 'LESSON',
+          entityId: id,
+          metadata: {
+            courseId: lesson.section.courseId,
+            title: lesson.title,
+            deletedProgressRows,
+          },
+        },
+        tx,
+      );
     });
   }
 
-  async reorderLessons(sectionId: string, lessonIds: string[]): Promise<void> {
+  async reorderLessons(
+    sectionId: string,
+    lessonIds: string[],
+    actor: AuditActorContext,
+  ): Promise<void> {
     const section = await this.mustFindSection(sectionId);
     const current = await this.prisma.lesson.findMany({
       where: { sectionId },
@@ -719,30 +1055,56 @@ export class CatalogService {
         }
       }
       await this.recompute(tx, section.courseId);
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'lesson.reordered',
+          entityType: 'SECTION',
+          entityId: sectionId,
+          metadata: { lessonIds },
+        },
+        tx,
+      );
     });
   }
 
   // ── Admin: lesson resources ──────────────────────────────────────
 
-  async addResource(lessonId: string, input: CreateResourceDto) {
+  async addResource(
+    lessonId: string,
+    input: CreateResourceDto,
+    actor: AuditActorContext,
+  ) {
     await this.mustFindLesson(lessonId);
     const last = await this.prisma.lessonResource.findFirst({
       where: { lessonId },
       orderBy: { position: 'desc' },
       select: { position: true },
     });
-    const resource = await this.prisma.lessonResource.create({
-      data: {
-        lessonId,
-        storage: this.storageProvider(),
-        objectKey: input.objectKey,
-        filename: input.filename,
-        contentType: input.contentType,
-        sizeBytes: input.sizeBytes,
-        position: (last?.position ?? 0) + 1,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const resource = await tx.lessonResource.create({
+        data: {
+          lessonId,
+          storage: this.storageProvider(),
+          objectKey: input.objectKey,
+          filename: input.filename,
+          contentType: input.contentType,
+          sizeBytes: input.sizeBytes,
+          position: (last?.position ?? 0) + 1,
+        },
+      });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'resource.created',
+          entityType: 'RESOURCE',
+          entityId: resource.id,
+          metadata: { lessonId, filename: resource.filename },
+        },
+        tx,
+      );
+      return this.toResource(resource);
     });
-    return this.toResource(resource);
   }
 
   async listResources(lessonId: string) {
@@ -754,12 +1116,27 @@ export class CatalogService {
     return { items: resources.map((resource) => this.toResource(resource)) };
   }
 
-  async deleteResource(id: string): Promise<void> {
+  async deleteResource(id: string, actor: AuditActorContext): Promise<void> {
     const resource = await this.prisma.lessonResource.findUnique({
       where: { id },
     });
     if (!resource) notFound();
-    await this.prisma.lessonResource.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.lessonResource.delete({ where: { id } });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'resource.deleted',
+          entityType: 'RESOURCE',
+          entityId: id,
+          metadata: {
+            lessonId: resource.lessonId,
+            filename: resource.filename,
+          },
+        },
+        tx,
+      );
+    });
     await this.storage.delete(resource.objectKey);
   }
 

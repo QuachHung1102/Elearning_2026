@@ -1,9 +1,8 @@
-import { isIP } from 'node:net';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { clientIp } from '../common/client-ip.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
-import { config } from '../config.js';
 import type { AuthenticatedRequest } from './session-auth.guard.js';
 import { RATE_LIMIT, type RateLimitOptions } from './rate-limit.decorator.js';
 
@@ -32,7 +31,7 @@ export class AuthRateLimitGuard implements CanActivate {
     const subject =
       options.key === 'user'
         ? (request.auth?.user.id ?? 'unauthenticated')
-        : this.clientIp(request);
+        : clientIp(request);
     const route = request.route?.path ?? request.path;
     const key = `${options.key}:${subject}:${request.method}:${route}`;
     const attempt = this.attempts.get(key);
@@ -51,22 +50,10 @@ export class AuthRateLimitGuard implements CanActivate {
         'Retry-After',
         Math.ceil((attempt.resetsAt - now) / 1_000),
       );
-      throw appError(
-        429,
-        ERROR_CODE.RATE_LIMITED,
-        'Too many authentication attempts',
-      );
+      throw appError(429, ERROR_CODE.RATE_LIMITED, 'Too many requests');
     }
 
     attempt.count += 1;
     return true;
-  }
-
-  private clientIp(request: Request): string {
-    if (config.railwayEnvironmentId) {
-      const railwayIp = request.get('x-real-ip');
-      if (railwayIp && isIP(railwayIp)) return railwayIp;
-    }
-    return request.ip ?? request.socket.remoteAddress ?? 'unknown';
   }
 }

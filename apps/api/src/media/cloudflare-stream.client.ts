@@ -34,8 +34,13 @@ export class CloudflareStreamClient implements StreamClient {
   /**
    * Signed playback token, RS256 over the Stream claim set. Cloudflare
    * verifies it against the signing key registered for this account.
+   * Cloudflare tokens are not per-viewer, so `viewerId` is not part of them.
    */
-  async signPlayback(uid: string, ttlSeconds: number): Promise<PlaybackToken> {
+  async signPlayback(
+    uid: string,
+    ttlSeconds: number,
+    _viewerId: string,
+  ): Promise<PlaybackToken> {
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
     const header = {
       alg: 'RS256',

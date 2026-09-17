@@ -10,5 +10,10 @@ export type VideoStatus = { ready: boolean; durationSeconds: number };
 
 export interface StreamClient {
   getStatus(uid: string): Promise<VideoStatus>;
-  signPlayback(uid: string, ttlSeconds: number): Promise<PlaybackToken>;
+  /** `viewerId` binds the demo URL to one user; see each implementation. */
+  signPlayback(
+    uid: string,
+    ttlSeconds: number,
+    viewerId: string,
+  ): Promise<PlaybackToken>;
 }

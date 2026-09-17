@@ -1,0 +1,31 @@
+sample.mp4 — demo video for VIDEO_DRIVER=demo
+=============================================
+
+Source:    self-generated test pattern. No third-party footage, music or
+           voice: ffmpeg's built-in `testsrc` video source and a silent
+           `anullsrc` audio track.
+License:   dedicated to the public domain by the repository owner under
+           CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/).
+Size:      1948743 bytes
+SHA-256:   c81535cc78ae3408e4b78153daeaa0c8fbeebb05741000e2b237386fa1a9512a
+Duration:  60 s (1440 frames at 24 fps)
+Video:     H.264 Constrained Baseline, 640x360, 24 fps, x264 ABR target 280 kbit/s
+Audio:     AAC, stereo, 44100 Hz, silent
+Container: MP4 with the moov box before mdat (faststart), so the browser can
+           start playback and seek before the whole file has arrived.
+
+Generation command (encoder settings match those embedded in the file:
+x264 core 164, Lavf 60.16.100):
+
+  ffmpeg -f lavfi -i testsrc=size=640x360:rate=24 \
+         -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 \
+         -t 60 \
+         -c:v libx264 -profile:v baseline -pix_fmt yuv420p -g 48 \
+         -b:v 280k -maxrate 300k -bufsize 600k \
+         -c:a aac \
+         -movflags +faststart \
+         apps/api/assets/demo/sample.mp4
+
+Served only by the API through a signed, expiring, viewer-bound URL on
+/api/v1/media/local/videos/... (DEMO_MODE.md §2). It is not placed under
+apps/web/public.

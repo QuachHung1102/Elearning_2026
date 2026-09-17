@@ -23,17 +23,22 @@ enum AuthTokenType {
 }
 
 model User {
-  id              String     @id @default(uuid()) @db.Uuid
-  email           String     @unique @db.VarChar(320)
-  passwordHash    String     @map("password_hash")
-  displayName     String     @map("display_name") @db.VarChar(80)
-  role            UserRole   @default(STUDENT)
-  status          UserStatus @default(ACTIVE)
-  emailVerifiedAt DateTime?  @map("email_verified_at") @db.Timestamptz(3)
-  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id              String      @id @default(uuid()) @db.Uuid
+  email           String      @unique @db.VarChar(320)
+  passwordHash    String      @map("password_hash")
+  displayName     String      @map("display_name") @db.VarChar(80)
+  role            UserRole    @default(STUDENT)
+  status          UserStatus  @default(ACTIVE)
+  emailVerifiedAt DateTime?   @map("email_verified_at") @db.Timestamptz(3)
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
   sessions        Session[]
   authTokens      AuthToken[]
+
+  enrollments        Enrollment[]     @relation("EnrollmentStudent")
+  grantedEnrollments Enrollment[]     @relation("EnrollmentGrantedBy")
+  lessonProgress     LessonProgress[]
+  auditLogs          AuditLog[]
 
   @@map("users")
 }
@@ -145,8 +150,9 @@ model Course {
   createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  category Category?  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  sections Section[]
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  sections    Section[]
+  enrollments Enrollment[]
 
   @@index([status, publishedAt])
   @@index([categoryId, status])
@@ -183,6 +189,7 @@ model Lesson {
   section    Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   videoAsset VideoAsset?      @relation(fields: [videoAssetId], references: [id], onDelete: Restrict)
   resources  LessonResource[]
+  progress   LessonProgress[]
 
   @@unique([sectionId, position])
   @@map("lessons")
@@ -219,4 +226,70 @@ model LessonResource {
   @@unique([lessonId, position])
   @@unique([storage, objectKey])
   @@map("lesson_resources")
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum EnrollmentSource {
+  PURCHASE
+  MANUAL_GRANT
+}
+
+// `purchaseId` / `purchase` arrive with the add_payment migration, together
+// with the `purchases` table they point at (DATA_MODEL.md §Chiến lược migration).
+model Enrollment {
+  id          String           @id @default(uuid()) @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  courseId    String           @map("course_id") @db.Uuid
+  grantedById String?          @map("granted_by_id") @db.Uuid
+  status      EnrollmentStatus @default(ACTIVE)
+  source      EnrollmentSource
+  grantedAt   DateTime         @default(now()) @map("granted_at") @db.Timestamptz(3)
+  revokedAt   DateTime?        @map("revoked_at") @db.Timestamptz(3)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user      User   @relation("EnrollmentStudent", fields: [userId], references: [id], onDelete: Restrict)
+  course    Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  grantedBy User?  @relation("EnrollmentGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  lessonId            String    @map("lesson_id") @db.Uuid
+  lastPositionSeconds Int       @default(0) @map("last_position_seconds")
+  completedAt         DateTime? @map("completed_at") @db.Timestamptz(3)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId, updatedAt])
+  @@map("lesson_progress")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String   @db.VarChar(64)
+  entityType String   @map("entity_type") @db.VarChar(40)
+  entityId   String?  @map("entity_id") @db.Uuid
+  metadata   Json?    @db.JsonB
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

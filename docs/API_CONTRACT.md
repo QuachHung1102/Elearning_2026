@@ -174,7 +174,7 @@ Giữ nguyên ba field mà Nest đang trả, **thêm** một field `code`. Một
 | `NOT_FOUND` | 404 | Không tồn tại, hoặc tồn tại nhưng người gọi không được phép biết |
 | `EMAIL_TAKEN` | 409 | Đăng ký trùng email |
 | `ALREADY_ENROLLED` | 409 | Checkout khoá đã có quyền học |
-| `COURSE_HAS_ENROLLMENTS` | 409 | Xoá cứng khoá học đã có người học |
+| `COURSE_HAS_ENROLLMENTS` | 409 | Xoá cứng khoá học đã có người học; gỡ về bản nháp khoá còn `Enrollment` `ACTIVE` |
 | `SECTION_NOT_EMPTY` | 409 | Xoá section còn lesson |
 | `CATEGORY_NOT_EMPTY` | 409 | Xoá category còn khoá học trỏ tới (FK `Restrict`, DATA_MODEL.md) |
 | `SLUG_TAKEN` | 409 | `Course.slug` hoặc `Category.slug` đã tồn tại |
@@ -213,7 +213,7 @@ Chuỗi lấy nguyên văn từ UX_PLAN.md §6.2 và §6.3 khi ở đó đã có
 | `NOT_FOUND` | Trang 404 chuẩn của web, không phải toast | Trang lỗi | Nút "Về trang chủ" |
 | `EMAIL_TAKEN` | "Email này đã được đăng ký." | Lỗi dưới ô `email` | Link "Đăng nhập" |
 | `ALREADY_ENROLLED` | "Bạn đã có quyền học khoá này." | `Alert` `info` trên trang checkout | Nút "Vào học" |
-| `COURSE_HAS_ENROLLMENTS` | "Không xoá được: khoá học đã có học viên." | `Alert` trong `ConfirmDialog` | Gợi ý "Lưu trữ" thay vì xoá |
+| `COURSE_HAS_ENROLLMENTS` | Xoá: "Không xoá được: khoá học đã có học viên." · Gỡ về bản nháp: "Không gỡ về bản nháp được: khoá học đang có học viên." | Xoá: `Alert` trong `ConfirmDialog` · Gỡ về bản nháp: `Alert` `destructive` đầu form sửa khoá học | Gợi ý "Lưu trữ" thay vì xoá hoặc gỡ về bản nháp (nút "Lưu trữ" nằm ngay cạnh "Gỡ xuất bản") |
 | `SECTION_NOT_EMPTY` | "Xoá hết bài học trong chương trước đã." | `Alert` trong `ConfirmDialog` | — |
 | `CATEGORY_NOT_EMPTY` | "Danh mục còn khoá học, không xoá được." | `Alert` trong `ConfirmDialog` | Nút "Xem khoá học trong danh mục" |
 | `SLUG_TAKEN` | "Đường dẫn này đã được dùng." | Lỗi dưới ô `slug` | — |
@@ -513,9 +513,9 @@ Mọi endpoint dưới đây: `ADMIN`, sai vai trò → `404`. Mọi mutation gh
 | `POST /admin/courses` | `/admin/courses/new` | `title` `@Length(3,160)`; `slug?` `@Matches(slug)` — thiếu thì sinh từ title, bỏ dấu tiếng Việt; `categoryId?` `@IsUUID` | `201 CourseDetail` (`DRAFT`) | `400`, `404`, `409 SLUG_TAKEN` |
 | `GET /admin/courses/{id}` | `/admin/courses/[id]` | param UUID | `200 CourseDetail + { status, archivedAt, videoAssets: [{ lessonId, provider, externalId, status, durationSeconds }] }` | `404` |
 | `PATCH /admin/courses/{id}` | `/admin/courses/[id]` | tất cả optional: `title` `@Length(3,160)`; `slug` `@Matches(slug)`; `subtitle` `@MaxLength(240)`; `description` `@MaxLength(20000)`; `priceVnd` `@IsInt @Min(0) @Max(100000000)`; `compareAtPriceVnd` `@IsInt @Min(0)`; `level` `@IsEnum(CourseLevel)`; `language` `@MaxLength(10)`; `categoryId` `@IsUUID @IsOptional` (null để gỡ); `learningOutcomes`/`requirements`/`targetAudience` `@IsString({each}) @ArrayMaxSize(12) @MaxLength(200,{each})`; `coverImageKey` `@MaxLength(400)` | `200 CourseDetail` | `400`, `404` |
-| `POST /admin/courses/{id}/publish` | `/admin/courses/[id]` | — | `200 CourseDetail` (`PUBLISHED`) | `404`, `422 COURSE_NOT_PUBLISHABLE` |
-| `POST /admin/courses/{id}/unpublish` | `/admin/courses/[id]` | — | `200` (`DRAFT`) — nhận **cả** `PUBLISHED` lẫn `ARCHIVED` làm đầu vào | `404`, `409 CONFLICT` khi khoá đang ở `DRAFT` |
-| `POST /admin/courses/{id}/archive` | `/admin/courses/[id]` | — | `200` (`ARCHIVED`) | `404` |
+| `POST /admin/courses/{id}/publish` | `/admin/courses/[id]` | — | `200 CourseDetail` (`PUBLISHED`) — nhận `DRAFT` hoặc `ARCHIVED` làm đầu vào | `404`, `422 COURSE_NOT_PUBLISHABLE`, `409 CONFLICT` khi khoá đã `PUBLISHED` |
+| `POST /admin/courses/{id}/unpublish` | `/admin/courses/[id]` | — | `200` (`DRAFT`) — nhận **cả** `PUBLISHED` lẫn `ARCHIVED` làm đầu vào | `404`, `409 CONFLICT` khi khoá đang ở `DRAFT`, `409 COURSE_HAS_ENROLLMENTS` khi khoá còn `Enrollment` `ACTIVE` (bản nháp không cho ai học, PLAN_SUPPLEMENT.md §4.10) |
+| `POST /admin/courses/{id}/archive` | `/admin/courses/[id]` | — | `200` (`ARCHIVED`) — chỉ nhận `PUBLISHED` làm đầu vào (DATA_MODEL.md §Chuyển trạng thái) | `404`, `409 CONFLICT` khi khoá không ở `PUBLISHED` |
 | `DELETE /admin/courses/{id}` | `/admin/courses` | — | `204` | `404`, `409 COURSE_HAS_ENROLLMENTS` |
 | `POST /admin/courses/{id}/sections` | `/admin/courses/[id]/curriculum` | `title` `@Length(1,160)` | `201 SectionOutline` (position = cuối) | `400`, `404` |
 | `PATCH /admin/sections/{id}` | `/admin/courses/[id]/curriculum` | `title` `@Length(1,160)` | `200 SectionOutline` | `400`, `404` |
@@ -782,7 +782,7 @@ Tên field chốt là **`database`**, không phải `db`. Bản đầu của ROA
 4. Cho qua nếu `lesson.isPreview === true`, **hoặc** `auth.user.role === ADMIN`, **hoặc** tồn tại `Enrollment` với `(userId, courseId)` và `status = ACTIVE`. Ngược lại → `403 NOT_ENROLLED`.
 5. `lesson.videoAssetId == null` → `404 NOT_FOUND`.
 6. `(await stream.getStatus(videoAsset.externalId)).ready !== true` → `409 VIDEO_NOT_READY`.
-7. `stream.signPlayback(videoAsset.externalId, PLAYBACK_TOKEN_TTL_SECONDS)`.
+7. `stream.signPlayback(videoAsset.externalId, PLAYBACK_TOKEN_TTL_SECONDS, auth.user.id)`.
 8. Trả `{ playbackUrl, kind, expiresAt }` và **không gì khác**.
 
 Ba chỗ trong danh sách này từng sai và phải giữ nguyên như trên:

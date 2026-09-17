@@ -929,10 +929,10 @@ Năm enum mang vòng đời. `PaymentAttemptStatus` đã có luật ở mục tr
 | Từ | Sang | Ai kích hoạt | Điều kiện | Side effect |
 |---|---|---|---|---|
 | `DRAFT` | `PUBLISHED` | admin | Toàn bộ luật publish ở §Course | Đặt `publishedAt` nếu còn null; `AuditLog course.published` |
-| `PUBLISHED` | `DRAFT` | admin | Không có | Khóa biến mất khỏi catalog; người đã có `Enrollment` vẫn học. `publishedAt` **giữ nguyên** |
+| `PUBLISHED` | `DRAFT` | admin | Không còn `Enrollment` `ACTIVE`, ngược lại `409 COURSE_HAS_ENROLLMENTS` — bản nháp không cho ai học (`PLAN_SUPPLEMENT.md` §4.10), muốn ngừng bán thì lưu trữ | Khóa biến mất khỏi catalog; `AuditLog course.unpublished`. `publishedAt` **giữ nguyên** |
 | `PUBLISHED` | `ARCHIVED` | admin | Không có | Đặt `archivedAt`; `AuditLog course.archived` |
 | `ARCHIVED` | `PUBLISHED` | admin | Luật publish chạy lại đủ | Xóa `archivedAt`. `publishedAt` giữ nguyên nên thứ tự catalog không nhảy |
-| `ARCHIVED` | `DRAFT` | admin | Không có | Xóa `archivedAt`; `publishedAt` **giữ nguyên**. Đây là nút "Bỏ lưu trữ" ở `UX_PLAN.md` §5.7, gọi `POST /admin/courses/{id}/unpublish`: khóa quay về bản nháp và phải chạy lại toàn bộ checklist trước khi publish lần nữa, thay vì nhảy thẳng lại `PUBLISHED`. Quy tắc khóa slug sau lần publish đầu **không** đổi — nó bám `publishedAt`, không bám `status` |
+| `ARCHIVED` | `DRAFT` | admin | Không còn `Enrollment` `ACTIVE`, ngược lại `409 COURSE_HAS_ENROLLMENTS` | Xóa `archivedAt`; `publishedAt` **giữ nguyên**. Đây là nút "Bỏ lưu trữ" ở `UX_PLAN.md` §5.7, gọi `POST /admin/courses/{id}/unpublish`: khóa quay về bản nháp và phải chạy lại toàn bộ checklist trước khi publish lần nữa, thay vì nhảy thẳng lại `PUBLISHED`. Quy tắc khóa slug sau lần publish đầu **không** đổi — nó bám `publishedAt`, không bám `status` |
 | `DRAFT` | `ARCHIVED` | — | **Không hợp lệ** | Một khóa chưa từng phát hành thì xóa cứng, không lưu trữ. Archive tồn tại để giữ quyền học của người đã mua, mà khóa `DRAFT` thì không có ai |
 
 ### `VideoAssetStatus`
@@ -1206,7 +1206,7 @@ Con số này **cố ý lệch** so với độ dài thật của file mẫu, v�
 
 Một hệ quả phải biết trước: mở màn hình `/admin/courses/[id]/lessons/[lessonId]` của một bài seed sẽ gọi `getStatus()`, và `LocalStreamClient` luôn trả `DEMO_VIDEO_DURATION_SECONDS` — thời lượng hiển thị của bài đó sẽ nhảy về đúng độ dài file mẫu. Đó là hành vi đúng (màn hình admin đang đồng bộ với driver), không phải lỗi.
 
-`externalId` **không** được trùng nhau vì `@@unique([provider, externalId])`. Quy ước: `demo/c{n}-s{n}-l{n}`. Driver demo ánh xạ mọi `externalId` bắt đầu bằng `demo/` về cùng một file mẫu trong `apps/web/public/demo/sample.mp4`. Nghĩa là 58 hàng, một file trên đĩa.
+`externalId` **không** được trùng nhau vì `@@unique([provider, externalId])`. Quy ước: `demo/c{n}-s{n}-l{n}`. Driver demo ánh xạ mọi `externalId` bắt đầu bằng `demo/` về cùng một file mẫu `apps/api/assets/demo/sample.mp4` (`DEMO_VIDEO_FILE`), phục vụ qua URL đã ký gắn với người xem (`DEMO_MODE.md` §2) chứ không qua thư mục public của web. Nghĩa là 58 hàng, một file trên đĩa.
 
 Tương tự với `LessonResource.storage = DEMO` và `Course.coverImageStorage = DEMO`.
 

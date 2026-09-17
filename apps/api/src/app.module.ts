@@ -6,6 +6,7 @@ import { CatalogModule } from './catalog/catalog.module.js';
 import { config } from './config.js';
 import { ContactModule } from './contact/contact.module.js';
 import { DevModule } from './dev/dev.module.js';
+import { EnrollmentModule } from './enrollment/enrollment.module.js';
 import { HealthModule } from './health/health.module.js';
 import { MediaModule } from './media/media.module.js';
 import { ReportingModule } from './reporting/reporting.module.js';
@@ -14,6 +15,7 @@ import { ReportingModule } from './reporting/reporting.module.js';
   imports: [
     AuthModule,
     CatalogModule,
+    EnrollmentModule,
     MediaModule,
     ReportingModule,
     ContactModule,

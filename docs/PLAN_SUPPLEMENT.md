@@ -56,7 +56,7 @@ Bốn điểm tích hợp ngoài, mỗi điểm **một** interface đặt tên 
 
 | Seam | Token / interface | Bản demo | Bản thật |
 |---|---|---|---|
-| Video | `STREAM_CLIENT` / `StreamClient`: `getStatus`, `signPlayback(externalId, ttl)` | `LocalStreamClient` trả `kind: 'mp4'` và một URL **có chữ ký, có hạn thật** trên route media dùng chung — xem rủi ro 3 ở §6. | `CloudflareStreamClient` |
+| Video | `STREAM_CLIENT` / `StreamClient`: `getStatus`, `signPlayback(externalId, ttl, viewerId)` | `LocalStreamClient` trả `kind: 'mp4'` và một URL **có chữ ký, có hạn thật** trên route media dùng chung — xem rủi ro 3 ở §6. | `CloudflareStreamClient` |
 | File | `OBJECT_STORAGE` / `ObjectStorage`: `signedUploadUrl`, `signedDownloadUrl`, `publicUrl`, `delete` | `LocalDiskStorage` + `GET`/`PUT /api/v1/media/local/*key`, ký HMAC có method trong chuỗi ký. Ảnh bìa nằm dưới prefix `public/` và đọc bằng URL **không ký**; đường `PUT` không có ngoại lệ nào. Header `Content-Type`/`Content-Disposition` suy theo prefix key (`DEMO_MODE.md` §3). | `R2ObjectStorage` |
 | Email | `MAILER` / `Mailer`: `send` | `DevInboxMailer`: một dòng JSON ra stdout kèm link đầy đủ, cộng một file `.eml` và hộp thư dev `GET /api/v1/dev/mail`. | `SmtpMailer` |
 | Thanh toán | `ZALOPAY_CLIENT` / `ZaloPayClient`: `createOrder`, `queryOrder`, `verifyCallback` | `DemoZaloPayClient` không gọi mạng. Nút "đã trả tiền" gọi `POST /api/v1/dev/payments/:appTransId/confirm`, route này dựng payload callback đúng schema rồi gọi **đúng** `checkout.confirmPayment()` mà callback thật gọi. | `ZaloPayHttpClient` |
@@ -319,7 +319,7 @@ Bổ sung:
 - Search engine ngoài, chịu lỗi chính tả, gợi ý "có phải bạn tìm" (§4.3).
 - Gợi ý khóa học bằng ML. "Khóa liên quan" là truy vấn cùng `categoryId`, sắp theo `enrollmentCount`.
 - Viết đánh giá, hỏi đáp, bình luận — giữ nguyên quyết định hoãn của kế hoạch gốc; chỉ có trường tổng hợp (§4.4).
-- Uploader video trực tiếp trong admin. Kế hoạch gốc đã hoãn; bản demo dùng đúng **một** file mẫu commit trong repo (`apps/web/public/demo/sample.mp4`) mà 58 hàng `VideoAsset` cùng trỏ tới.
+- Uploader video trực tiếp trong admin. Kế hoạch gốc đã hoãn; bản demo dùng đúng **một** file mẫu commit trong repo (`apps/api/assets/demo/sample.mp4`, phục vụ qua URL đã ký) mà 58 hàng `VideoAsset` cùng trỏ tới.
 - Lưu trữ bền cho file upload ở chế độ demo. `STORAGE_LOCAL_DIR` nằm trên đĩa của container, và Railway xóa sạch nó sau mỗi lần deploy — nên thư mục này chỉ dùng cho máy local và cho fixture seed. File nào phải sống qua một lần deploy thì phải nằm trên R2. Trên môi trường triển khai, upload ở chế độ demo là mất dữ liệu có thể đoán trước, không phải lỗi.
 - Wishlist, so sánh khóa học, "học viên cũng xem".
 - Ứng dụng mobile, PWA, tải bài học về xem offline.

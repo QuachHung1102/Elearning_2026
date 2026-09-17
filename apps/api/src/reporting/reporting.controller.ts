@@ -8,7 +8,11 @@ import {
 import { AdminGuard } from '../auth/admin.guard.js';
 import { ReportRangeQuery } from '../catalog/course.dto.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
-import { CourseStatus, VideoAssetStatus } from '../generated/prisma/enums.js';
+import {
+  CourseStatus,
+  EnrollmentStatus,
+  VideoAssetStatus,
+} from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 const TIMEZONE = 'Asia/Ho_Chi_Minh';
@@ -36,23 +40,28 @@ export class ReportingController {
   async overview(@Query() query: ReportRangeQuery) {
     const { from, to } = this.range(query);
 
-    const [newStudents, draftCourses, videoAssetsNotReady] = await Promise.all([
-      this.prisma.user.count({
-        where: { role: 'STUDENT', createdAt: { gte: from, lte: to } },
-      }),
-      this.prisma.course.count({ where: { status: CourseStatus.DRAFT } }),
-      this.prisma.videoAsset.count({
-        where: { status: { not: VideoAssetStatus.READY } },
-      }),
-    ]);
+    const [newStudents, activeEnrollments, draftCourses, videoAssetsNotReady] =
+      await Promise.all([
+        this.prisma.user.count({
+          where: { role: 'STUDENT', createdAt: { gte: from, lte: to } },
+        }),
+        // Current state, like the draft and video counts: not range-bound.
+        this.prisma.enrollment.count({
+          where: { status: EnrollmentStatus.ACTIVE },
+        }),
+        this.prisma.course.count({ where: { status: CourseStatus.DRAFT } }),
+        this.prisma.videoAsset.count({
+          where: { status: { not: VideoAssetStatus.READY } },
+        }),
+      ]);
 
     return {
-      // Purchases and enrollments arrive in later phases; the keys stay so
-      // /admin renders one shape throughout.
+      // Purchases arrive with checkout; the keys stay so /admin renders one
+      // shape throughout.
       revenueVnd: 0,
       paidPurchases: 0,
       newStudents,
-      activeEnrollments: 0,
+      activeEnrollments,
       draftCourses,
       pendingPaymentAttempts: 0,
       videoAssetsNotReady,

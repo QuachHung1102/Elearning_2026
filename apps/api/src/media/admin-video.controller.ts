@@ -10,6 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AdminGuard } from '../auth/admin.guard.js';
+import { AuthRateLimitGuard } from '../auth/auth-rate-limit.guard.js';
+import { AdminMutationRateLimit } from '../auth/rate-limit.decorator.js';
 import { CreateVideoDto } from '../catalog/course.dto.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
 import { config } from '../config.js';
@@ -28,7 +30,7 @@ const uuid = () => new ParseUUIDPipe({ version: '4' });
  * polls while the lesson screen is open.
  */
 @Controller('admin/videos')
-@UseGuards(AdminGuard)
+@UseGuards(AdminGuard, AuthRateLimitGuard)
 export class AdminVideoController {
   constructor(
     private readonly prisma: PrismaService,
@@ -36,6 +38,7 @@ export class AdminVideoController {
   ) {}
 
   @Post()
+  @AdminMutationRateLimit()
   async create(@Body() input: CreateVideoDto) {
     const provider = this.provider();
     const existing = await this.prisma.videoAsset.findUnique({

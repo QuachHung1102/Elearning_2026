@@ -49,8 +49,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     storageDriver,
     mailDriver,
     paymentDriver,
-    demoVideoUrl: env.DEMO_VIDEO_URL ?? '/demo/sample.mp4',
-    demoVideoDurationSeconds: integer(env, 'DEMO_VIDEO_DURATION_SECONDS', 30),
+    // Relative to the apps/api working directory; served only through a signed,
+    // viewer-bound URL, never from a public folder.
+    demoVideoFile: env.DEMO_VIDEO_FILE ?? 'assets/demo/sample.mp4',
+    demoVideoDurationSeconds: integer(env, 'DEMO_VIDEO_DURATION_SECONDS', 60),
     storageLocalDir: env.STORAGE_LOCAL_DIR ?? '.storage',
     mailFrom: env.MAIL_FROM ?? 'E-learning <no-reply@localhost>',
     localMailDir: env.LOCAL_MAIL_DIR ?? '.mail',

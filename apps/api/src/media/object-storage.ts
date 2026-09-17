@@ -79,6 +79,14 @@ export function resourceKey(lessonId: string, filename: string): string {
 export const downloadMessage = (key: string, exp: number) =>
   `local-file:GET:${key}:${exp}`;
 
+/**
+ * Demo video playback: the viewer id is signed in, so a URL copied out of one
+ * account does not play in another, and the key is per video asset, so one
+ * lesson's URL does not open another lesson.
+ */
+export const playbackMessage = (key: string, exp: number, viewerId: string) =>
+  `local-file:GET:${key}:${exp}:${viewerId}`;
+
 export const uploadMessage = (key: string, contentType: string, exp: number) =>
   `local-file:PUT:${key}:${contentType}:${exp}`;
 

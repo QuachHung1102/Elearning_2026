@@ -62,7 +62,11 @@ export type PlaybackToken = {
 
 export interface StreamClient {
   getStatus(uid: string): Promise<{ ready: boolean; durationSeconds: number }>;
-  signPlayback(uid: string, ttlSeconds: number): Promise<PlaybackToken>;
+  signPlayback(
+    uid: string,
+    ttlSeconds: number,
+    viewerId: string,
+  ): Promise<PlaybackToken>;
 }
 ```
 
@@ -173,7 +177,7 @@ Thứ tự bắt buộc, chép đúng từ API_CONTRACT.md §6.1. Đây là chu�
 4. Cho qua nếu `lesson.isPreview === true`, **hoặc** `auth.user.role === 'ADMIN'`, **hoặc** tồn tại `Enrollment` `(userId, courseId)` với `status = ACTIVE`. Ngược lại → `403 NOT_ENROLLED`.
 5. `lesson.videoAssetId == null` → **`404 NOT_FOUND`**.
 6. `(await stream.getStatus(videoAsset.externalId)).ready !== true` → `409 VIDEO_NOT_READY`.
-7. `stream.signPlayback(videoAsset.externalId, PLAYBACK_TOKEN_TTL_SECONDS)`.
+7. `stream.signPlayback(videoAsset.externalId, PLAYBACK_TOKEN_TTL_SECONDS, auth.user.id)`.
 8. Trả `{ playbackUrl, kind, expiresAt }` và không gì khác.
 
 Bước 3 phải đứng **trước** bước 4, và trả `404` chứ không `403`. Nếu đảo lại — "cho qua nếu preview" rồi mới kiểm `status` — thì bất kỳ ai đăng nhập, biết một `lessonId`, đều lấy được playback token cho bài preview của khóa `DRAFT` hoặc `ARCHIVED`. Điều đó phá thẳng điều kiện hoàn thành phase Catalog trong PROJECT_PLAN.md ("khóa draft không xuất hiện công khai"). `403` cũng sai vì nó xác nhận tài nguyên tồn tại.
@@ -204,27 +208,35 @@ Bước 1–6 không có nhánh nào phụ thuộc driver. Test quyền truy c�
 | Method | `CloudflareStreamClient` | `LocalStreamClient` |
 |---|---|---|
 | `getStatus(externalId)` | Gọi Stream API, đọc `readyToStream`, `duration` | Luôn `{ ready: true, durationSeconds: DEMO_VIDEO_DURATION_SECONDS }` |
-| `signPlayback(externalId, ttl)` | Ký JWT bằng signing key, trả `.../{token}/manifest/video.m3u8`, `kind: 'hls'` | Trả `DEMO_VIDEO_URL`, `kind: 'mp4'`, `expiresAt = now + ttl` |
+| `signPlayback(externalId, ttl, viewerId)` | Ký JWT bằng signing key, trả `.../{token}/manifest/video.m3u8`, `kind: 'hls'`. Token Cloudflare không gắn với người xem nên `viewerId` bị bỏ qua | Trả `{API_PUBLIC_URL}/api/v1/media/local/videos/{base64url(externalId)}.mp4?exp=…&sig=…`, `kind: 'mp4'`, `expiresAt = exp` |
 
 `externalId` là `VideoAsset.externalId` (DATA_MODEL.md). Ở demo mode mọi `externalId` bắt đầu bằng `demo/` được ánh xạ về cùng một file — 58 hàng `VideoAsset`, một file trên đĩa.
+
+URL của driver demo là URL **đã ký, có hạn thật** trên chính route media dùng chung, không phải một file tĩnh (PLAN_SUPPLEMENT.md §6 rủi ro 3). Chữ ký là HMAC của `local-file:GET:{key}:{exp}:{viewerId}` (`playbackMessage` trong `object-storage.ts`, cạnh `downloadMessage`):
+
+- `key` chứa `externalId`, mỗi bài học có một `VideoAsset` riêng → URL của bài X không mở được bài Y.
+- `viewerId` là id người xin token → khi phục vụ, `LocalFileController` đọc người xem từ cookie `elearning_session` qua `AuthService.authenticate` và ký lại với id đó. URL của user A dán sang phiên của user B → `403 SIGNATURE_INVALID` (N3.4). Không có session → `403 SIGNATURE_INVALID`.
+- `exp` hết hạn → `403 SIGNATURE_INVALID` (N3.3).
+
+Khi hợp lệ, route trả file `DEMO_VIDEO_FILE` với `Content-Type: video/mp4`, `Content-Disposition: inline`, `Accept-Ranges: bytes`, `Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`, và phục vụ một `Range` đơn (`206` + `Content-Range`; khoảng không thỏa → `416` + `Content-Range: bytes */size`) để tua được.
 
 `getStatus` trả `ready: true` là điều kiện để validation “không cho publish khi video chưa sẵn sàng” (PROJECT_PLAN.md, phase Catalog) chạy được ở local mà không cần Cloudflare.
 
 ### File media demo
 
-Một file duy nhất, commit vào repo. Đường dẫn khớp DATA_MODEL.md §Media demo:
+Một file duy nhất, commit vào repo, nằm trong `apps/api` chứ **không** nằm trong `apps/web/public` — file ở `public/` thì ai biết đường dẫn cũng tải được, và khi đó không test nào về hạn dùng hay chữ ký của playback URL có nghĩa:
 
 ```
-apps/web/public/demo/sample.mp4       # H.264 baseline + AAC, ≤ 3 MB, giấy phép CC0
-apps/web/public/demo/LICENSE.txt      # URL nguồn, tên giấy phép, ngày tải, số byte, độ dài giây
+apps/api/assets/demo/sample.mp4       # test pattern tự sinh (ffmpeg testsrc + anullsrc im lặng), H.264 Constrained Baseline 640×360 24 fps + AAC, faststart, 1.948.743 byte, 60 giây
+apps/api/assets/demo/LICENSE.txt      # nguồn (tự sinh, không có nội dung bên thứ ba), CC0, số byte, SHA-256, độ dài giây, lệnh sinh
 ```
 
-Chọn file local thay vì URL công khai trên internet: chạy được khi mất mạng, không phụ thuộc host của người khác, không có request rời máy. `DEMO_VIDEO_URL` cho phép trỏ chỗ khác mà không phải commit file mới.
+Chọn file local thay vì URL công khai trên internet: chạy được khi mất mạng, không phụ thuộc host của người khác, không có request rời máy. `DEMO_VIDEO_FILE` (đường dẫn tương đối so với thư mục làm việc `apps/api`) cho phép trỏ sang file khác mà không phải sửa code.
 
-Clip cụ thể chưa được chọn — xem "Điểm cần chủ sở hữu chốt" ở cuối tài liệu. Khi thả file vào, đo độ dài bằng lệnh rồi ghi số đo được vào cả `LICENSE.txt` lẫn `DEMO_VIDEO_DURATION_SECONDS`:
+Khi thay file, đo độ dài bằng lệnh rồi ghi số đo được vào cả `LICENSE.txt` lẫn `DEMO_VIDEO_DURATION_SECONDS`:
 
 ```powershell
-ffprobe -v error -show_entries format=duration -of csv=p=0 apps/web/public/demo/sample.mp4
+ffprobe -v error -show_entries format=duration -of csv=p=0 apps/api/assets/demo/sample.mp4
 ```
 
 `DEMO_VIDEO_DURATION_SECONDS` **chỉ** phục vụ `getStatus()`, tức là số mà màn hình `/admin/courses/[id]/lessons/[lessonId]` ghi vào `VideoAsset.durationSeconds`. Nó **không** tham gia tính tiến độ. Đặt sai thì màn hình admin hiển thị sai độ dài cho tới khi sửa; không có gì hỏng âm thầm. Bản trước của tài liệu này nói sai điều đó — xem mục "Tiến độ" ngay dưới.
@@ -262,11 +274,11 @@ Nhịp ghi, để `PUT /api/v1/lessons/{lessonId}/progress` (API_CONTRACT.md §5
 - Trước khi phát tiếp sau khi tạm dừng, nếu `Date.now() > expiresAt - 60_000` thì xin token mới trước.
 - Trên sự kiện `error` của `<video>`, xin token mới và thử lại **đúng một lần**; lần thứ hai thất bại thì hiện `ErrorState` với nút thử lại thủ công.
 
-Ở demo mode lỗi này không bao giờ xuất hiện: mp4 trong `public/` không có hạn dùng. Đây là một khác biệt demo/production thật sự, nên nó nằm trong bảng ở mục 9.
+URL của driver demo cũng hết hạn sau `PLAYBACK_TOKEN_TTL_SECONDS`, nên hai nhánh trên chạy được ở local: đặt TTL ngắn trong `.env` là tái hiện được.
 
 ### Điểm khác biệt phải biết
 
-Ở demo, file mp4 nằm trong `public/` nên ai biết URL đều tải được — nó **không** được bảo vệ. Signed URL thật của Cloudflare thì có. Đây là khác biệt cố ý, và nó kéo theo đúng một khác biệt nữa: URL demo không bao giờ hết hạn, nên đường xử lý `expiresAt` ở trên không chạy ở local. Cả hai đều nằm trong bảng ở mục 9. Không cái nào ảnh hưởng đường xác thực — nhưng đừng dùng demo mode để kết luận “video đã được bảo vệ”.
+URL demo có chữ ký, có hạn và gắn với người xem, nên đường xác thực phát video chạy thật ở local. Cái demo **không** có là hạ tầng: không encode, không adaptive bitrate, không giới hạn origin nhúng, không chống hotlink ở CDN — ai đang có phiên hợp lệ và một URL còn hạn của chính mình vẫn tải được cả file mp4. Đừng dùng demo mode để kết luận về chất lượng phát hay chi phí băng thông.
 
 ## 3. File và tài liệu ở demo mode
 
@@ -843,10 +855,11 @@ MAIL_DRIVER=demo
 PAYMENT_DRIVER=demo
 
 # ── Cấu hình driver demo (bỏ qua ở production) ────────────────
-# Đường dẫn video mẫu do web phục vụ tĩnh.
-DEMO_VIDEO_URL="/demo/sample.mp4"
+# File video mẫu, tương đối so với apps/api. API phục vụ nó qua URL đã ký
+# /api/v1/media/local/videos/…, không bao giờ qua thư mục public của web.
+DEMO_VIDEO_FILE="assets/demo/sample.mp4"
 # Độ dài thật của clip, đo bằng ffprobe. Chỉ dùng cho getStatus(); không tính tiến độ.
-DEMO_VIDEO_DURATION_SECONDS=30
+DEMO_VIDEO_DURATION_SECONDS=60
 # Thư mục lưu file, tương đối so với apps/api. Đã gitignore.
 STORAGE_LOCAL_DIR=".storage"
 # Thư mục chứa .eml của hộp thư dev. Đã gitignore.
@@ -1011,7 +1024,7 @@ Số lượng chính xác từng bảng, phân bổ chương/bài từng khóa, 
 
 Ba điều chỉ liên quan tới demo mode, và chỉ có ở đây:
 
-- Mọi `VideoAsset` có `provider = DEMO` và `externalId` dạng `demo/c{n}-s{n}-l{n}`. `LocalStreamClient` ánh xạ mọi `externalId` bắt đầu bằng `demo/` về cùng một file `apps/web/public/demo/sample.mp4`. 58 hàng, một file trên đĩa.
+- Mọi `VideoAsset` có `provider = DEMO` và `externalId` dạng `demo/c{n}-s{n}-l{n}`. `LocalStreamClient` ánh xạ mọi `externalId` bắt đầu bằng `demo/` về cùng một file `DEMO_VIDEO_FILE` (mặc định `apps/api/assets/demo/sample.mp4`), phục vụ qua URL đã ký ở mục 2. 58 hàng, một file trên đĩa.
 - `getStatus()` trả `ready: true` cho mọi hàng đó, nên validation "không cho publish khi video chưa sẵn sàng" chạy thật ở local mà không cần Cloudflare.
 - Seed ghi các file `LessonResource` thật vào `.storage/` theo đúng template key ở mục 3, để luồng tải xuống có byte thật đi qua `LocalFileController` chứ không phải một hàng database trỏ vào hư không.
 
@@ -1038,8 +1051,8 @@ Demo mode chứng minh **luồng và quyền**, không chứng minh **hạ tần
 | Callback ZaloPay | Bắt buộc HTTPS công khai cổng 443, TLS ≥ 1.2. Không có localhost | Nhận đồng đầu tiên |
 | Hoàn tiền, đối soát, hóa đơn, thuế | Không có tiền thật thì không có gì để đối soát | Mở bán |
 | Encode và adaptive bitrate | `LocalStreamClient` không encode; chất lượng, thời gian xử lý, buffering trên 3G đều chưa biết | Phase học lên production |
-| Bảo vệ video thật | mp4 trong `public/` không được bảo vệ; hết hạn signed URL, giới hạn origin, chống hotlink chỉ tồn tại ở Cloudflare | Bán khóa học đầu tiên |
-| Playback token hết hạn giữa buổi học | mp4 trong `public/` không bao giờ hết hạn, nên đường xử lý `expiresAt` ở mục 2 không bao giờ chạy ở demo. Học viên tạm dừng hai tiếng rồi phát tiếp là ca chỉ xuất hiện ở production | Phase học lên production |
+| Bảo vệ video thật | URL demo có chữ ký, có hạn và gắn với người xem, nhưng không có giới hạn origin nhúng hay chống hotlink ở CDN: ai có phiên hợp lệ và URL còn hạn của chính mình vẫn tải được cả file mp4. Những lớp đó chỉ tồn tại ở Cloudflare | Bán khóa học đầu tiên |
+| Playback token hết hạn giữa buổi học | URL demo hết hạn sau `PLAYBACK_TOKEN_TTL_SECONDS`, nên đường làm mới `expiresAt` ở mục 2 chạy được ở local (đặt TTL ngắn). Cái demo không tái hiện là token Cloudflare hết hạn giữa chừng khi player HLS còn đang tải segment | Phase học lên production |
 | Chi phí Stream/R2 | Ước tính trong PROJECT_PLAN.md chưa được kiểm chứng bằng hóa đơn thật | Định giá |
 | Khả năng vào hộp thư | SPF, DKIM, DMARC, danh tiếng domain, quy tắc gửi hàng loạt của Gmail. `.eml` trên đĩa không nói gì về việc mail có vào spam không | Bật xác minh email |
 | Bounce và complaint | Không có webhook, không có địa chỉ chết để phát hiện | Bật xác minh email |
@@ -1059,10 +1072,10 @@ Hai điều kiện để danh sách "trung thực" đó đúng, cả hai đã gh
 
 | # | Điểm | Vì sao chưa quyết được |
 |---|---|---|
-| 1 | Clip demo cụ thể: URL nguồn, giấy phép, số byte, độ dài giây | Cần chọn một file thật rồi đo bằng `ffprobe`. Mọi con số ghi trước khi có file đều là số bịa, và mục 2 đã bỏ mọi bất biến phụ thuộc vào nó nên có thể chốt sau. |
-| 2 | Câu chữ thân email | Mục 4 chốt khung, bốn `tag` và tiêu đề; câu chữ chi tiết thuộc UX_PLAN.md §9 và cần chủ sở hữu duyệt giọng văn |
+| 1 | Câu chữ thân email | Mục 4 chốt khung, bốn `tag` và tiêu đề; câu chữ chi tiết thuộc UX_PLAN.md §9 và cần chủ sở hữu duyệt giọng văn |
 
-Hai điểm từng nằm trong bảng này đã được chốt và không còn là câu hỏi mở:
+Ba điểm từng nằm trong bảng này đã được chốt và không còn là câu hỏi mở:
 
+- **Clip demo** là `apps/api/assets/demo/sample.mp4`: tự sinh bằng `ffmpeg` (`testsrc` + `anullsrc`), CC0, 1948743 byte, 60 giây. Nguồn, giấy phép, SHA-256 và lệnh sinh ghi ở `apps/api/assets/demo/LICENSE.txt`.
 - **Tham số route checkout** là `/checkout/[courseSlug]`, theo UX_PLAN.md §2.2 — tài liệu sở hữu tên trang. `POST /checkout/{courseSlug}` cố ý trả lại QR cũ, nên tham số trang phải là thứ người dùng cầm trước khi có `Purchase`.
 - **Driver seam cũ trong tài liệu khác** đã được gỡ: `PLAN_SUPPLEMENT.md` §3 dùng đúng `DevInboxMailer`/`LocalDiskStorage` và đã xóa `ALLOW_DEMO_DRIVERS_IN_PRODUCTION`; `ROADMAP.md` §2.3 đã thay bảng biến của riêng nó bằng một tham chiếu về mục 7 ở đây.

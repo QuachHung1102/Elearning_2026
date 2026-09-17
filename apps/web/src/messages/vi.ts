@@ -30,6 +30,12 @@ export const messages = {
   NETWORK_ERROR: "Không thể kết nối máy chủ. Vui lòng thử lại.",
 } as const;
 
+/** Codes whose §2.5b row words a second screen differently. */
+export const contextMessages = {
+  COURSE_HAS_ENROLLMENTS_UNPUBLISH:
+    "Không gỡ về bản nháp được: khóa học đang có học viên.",
+} as const;
+
 export type MessageCode = keyof typeof messages;
 
 export function t(code: string): string {
