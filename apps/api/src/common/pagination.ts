@@ -1,5 +1,7 @@
 export const PAGE_SIZE_DEFAULT = 20;
 export const PAGE_SIZE_MAX = 100;
+/** Far past any real list; keeps `skip` inside what Prisma accepts (`?page=1e30` was a 500). */
+export const PAGE_MAX = 1_000_000;
 
 export type Page = {
   page: number;
@@ -27,7 +29,10 @@ export function resolvePage(
   query: { page?: unknown; pageSize?: unknown } = {},
   defaultPageSize = PAGE_SIZE_DEFAULT,
 ): Page {
-  const page = Math.max(1, Math.trunc(toNumber(query.page, 1)));
+  const page = Math.min(
+    PAGE_MAX,
+    Math.max(1, Math.trunc(toNumber(query.page, 1))),
+  );
   const pageSize = Math.min(
     PAGE_SIZE_MAX,
     Math.max(1, Math.trunc(toNumber(query.pageSize, defaultPageSize))),

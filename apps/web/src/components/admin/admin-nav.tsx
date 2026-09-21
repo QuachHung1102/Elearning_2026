@@ -4,6 +4,7 @@ import {
   BookOpen,
   FolderTree,
   LayoutDashboard,
+  ScrollText,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -15,6 +16,7 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/admin/courses", label: "Khóa học", icon: BookOpen },
   { href: "/admin/categories", label: "Danh mục", icon: FolderTree },
   { href: "/admin/users", label: "Người dùng", icon: Users },
+  { href: "/admin/audit-logs", label: "Nhật ký", icon: ScrollText },
 ];
 
 /**

@@ -9,7 +9,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 
 const PASSWORD = 'correct horse battery staple';
 
-describe('Phase 3 admin users (e2e)', () => {
+describe('Phase 3 admin users and audit log (e2e)', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
 
@@ -430,5 +430,224 @@ describe('Phase 3 admin users (e2e)', () => {
       .send({ status: 'BLOCKED', reason: 'thử' })
       .expect(400);
     await setStatus(admin, randomUUID(), 'BLOCKED').expect(404);
+  });
+
+  it('lists the audit log newest first, filtered by the closed vocabulary', async () => {
+    const adminUser = await createUser('ADMIN');
+    const admin = await signIn(adminUser.email);
+    const student = await createUser('STUDENT');
+
+    // A real mutation, so the row the viewer shows is the one the endpoint wrote.
+    await setStatus(admin, student.id, 'BLOCKED').expect(200);
+
+    const at = (minute: number) =>
+      new Date(Date.UTC(2026, 8, 1, 3, minute)).toISOString();
+    const granted = (minute: number, actorId: string | null) =>
+      prisma.auditLog.create({
+        data: {
+          actorId,
+          action: 'enrollment.granted',
+          entityType: 'ENROLLMENT',
+          entityId: randomUUID(),
+          metadata: {
+            courseId: randomUUID(),
+            userId: student.id,
+            source: 'MANUAL_GRANT',
+          },
+          ipAddress: '127.0.0.1',
+          createdAt: at(minute),
+        },
+      });
+    // Inserted out of order: the answer must sort, not echo insertion order.
+    await granted(10, adminUser.id);
+    await granted(30, null);
+    await granted(20, adminUser.id);
+    await prisma.auditLog.create({
+      data: {
+        actorId: adminUser.id,
+        action: 'course.created',
+        entityType: 'COURSE',
+        entityId: randomUUID(),
+        metadata: { slug: 'khoa-hoc' },
+        createdAt: at(15),
+      },
+    });
+
+    const list = (query: string) =>
+      request(app.getHttpServer())
+        .get(`/api/v1/admin/audit-logs${query}`)
+        .set(as(admin));
+
+    // A3.13
+    const byAction = await list('?action=enrollment.granted&pageSize=200')
+      .expect(200)
+      .expect('Cache-Control', 'no-store');
+    expect(byAction.body).toMatchObject({
+      page: 1,
+      pageSize: 100,
+      total: 3,
+      totalPages: 1,
+    });
+    expect(
+      byAction.body.items.map(
+        (item: { action: string; createdAt: string }) => [
+          item.action,
+          item.createdAt,
+        ],
+      ),
+    ).toEqual([
+      ['enrollment.granted', at(30)],
+      ['enrollment.granted', at(20)],
+      ['enrollment.granted', at(10)],
+    ]);
+    expect(Object.keys(byAction.body.items[0]).sort()).toEqual(
+      [
+        'action',
+        'actorEmail',
+        'actorId',
+        'createdAt',
+        'entityId',
+        'entityType',
+        'id',
+        'ipAddress',
+        'metadata',
+      ].sort(),
+    );
+    // The system has no actor and therefore no email.
+    expect(byAction.body.items[0]).toMatchObject({
+      actorId: null,
+      actorEmail: null,
+    });
+    expect(byAction.body.items[1]).toMatchObject({
+      actorId: adminUser.id,
+      actorEmail: adminUser.email,
+      entityType: 'ENROLLMENT',
+      metadata: { userId: student.id, source: 'MANUAL_GRANT' },
+      ipAddress: '127.0.0.1',
+    });
+
+    // Unfiltered, the block written just now is the newest row.
+    const all = await list('').expect(200);
+    expect(all.body).toMatchObject({ pageSize: 20, total: 5 });
+    expect(all.body.items[0]).toMatchObject({
+      action: 'user.blocked',
+      actorId: adminUser.id,
+      actorEmail: adminUser.email,
+      entityType: 'USER',
+      entityId: student.id,
+      metadata: { reason: null, revokedSessions: 0 },
+    });
+    expect(all.body.items[0].ipAddress).toBeTruthy();
+
+    // Paging walks the same order without repeating a row.
+    const first = await list('?pageSize=2').expect(200);
+    const second = await list('?pageSize=2&page=2').expect(200);
+    expect(first.body.totalPages).toBe(3);
+    expect(
+      [...first.body.items, ...second.body.items].map(
+        (item: { id: string }) => item.id,
+      ),
+    ).toEqual(
+      all.body.items.slice(0, 4).map((item: { id: string }) => item.id),
+    );
+
+    // Entity type, actor and an inclusive time window narrow the list.
+    const courses = await list('?entityType=COURSE').expect(200);
+    expect(courses.body.total).toBe(1);
+    expect(courses.body.items[0].action).toBe('course.created');
+    const byActor = await list(
+      `?actorId=${adminUser.id}&action=enrollment.granted`,
+    ).expect(200);
+    expect(byActor.body.total).toBe(2);
+    const window = await list(
+      `?from=${encodeURIComponent(at(15))}&to=${encodeURIComponent(at(20))}`,
+    ).expect(200);
+    expect(
+      window.body.items.map((item: { action: string }) => item.action),
+    ).toEqual(['enrollment.granted', 'course.created']);
+    // One calendar day in Vietnam time, the way the web page asks for it.
+    const day = await list(
+      `?from=${encodeURIComponent('2026-09-01T00:00:00+07:00')}&to=${encodeURIComponent('2026-09-01T23:59:59.999+07:00')}`,
+    ).expect(200);
+    expect(day.body.total).toBe(4);
+    const inverted = await list(
+      `?from=${encodeURIComponent(at(30))}&to=${encodeURIComponent(at(10))}`,
+    ).expect(200);
+    expect(inverted.body.total).toBe(0);
+    // A bare date is UTC midnight.
+    const sinceDay = await list('?from=2026-09-01&action=enrollment.granted');
+    expect(sinceDay.status).toBe(200);
+    expect(sinceDay.body.total).toBe(3);
+
+    // Exact filters take a comma list (API_CONTRACT.md §2.8).
+    const twoActions = await list('?action=course.created,user.blocked');
+    expect(twoActions.status).toBe(200);
+    expect(
+      twoActions.body.items.map((item: { action: string }) => item.action),
+    ).toEqual(['user.blocked', 'course.created']);
+    const twoTypes = await list('?entityType=COURSE,USER').expect(200);
+    expect(twoTypes.body.total).toBe(2);
+
+    // A page number past any real list is clamped, not a 500.
+    const farPage = await list('?page=1e30').expect(200);
+    expect(farPage.body).toMatchObject({ page: 1_000_000, items: [] });
+
+    // Outside the vocabulary, or malformed, is a 400, never a silent empty page.
+    for (const query of [
+      '?action=enrollment.deleted',
+      '?action=ENROLLMENT.GRANTED',
+      '?action=course.created,enrollment.deleted',
+      '?entityType=Course',
+      // A blank list would match nothing and pass for an empty trail.
+      '?action=',
+      '?action=,',
+      '?entityType=',
+      '?actorId=',
+      '?actorId=not-a-uuid',
+      '?actorId=00000000-0000-0000-0000-000000000001',
+      '?from=2026-02-30',
+      '?to=yesterday',
+      // Strict ISO 8601 that `new Date` cannot read, or reads in local time.
+      '?from=2026-W35',
+      '?from=2026-244',
+      '?from=20260901',
+      '?to=2026-09-01T10',
+      `?to=${encodeURIComponent('2026-09-01T10:00:00+07')}`,
+      '?from=2026-09-01T00:00:00',
+      '?sort=createdAt:asc',
+    ]) {
+      await list(query)
+        .expect(400)
+        .expect(({ body }) => expect(body.code, query).toBe('VALIDATION_FAILED'));
+    }
+  });
+
+  it('hides the audit log from a student behind the same 404 as a missing path', async () => {
+    const student = await createUser('STUDENT');
+    const session = await signIn(student.email);
+    await prisma.auditLog.create({
+      data: {
+        actorId: null,
+        action: 'user.unblocked',
+        entityType: 'USER',
+        entityId: student.id,
+        metadata: {},
+      },
+    });
+
+    // N3.9
+    const asStudent = await request(app.getHttpServer())
+      .get('/api/v1/admin/audit-logs')
+      .set(as(session))
+      .expect(404);
+    const anonymous = await request(app.getHttpServer())
+      .get('/api/v1/admin/audit-logs')
+      .expect(404);
+    const unknownPath = await request(app.getHttpServer())
+      .get('/api/v1/khong-co-duong-nay')
+      .expect(404);
+    expect(asStudent.body.code).toBe('NOT_FOUND');
+    expect(asStudent.body).toEqual(unknownPath.body);
+    expect(anonymous.body).toEqual(unknownPath.body);
   });
 });

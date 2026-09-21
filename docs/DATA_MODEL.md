@@ -1007,7 +1007,7 @@ Cố ý **chưa** tạo, kèm mốc để tạo:
 | `purchases(status)` một phần `WHERE status = 'REFUND_REQUESTED'` | Hàng đợi duyệt hoàn tiền quét toàn bảng. Với một chủ sở hữu, số yêu cầu đang chờ đếm trên đầu ngón tay, và `purchases_status_created_at_idx` đã phục vụ được truy vấn đó. Thêm khi `purchases` vượt ~50.000 hàng |
 | `video_assets(status)` | Màn hình "video đang xử lý" quét toàn bảng. Thêm khi bảng vượt ~10.000 hàng |
 | `lesson_progress(lesson_id)` | Chưa có báo cáo theo bài. Thêm cùng lúc với tính năng đó |
-| `audit_logs(actor_id, created_at)` | Chưa có màn hình lọc theo tác nhân |
+| `audit_logs(actor_id, created_at)` | Bộ lọc "Người thực hiện" của `/admin/audit-logs` có từ giai đoạn 3, nhưng tác nhân chỉ là vài admin hoặc hệ thống (`null`), nên `actor_id` gần như không chọn lọc và truy vấn đi theo `audit_logs_created_at_idx`. Thêm khi `audit_logs` vượt ~100.000 hàng, hoặc khi học viên thành tác nhân (yêu cầu hoàn tiền, giai đoạn 4) |
 
 ## Cascade và onDelete
 

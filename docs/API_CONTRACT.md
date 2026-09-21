@@ -652,7 +652,7 @@ Reporting **chỉ đọc**. Không endpoint nào trong nhóm này được phép
 
 | Điểm | Quyết định |
 |---|---|
-| `from` / `to` | Optional. Thiếu cả hai → **30 ngày gần nhất**, tính theo `Asia/Ho_Chi_Minh`. Trang `/admin` mở lần đầu không gửi tham số nào. |
+| `from` / `to` | Optional. Thiếu cả hai → **30 ngày gần nhất**, tính theo `Asia/Ho_Chi_Minh`. Trang `/admin` mở lần đầu không gửi tham số nào. Mặc định này chỉ áp cho `/admin/reports/*`; `GET /admin/audit-logs` thiếu `from`/`to` trả toàn bộ lịch sử (nhật ký kiểm toán không được ẩn hàng cũ). |
 | Gom nhóm ngày | `AT TIME ZONE 'Asia/Ho_Chi_Minh'` trong SQL. Gom theo UTC làm doanh thu lúc 07:00 sáng giờ VN rơi vào ngày hôm trước và toàn bộ biểu đồ lệch một ngày so với UX_PLAN.md §9.3 (mọi hiển thị dùng `Asia/Ho_Chi_Minh`). |
 | `series[].date` | Chuỗi `"YYYY-MM-DD"`. **Đây là ngoại lệ duy nhất của mục 2.9** — nó là một *ngày lịch* ở một múi giờ cụ thể, không phải một thời điểm, và ép nó thành ISO UTC sẽ tái tạo đúng lỗi lệch ngày ở trên. |
 | `completionRate` | Số thực `0`–`1`, làm tròn 4 chữ số. Tử số: số học viên có `completedLessons = totalLessons`. Mẫu số: số `Enrollment` `status = ACTIVE` của khoá. Mẫu số `0` → `null` (không phải `0`). |

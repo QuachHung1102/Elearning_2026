@@ -345,3 +345,10 @@ dialog::backdrop {
 .table-scroll {
   overflow-x: auto;
 }
+
+/* Admin table headers stick to the top of the page (UX_PLAN.md §7.3), so a
+   row control reached with Shift+Tab would scroll in underneath the 47px
+   header row. WCAG 2.2 SC 2.4.11: keep it clear. */
+tbody :where(a, button, input, select, textarea) {
+  scroll-margin-top: 3.5rem;
+}

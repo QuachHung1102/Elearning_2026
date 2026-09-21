@@ -1,4 +1,5 @@
 import {
+  PAGE_MAX,
   PAGE_SIZE_DEFAULT,
   PAGE_SIZE_MAX,
   paginated,
@@ -18,6 +19,16 @@ describe('resolvePage', () => {
     'falls back to defaults for pageSize=%j',
     (pageSize) => {
       expect(resolvePage({ pageSize }).pageSize).toBe(PAGE_SIZE_DEFAULT);
+    },
+  );
+
+  it.each([1e30, '1e30', Number.MAX_VALUE])(
+    'caps page=%j so the offset stays a valid query',
+    (page) => {
+      expect(resolvePage({ page, pageSize: 100 })).toMatchObject({
+        page: PAGE_MAX,
+        skip: (PAGE_MAX - 1) * 100,
+      });
     },
   );
 

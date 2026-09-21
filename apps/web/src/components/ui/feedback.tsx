@@ -132,7 +132,7 @@ export function EmptyState({
   action,
 }: {
   title: string;
-  description: string;
+  description?: string;
   action?: ReactNode;
 }) {
   return (
@@ -143,7 +143,9 @@ export function EmptyState({
         strokeWidth={1.75}
       />
       <h2 className="text-xl font-semibold">{title}</h2>
-      <p className="text-muted-foreground-strong">{description}</p>
+      {description && (
+        <p className="text-muted-foreground-strong">{description}</p>
+      )}
       {action}
     </section>
   );

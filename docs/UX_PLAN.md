@@ -979,7 +979,7 @@ Bốn trạng thái là bắt buộc cho mọi bề mặt có dữ liệu: loadi
 | `/admin/courses/[id]/curriculum` | 2 chương + 3 bài | **"Khóa học chưa có chương nào"** / "Thêm chương đầu tiên rồi thêm bài học vào đó." → "Thêm chương" | **"Không tải được chương trình học"** → "Thử lại" |
 | `/admin/users` | 8 hàng bảng | **"Chưa có người dùng nào"** / "Người dùng sẽ xuất hiện sau khi có người đăng ký." | **"Không tải được danh sách người dùng"** → "Thử lại" |
 | `/admin/enrollments` | 8 hàng bảng | **"Chưa cấp quyền học cho ai"** / "Cấp quyền thủ công để học viên vào học ngay." → "Cấp quyền học" | **"Không tải được danh sách quyền học"** → "Thử lại" |
-| `/admin/audit-logs` | 10 hàng bảng | **"Chưa có hoạt động nào được ghi lại"** | **"Không tải được nhật ký"** → "Thử lại" |
+| `/admin/audit-logs` | 10 hàng bảng | Không lọc: **"Chưa có hoạt động nào được ghi lại"** (không CTA: nhật ký chỉ đọc, không có hành động nào tạo ra dòng từ đây — ngoại lệ của §6.1).<br>Có lọc: **"Không tìm thấy hoạt động phù hợp"** / "Thử bỏ bớt bộ lọc hoặc chọn khoảng thời gian rộng hơn." → "Xóa bộ lọc".<br>Quá trang cuối: **"Trang này không có hoạt động nào"** / "Nhật ký chỉ có {n} trang." → "Về trang 1" | **"Không tải được nhật ký"** → "Thử lại" |
 | `QrPanel` *(sau)* | Khối vuông 240px + 2 dòng | — | **"Không tạo được mã QR"** / "Thử lại sau ít phút hoặc liên hệ hỗ trợ." → "Tạo lại mã QR" |
 | Kết quả `SearchInput` | `Spinner` `sm` trong ô, giữ nguyên kết quả cũ | **"Không có kết quả cho \"{q}\""** / "Thử từ khóa ngắn hơn hoặc bỏ dấu." → "Xóa tìm kiếm" | Chip inline: "Tìm kiếm lỗi. Thử lại." |
 
