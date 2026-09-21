@@ -1,12 +1,10 @@
 "use client";
 
 import { LogOut } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 
 export function LogoutButton() {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   return (
     <button
@@ -19,8 +17,8 @@ export function LogoutButton() {
         try {
           await apiFetch("/auth/logout", { method: "POST" });
         } finally {
-          router.replace("/");
-          router.refresh();
+          // A full load: every island cached the signed-in viewer.
+          window.location.replace("/");
         }
       }}
     >

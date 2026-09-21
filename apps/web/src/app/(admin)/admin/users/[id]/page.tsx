@@ -1,21 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BlockUserDialog } from "@/components/admin/block-user-dialog";
+import { ManualGrantDialog } from "@/components/admin/manual-grant-dialog";
+import { RevokeEnrollmentDialog } from "@/components/admin/revoke-enrollment-dialog";
 import { StatTile } from "@/components/admin/shell";
 import { StatusBadge } from "@/components/ui/badge";
 import {
   adminFetch,
+  grantableCourses,
   SOURCE_LABEL,
+  UUID_V4,
   type AdminUserDetail,
 } from "@/lib/admin";
 import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Hồ sơ người dùng" };
-
-/** v4 only, like the API's `ParseUUIDPipe`: anything else would be a 400. */
-const UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default async function AdminUserPage({
   params,
@@ -24,10 +24,11 @@ export default async function AdminUserPage({
 }) {
   const { id } = await params;
   // The API answers a malformed id with 400; to a reader it is simply absent.
-  if (!UUID.test(id)) notFound();
-  const { user, enrollments } = await adminFetch<AdminUserDetail>(
-    `/admin/users/${id}`,
-  );
+  if (!UUID_V4.test(id)) notFound();
+  const [{ user, enrollments }, courses] = await Promise.all([
+    adminFetch<AdminUserDetail>(`/admin/users/${id}`),
+    grantableCourses(),
+  ]);
 
   return (
     <div className="grid gap-8">
@@ -56,7 +57,10 @@ export default async function AdminUserPage({
               Ngày đăng ký: {formatDate(user.createdAt)}
             </p>
           </div>
-          <BlockUserDialog user={user} />
+          <div className="flex flex-wrap gap-3">
+            {courses && <ManualGrantDialog user={user} courses={courses} />}
+            <BlockUserDialog user={user} />
+          </div>
         </div>
       </header>
 
@@ -88,6 +92,9 @@ export default async function AdminUserPage({
                       Ngày cấp
                     </th>
                     <th className="px-4 py-3 font-semibold">Trạng thái</th>
+                    <th className="px-4 py-3 font-semibold">
+                      <span className="sr-only">Thao tác</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -112,6 +119,11 @@ export default async function AdminUserPage({
                       </td>
                       <td className="px-4 py-2">
                         <StatusBadge status={enrollment.status} />
+                      </td>
+                      <td className="px-4 py-1 text-right">
+                        {enrollment.status === "ACTIVE" && (
+                          <RevokeEnrollmentDialog enrollment={enrollment} />
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -142,6 +154,11 @@ export default async function AdminUserPage({
                       <dd>{formatDate(enrollment.grantedAt)}</dd>
                     </div>
                   </dl>
+                  {enrollment.status === "ACTIVE" && (
+                    <div>
+                      <RevokeEnrollmentDialog enrollment={enrollment} />
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

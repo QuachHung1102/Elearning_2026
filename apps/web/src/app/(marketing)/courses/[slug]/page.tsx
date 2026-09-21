@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { Suspense } from "react";
 import { CourseMeta, PriceTag, Rating } from "@/components/catalog/course-card";
 import { CurriculumAccordion } from "@/components/catalog/curriculum";
+import { DeniedAlert } from "@/components/catalog/denied-alert";
 import { EnrollCta } from "@/components/catalog/enroll-cta";
 import {
   CourseAudience,
@@ -79,6 +81,10 @@ export default async function CoursePage({
         </ol>
       </nav>
 
+      <Suspense>
+        <DeniedAlert courseId={course.id} />
+      </Suspense>
+
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
         <div className="grid content-start gap-10">
           <header className="grid gap-4">
@@ -125,7 +131,11 @@ export default async function CoursePage({
               compareAtPriceVnd={course.compareAtPriceVnd}
               size="lg"
             />
-            <EnrollCta slug={course.slug} archived={false} />
+            <EnrollCta
+              courseId={course.id}
+              slug={course.slug}
+              archived={false}
+            />
             <p className="text-sm text-muted-foreground">
               Bài học thử mở cho mọi tài khoản đã đăng nhập, không cần trả phí.
             </p>

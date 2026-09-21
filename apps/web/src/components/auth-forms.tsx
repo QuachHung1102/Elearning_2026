@@ -59,7 +59,6 @@ export function LoginForm({
   next: string;
   passwordChanged?: boolean;
 }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -93,8 +92,9 @@ export function LoginForm({
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      router.replace(next);
-      router.refresh();
+      // A full load, not a client navigation: the header, the badges and
+      // every other island cached the previous viewer (`lib/viewer.ts`).
+      window.location.replace(next);
     } catch (error) {
       if (error instanceof ApiError && error.code === "RATE_LIMITED") {
         setRemaining(error.retryAfterSeconds ?? 60);
@@ -163,7 +163,6 @@ export function LoginForm({
 }
 
 export function RegisterForm({ next }: { next: string }) {
-  const router = useRouter();
   const [values, setValues] = useState({
     displayName: "",
     email: "",
@@ -211,8 +210,9 @@ export function RegisterForm({ next }: { next: string }) {
           password: values.password,
         }),
       });
-      router.replace(next);
-      router.refresh();
+      // A full load, not a client navigation: the header, the badges and
+      // every other island cached the previous viewer (`lib/viewer.ts`).
+      window.location.replace(next);
     } catch (error) {
       if (error instanceof ApiError && error.code === "EMAIL_TAKEN") {
         setErrors({ email: t(error.code) });

@@ -47,7 +47,7 @@ type Tx = Prisma.TransactionClient;
 
 export const CATALOG_PAGE_SIZE = 12;
 
-const CARD_SELECT = {
+export const CARD_SELECT = {
   id: true,
   slug: true,
   title: true,
@@ -1299,7 +1299,7 @@ export class CatalogService {
     };
   }
 
-  private toCourseCard(course: CourseCardRow): CourseCard {
+  toCourseCard(course: CourseCardRow): CourseCard {
     return {
       id: course.id,
       slug: course.slug,

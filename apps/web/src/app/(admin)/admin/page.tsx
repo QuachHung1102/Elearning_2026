@@ -26,7 +26,7 @@ export default async function AdminHomePage() {
       {/* Hidden, not zeroed: "0 ₫" would read as "sold nothing" when the truth
           is "selling is not built yet". */}
       <div
-        className={`grid gap-4 sm:grid-cols-2 ${CHECKOUT_ENABLED ? "xl:grid-cols-5" : "xl:grid-cols-3"}`}
+        className={`grid gap-4 sm:grid-cols-2 ${CHECKOUT_ENABLED ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}
       >
         {CHECKOUT_ENABLED && (
           <>
@@ -40,6 +40,10 @@ export default async function AdminHomePage() {
             />
           </>
         )}
+        <StatTile
+          label="Quyền học đang hiệu lực"
+          value={overview.activeEnrollments}
+        />
         <StatTile label="Khóa học bản nháp" value={overview.draftCourses} />
         <StatTile
           label="Video chưa sẵn sàng"

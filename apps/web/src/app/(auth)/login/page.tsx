@@ -1,14 +1,8 @@
-import { LEARNER_HOME } from "@/lib/routes";
+import { safeNext } from "@/lib/routes";
 import type { Metadata } from "next";
 import { LoginForm } from "@/components/auth-forms";
 
 export const metadata: Metadata = { title: "Đăng nhập" };
-
-function destination(value?: string): string {
-  return value?.startsWith("/") && !value.startsWith("//")
-    ? value
-    : LEARNER_HOME;
-}
 
 export default async function LoginPage({
   searchParams,
@@ -27,7 +21,7 @@ export default async function LoginPage({
         </p>
       </div>
       <LoginForm
-        next={destination(params.next)}
+        next={safeNext(params.next)}
         passwordChanged={params.passwordChanged === "1"}
       />
     </section>

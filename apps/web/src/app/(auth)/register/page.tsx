@@ -1,4 +1,4 @@
-import { LEARNER_HOME } from "@/lib/routes";
+import { safeNext } from "@/lib/routes";
 import type { Metadata } from "next";
 import { RegisterForm } from "@/components/auth-forms";
 
@@ -10,8 +10,7 @@ export default async function RegisterPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { next } = await searchParams;
-  const destination =
-    next?.startsWith("/") && !next.startsWith("//") ? next : LEARNER_HOME;
+  const destination = safeNext(next);
   return (
     <section className="grid gap-8">
       <div className="grid gap-2">

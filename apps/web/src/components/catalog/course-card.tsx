@@ -11,6 +11,7 @@ import {
 } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, Skeleton } from "@/components/ui/feedback";
+import { EnrolledBadge } from "./enrolled-badge";
 
 /** Hidden entirely when there is nothing to rate — never a row of empty stars. */
 export function Rating({
@@ -111,7 +112,11 @@ export function CourseMeta({ course }: { course: Course }) {
   );
 }
 
-function Cover({ course }: { course: Course }) {
+export function Cover({
+  course,
+}: {
+  course: Pick<Course, "title" | "coverUrl">;
+}) {
   if (!course.coverUrl) {
     return (
       <div
@@ -147,7 +152,7 @@ export function CourseCard({ course }: { course: Course }) {
     <li className="panel h-full transition-shadow duration-[var(--duration-fast)] hover:shadow-[var(--shadow-overlay)] focus-within:shadow-[var(--shadow-overlay)]">
       <Link
         href={`/courses/${course.slug}`}
-        className="grid h-full grid-rows-[auto_1fr] rounded-lg"
+        className="relative grid h-full grid-rows-[auto_1fr] rounded-lg"
       >
         <Cover course={course} />
         <div className="grid content-start gap-2 p-4">
@@ -172,6 +177,13 @@ export function CourseCard({ course }: { course: Course }) {
             />
           </div>
         </div>
+        {/* Over the cover: arriving after hydration, it must not move a line
+            of the card. Deviation: UX_PLAN.md §4.5 rule 6 puts it in the footer
+            next to PriceTag, where a long price wraps it onto a new line. Last
+            in the DOM so the link still reads title first. */}
+        <span className="absolute top-3 left-3">
+          <EnrolledBadge courseId={course.id} />
+        </span>
       </Link>
     </li>
   );

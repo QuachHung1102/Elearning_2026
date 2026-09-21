@@ -4,6 +4,7 @@ import { UserRound } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { User } from "@/lib/session";
+import { LEARNER_HOME } from "@/lib/routes";
 import { LogoutButton } from "./logout-button";
 import { whoAmI } from "@/lib/viewer";
 import { buttonClass } from "./ui/button";
@@ -60,6 +61,12 @@ export function UserMenu({ variant }: { variant: "desktop" | "mobile" }) {
         <span className="max-w-36 truncate">{user.displayName}</span>
       </summary>
       <div className="absolute right-0 top-full z-40 mt-2 grid w-56 rounded-lg border border-border bg-card p-2 shadow-[var(--shadow-overlay)]">
+        <Link
+          className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
+          href={LEARNER_HOME}
+        >
+          Khóa học của tôi
+        </Link>
         <Link
           className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
           href="/account"

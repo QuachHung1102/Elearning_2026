@@ -452,7 +452,7 @@ Cột **Vai trò**: `—` là công khai. Mọi endpoint mutation đều có th�
 | `GET /users/me/sessions` | any | `/account/sessions` | — | `200 { items: SessionRow[] }` | `401` |
 | `DELETE /users/me/sessions/{id}` | any | `/account/sessions` | param UUID | `204` | `401`, `404` |
 | `DELETE /users/me/sessions` | any | `/account/sessions` | — | `204` (giữ session hiện tại) | `401` |
-| `GET /admin/users` | ADMIN | `/admin/users` | `q`, `status`, `role`, `page`, `pageSize`, `sort` ∈ `createdAt`,`email` | `200 Paginated<AdminUserRow>` | `404` |
+| `GET /admin/users` | ADMIN | `/admin/users` | `q`, `email` (khớp chính xác, không phân biệt hoa thường), `status`, `role`, `page`, `pageSize`, `sort` ∈ `createdAt`,`email` | `200 Paginated<AdminUserRow>` | `404` |
 | `GET /admin/users/{id}` | ADMIN | `/admin/users/[id]` | param UUID | `200 { user: AdminUserRow, enrollments: AdminEnrollment[], purchases: PurchaseRow[] }` | `404` |
 | `PATCH /admin/users/{id}` | ADMIN | `/admin/users/[id]` | `status` `@IsEnum(UserStatus)` | `200 { user: AdminUserRow }`; `BLOCKED` thu hồi mọi session, ghi `AuditLog` | `400`, `404`, `409 SELF_ACTION_FORBIDDEN` |
 

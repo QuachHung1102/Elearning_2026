@@ -1,4 +1,5 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound, redirect, unstable_rethrow } from "next/navigation";
+import type { AdminCourseRow, CourseStatus, Paginated } from "./catalog";
 import { getSession, serverFetch, type User } from "./session";
 
 /**
@@ -72,3 +73,42 @@ export const SOURCE_LABEL: Record<EnrollmentSource, string> = {
   MANUAL_GRANT: "Cấp thủ công",
   PURCHASE: "Mua",
 };
+
+/** Version 4 only, like the API's `@IsUUID('4')`; any other id is a 400 there. */
+export const UUID_V4 =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Grant/revoke rows name the granting admin only by id: resolve it to an email. */
+export async function adminEmails(): Promise<Map<string, string>> {
+  // ponytail: every granter is an admin, and 100 admins is far past a
+  // one-owner site. Optional: on failure the column shows "—".
+  const admins = await adminFetch<{ items: AdminUserRow[] }>(
+    "/admin/users?role=ADMIN&sort=email:asc&pageSize=100",
+  ).catch((error: unknown) => {
+    unstable_rethrow(error);
+    console.error(error);
+    return { items: [] };
+  });
+  return new Map(admins.items.map(({ id, email }) => [id, email]));
+}
+
+export type GrantableCourse = { id: string; title: string; status: CourseStatus };
+
+/**
+ * The course select of `ManualGrantDialog`: PUBLISHED and ARCHIVED only (a
+ * DRAFT course cannot be granted). `null` when the list failed, so the page
+ * hides the grant button and keeps everything else working (UX_PLAN.md §6.3).
+ * ponytail: the first 100 by title; a searchable picker replaces it past that.
+ */
+export async function grantableCourses(): Promise<GrantableCourse[] | null> {
+  try {
+    const { items } = await adminFetch<Paginated<AdminCourseRow>>(
+      "/admin/courses?status=PUBLISHED,ARCHIVED&sort=title:asc&pageSize=100",
+    );
+    return items.map(({ id, title, status }) => ({ id, title, status }));
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error(error);
+    return null;
+  }
+}

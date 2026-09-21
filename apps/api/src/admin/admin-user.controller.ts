@@ -48,6 +48,13 @@ export class AdminUserListQuery extends PageQuery {
   @MaxLength(100)
   q?: string;
 
+  /** Exact, case-insensitive email match (the grant dialog's lookup). */
+  @IsOptional()
+  @trim()
+  @IsString()
+  @MaxLength(320)
+  email?: string;
+
   @IsOptional()
   @csv()
   @IsArray()
@@ -130,6 +137,9 @@ export class AdminUserController {
         { email: { contains: query.q, mode: 'insensitive' } },
         { displayName: { contains: query.q, mode: 'insensitive' } },
       ];
+    }
+    if (query.email) {
+      where.email = { equals: query.email, mode: 'insensitive' };
     }
     if (query.status?.length) where.status = { in: query.status };
     if (query.role?.length) where.role = { in: query.role };

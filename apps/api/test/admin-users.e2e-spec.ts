@@ -181,6 +181,22 @@ describe('Phase 3 admin users and audit log (e2e)', () => {
       .set(as(admin))
       .expect(400);
 
+    // `email` is an exact, case-insensitive match, never a contains search.
+    const exact = await request(app.getHttpServer())
+      .get(
+        `/api/v1/admin/users?email=${encodeURIComponent(student.email.toUpperCase())}`,
+      )
+      .set(as(admin))
+      .expect(200);
+    expect(exact.body.items.map((item: { id: string }) => item.id)).toEqual([
+      student.id,
+    ]);
+    const partial = await request(app.getHttpServer())
+      .get(`/api/v1/admin/users?email=${encodeURIComponent(fragment)}`)
+      .set(as(admin))
+      .expect(200);
+    expect(partial.body.total).toBe(0);
+
     // `q` also matches the display name, case-insensitively.
     const byName = await request(app.getHttpServer())
       .get(`/api/v1/admin/users?q=${encodeURIComponent('HỌC VIÊN')}`)
