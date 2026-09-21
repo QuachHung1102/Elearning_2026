@@ -146,6 +146,19 @@ export class CatalogService {
     return this.toCourseDetail(course);
   }
 
+  /**
+   * The learner shell (`GET /learn/{slug}`): `CourseDetail` plus `status`,
+   * whatever the status. The caller has already applied the access rule.
+   */
+  async getCourseDetailForLearner(id: string) {
+    const course = await this.prisma.course.findUnique({
+      where: { id },
+      include: this.detailInclude,
+    });
+    if (!course) notFound();
+    return { ...this.toCourseDetail(course), status: course.status };
+  }
+
   // ── Admin: categories ────────────────────────────────────────────
 
   async listCategoriesForAdmin() {

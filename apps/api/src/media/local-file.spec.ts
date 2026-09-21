@@ -2,6 +2,7 @@ import { PassThrough } from 'node:stream';
 import type { Request, Response } from 'express';
 import { LocalDiskStorage } from './local-disk.storage.js';
 import { LocalFileController } from './local-file.controller.js';
+import type { AuthService } from '../auth/auth.service.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 
 const COURSE_ID = '11111111-2222-4333-8444-555555555555';
@@ -16,7 +17,11 @@ const prisma = {
 } as unknown as PrismaService;
 
 const storage = new LocalDiskStorage();
-const controller = new LocalFileController(storage, prisma);
+const controller = new LocalFileController(
+  storage,
+  prisma,
+  {} as AuthService,
+);
 
 function queryOf(url: string): { exp: string; sig: string; key: string } {
   const parsed = new URL(url);

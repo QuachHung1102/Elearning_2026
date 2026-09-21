@@ -9,6 +9,7 @@ import { ContactModule } from './contact/contact.module.js';
 import { DevModule } from './dev/dev.module.js';
 import { EnrollmentModule } from './enrollment/enrollment.module.js';
 import { HealthModule } from './health/health.module.js';
+import { LearningModule } from './learning/learning.module.js';
 import { MediaModule } from './media/media.module.js';
 import { ReportingModule } from './reporting/reporting.module.js';
 
@@ -18,6 +19,7 @@ import { ReportingModule } from './reporting/reporting.module.js';
     AdminModule,
     CatalogModule,
     EnrollmentModule,
+    LearningModule,
     MediaModule,
     ReportingModule,
     ContactModule,

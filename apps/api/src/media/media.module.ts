@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
 import { config } from '../config.js';
+import { EnrollmentModule } from '../enrollment/enrollment.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { AdminMediaController } from './admin-media.controller.js';
 import { AdminVideoController } from './admin-video.controller.js';
@@ -9,6 +10,7 @@ import { LocalDiskStorage } from './local-disk.storage.js';
 import { LocalFileController } from './local-file.controller.js';
 import { LocalStreamClient } from './local-stream.client.js';
 import { OBJECT_STORAGE } from './object-storage.js';
+import { PlaybackController } from './playback.controller.js';
 import { R2ObjectStorage } from './r2.storage.js';
 import { STREAM_CLIENT } from './stream.client.js';
 
@@ -16,15 +18,20 @@ import { STREAM_CLIENT } from './stream.client.js';
  * Default is demo: only the exact string 'cloudflare' / 'r2' selects the real
  * client, so a typo is a loud failure in production rather than a silent one.
  *
- * `LocalFileController` is not registered at all under `STORAGE_DRIVER=r2` —
- * the route does not exist rather than being blocked by a guard.
+ * `LocalFileController` is not registered at all under `STORAGE_DRIVER=r2`
+ * with `VIDEO_DRIVER=cloudflare` (production) — the route does not exist
+ * rather than being blocked by a guard. A non-production r2 + demo-video mix
+ * registers it for the demo video alone; every other key is a 404 there.
  */
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [PrismaModule, AuthModule, EnrollmentModule],
   controllers: [
     AdminMediaController,
     AdminVideoController,
-    ...(config.storageDriver === 'r2' ? [] : [LocalFileController]),
+    PlaybackController,
+    ...(config.storageDriver === 'r2' && config.videoDriver === 'cloudflare'
+      ? []
+      : [LocalFileController]),
   ],
   providers: [
     LocalDiskStorage,

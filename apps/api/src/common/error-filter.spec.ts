@@ -45,4 +45,20 @@ describe('AppExceptionFilter', () => {
       requestId: 'request-500',
     });
   });
+
+  it('only ends a response whose headers already went out', () => {
+    const status = vi.fn();
+    const end = vi.fn();
+    const host = {
+      switchToHttp: () => ({
+        getRequest: () => ({ requestId: 'request-stream' }),
+        getResponse: () => ({ headersSent: true, status, end }),
+      }),
+    };
+
+    new AppExceptionFilter().catch(new Error('premature close'), host as never);
+
+    expect(status).not.toHaveBeenCalled();
+    expect(end).toHaveBeenCalledOnce();
+  });
 });

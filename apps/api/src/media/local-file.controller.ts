@@ -12,8 +12,10 @@ import {
 import { createReadStream } from 'node:fs';
 import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
-import { dirname, extname } from 'node:path';
+import { dirname, extname, resolve } from 'node:path';
 import type { Request, Response } from 'express';
+import { AUTH_COOKIE_NAME } from '../auth/auth.constants.js';
+import { AuthService } from '../auth/auth.service.js';
 import { SkipCsrf } from '../auth/csrf.guard.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
 import { config } from '../config.js';
@@ -25,12 +27,40 @@ import {
   RESOURCE_CONTENT_TYPES,
   RESOURCE_KEY_PREFIX,
   downloadMessage,
+  playbackMessage,
   signatureMatches,
   uploadMessage,
 } from './object-storage.js';
 
 const SAFE_KEY = /^[A-Za-z0-9/_.-]+$/;
 const PUBLIC_PREFIX = /^public\//;
+/** `LocalStreamClient` keys: `videos/{base64url(externalId)}.mp4`. */
+const VIDEO_KEY = /^videos\/[A-Za-z0-9_-]+\.mp4$/;
+
+/**
+ * One `Range: bytes=…` span, as the `<video>` element sends while seeking.
+ * `null` means "send the whole file" — no header, a syntax we do not parse,
+ * or several ranges, which RFC 9110 lets a server answer with a plain 200.
+ * `'unsatisfiable'` is a well-formed range that misses the file (416).
+ */
+export function parseByteRange(
+  header: string | undefined,
+  size: number,
+): { start: number; end: number } | 'unsatisfiable' | null {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header?.trim() ?? '');
+  if (!match || (match[1] === '' && match[2] === '')) return null;
+  if (match[1] === '') {
+    // Suffix form `-n`: the last n bytes.
+    const length = Number(match[2]);
+    if (length === 0 || size === 0) return 'unsatisfiable';
+    return { start: Math.max(size - length, 0), end: size - 1 };
+  }
+  const start = Number(match[1]);
+  const end = match[2] === '' ? size - 1 : Math.min(Number(match[2]), size - 1);
+  if (match[2] !== '' && Number(match[2]) < start) return null;
+  if (start >= size) return 'unsatisfiable';
+  return { start, end };
+}
 
 const IMAGE_TYPE_BY_EXTENSION: Record<string, string> = {
   '.jpg': 'image/jpeg',
@@ -49,9 +79,14 @@ function invalidSignature(): never {
   );
 }
 
+function notFound(): never {
+  throw appError(HttpStatus.NOT_FOUND, ERROR_CODE.NOT_FOUND, 'Not Found');
+}
+
 /**
- * Only registered when `STORAGE_DRIVER !== 'r2'` (see `media.module.ts`), so
- * in production the route does not exist rather than being guarded.
+ * Not registered under `STORAGE_DRIVER=r2` + `VIDEO_DRIVER=cloudflare` (see
+ * `media.module.ts`), so in production the route does not exist rather than
+ * being guarded. Under r2 with the demo video it serves that video only.
  *
  * This is the one place in demo mode that takes a *path* from the client.
  * Steps 1 and 2 are the trust boundary and run on every request, including the
@@ -62,6 +97,7 @@ export class LocalFileController {
   constructor(
     private readonly storage: LocalDiskStorage,
     private readonly prisma: PrismaService,
+    private readonly auth: AuthService,
   ) {}
 
   @Get('*key')
@@ -70,11 +106,17 @@ export class LocalFileController {
     @Query('exp') exp: string | undefined,
     @Query('sig') sig: string | undefined,
     @Res() response: Response,
+    @Req() request?: Request,
   ): Promise<void> {
     // Express 5 hands wildcard params back as an array of decoded segments.
     // Join before step 1, or the regex runs against "[object Object]".
     const key = this.join(rawKey);
     const absolute = this.resolve(key);
+    if (config.storageDriver === 'r2' && !VIDEO_KEY.test(key)) notFound();
+
+    if (VIDEO_KEY.test(key)) {
+      return this.playVideo(key, exp, sig, response, request);
+    }
 
     if (!PUBLIC_PREFIX.test(key)) {
       const expiry = Number(exp);
@@ -109,6 +151,8 @@ export class LocalFileController {
     @Req() request: Request,
   ): Promise<void> {
     const key = this.join(rawKey);
+    // Files live in R2 under r2; this route is here for the demo video only.
+    if (config.storageDriver === 'r2') notFound();
 
     // Step 0. The write path has no `public/` exemption at all: without this,
     // a valid upload URL could be bent into an arbitrary unsigned-read object.
@@ -166,6 +210,62 @@ export class LocalFileController {
 
     await mkdir(dirname(absolute), { recursive: true });
     await writeFile(absolute, bytes);
+  }
+
+  /**
+   * Demo video playback (DEMO_MODE.md §2). The signature binds the key (one
+   * video asset, so one lesson) and the viewer, who is read from the session
+   * cookie here rather than trusted from the URL: a link copied into another
+   * account, or opened signed out, fails exactly like a forged one.
+   * Every external id plays the same single file.
+   */
+  private async playVideo(
+    key: string,
+    exp: string | undefined,
+    sig: string | undefined,
+    response: Response,
+    request: Request | undefined,
+  ): Promise<void> {
+    const expiry = Number(exp);
+    if (!Number.isInteger(expiry) || expiry <= Date.now() / 1000) {
+      invalidSignature();
+    }
+    const token: unknown = request?.cookies?.[AUTH_COOKIE_NAME];
+    const viewer =
+      typeof token === 'string' ? await this.auth.authenticate(token) : null;
+    if (
+      !viewer ||
+      typeof sig !== 'string' ||
+      !signatureMatches(playbackMessage(key, expiry, viewer.user.id), sig)
+    ) {
+      invalidSignature();
+    }
+
+    const path = resolve(process.cwd(), config.demoVideoFile);
+    const file = await stat(path).catch(() => null);
+    if (!file?.isFile()) {
+      throw appError(HttpStatus.NOT_FOUND, ERROR_CODE.NOT_FOUND, 'Not Found');
+    }
+
+    response.setHeader('Content-Type', 'video/mp4');
+    response.setHeader('Content-Disposition', 'inline');
+    response.setHeader('Accept-Ranges', 'bytes');
+    response.setHeader('Cache-Control', 'private, no-store');
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+
+    const range = parseByteRange(request?.headers.range, file.size);
+    if (range === 'unsatisfiable') {
+      response.setHeader('Content-Range', `bytes */${file.size}`);
+      response.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).end();
+      return;
+    }
+    const { start, end } = range ?? { start: 0, end: file.size - 1 };
+    if (range) {
+      response.status(HttpStatus.PARTIAL_CONTENT);
+      response.setHeader('Content-Range', `bytes ${start}-${end}/${file.size}`);
+    }
+    response.setHeader('Content-Length', String(end - start + 1));
+    await pipeline(createReadStream(path, { start, end }), response);
   }
 
   private join(rawKey: string | string[]): string {

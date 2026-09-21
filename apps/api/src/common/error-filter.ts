@@ -33,6 +33,13 @@ export class AppExceptionFilter implements ExceptionFilter {
     const http = host.switchToHttp();
     const request = http.getRequest<RequestWithId>();
     const response = http.getResponse<Response>();
+    // A stream that failed after the status line went out (a `<video>` that
+    // aborts a range request on every seek) has nothing left to report to:
+    // writing a JSON body now would throw ERR_HTTP_HEADERS_SENT.
+    if (response.headersSent) {
+      response.end();
+      return;
+    }
     const status = this.status(exception);
     const source =
       exception instanceof HttpException ? exception.getResponse() : undefined;
