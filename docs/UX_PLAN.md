@@ -409,7 +409,7 @@ Ba layout bảo vệ gọi API rồi xử lý như sau:
 | Layout | Kiểm tra | Khi thất bại |
 |---|---|---|
 | `(learner)/layout.tsx` | `GET /api/v1/auth/me` trả 200 | `redirect('/login?next=' + pathname)` |
-| `(player)/learn/[courseSlug]/layout.tsx` | `me` 200 **và** enrollment active cho khóa | Chưa đăng nhập → `/login?next=…`. Đã đăng nhập nhưng chưa có quyền → `redirect('/courses/[slug]?denied=1')` |
+| `(player)/learn/[courseSlug]/layout.tsx` | `me` 200 **và** enrollment active cho khóa | Chưa đăng nhập → `/login?next=…`. Đã đăng nhập nhưng chưa có quyền → `redirect('/courses/[slug]?denied=1')`, trừ bài "Học thử" của khóa `PUBLISHED`: layout dựng khung học thử từ outline công khai (§5.1 bước 3) |
 | `(admin)/layout.tsx` | `me` 200 và `role === 'ADMIN'` | Chưa đăng nhập → `/login?next=…`. Sai vai trò → `notFound()` (404 chứ không phải 403, để không lộ sự tồn tại của khu quản trị) |
 
 **Chưa xác minh email không chặn gì cả.** `(learner)` và `(player)` chỉ hỏi `me` 200, không hỏi `emailVerifiedAt`. Người được admin cấp quyền học thủ công phải vào học được ngay — đó là con đường duy nhất có enrollment ở vòng đầu, và chặn nó là chặn đúng luồng quan trọng nhất. Thay vào đó: khi `me.emailVerifiedAt === null`, layout `(learner)` hiện `Alert` `warning` `banner` dính đầu trang, không đóng được — **"Email của bạn chưa được xác minh."** / "Xác minh để nhận thông báo về khóa học và khôi phục được mật khẩu." → nút "Gửi lại email xác minh" (gọi `POST /api/v1/auth/verify-email/request`, cùng cooldown ở §3.2). Banner biến mất ngay khi `emailVerifiedAt` khác null. Khu `(admin)` không có banner này.
@@ -838,13 +838,13 @@ Nhãn hai nút của từng dialog — nút chính nhắc lại hành động, k
 |---|---|---|---|
 | 1 | `/` | Gõ từ khóa vào `SearchHero` hoặc chạm một `CategoryChip` | Không tải được danh mục → ẩn hàng chip, ô tìm kiếm vẫn dùng được (giảm cấp, không chặn) |
 | 2 | `/courses?q=…` | Lọc theo danh mục, trình độ, giá; sắp xếp | 0 kết quả → `EmptyState` biến thể `search` kèm nút "Xóa bộ lọc". Lỗi mạng → `ErrorState` `network`, giữ nguyên bộ lọc trên URL để "Thử lại" không mất ngữ cảnh |
-| 3 | `/courses/[slug]` | Đọc mô tả, mở `CurriculumAccordion`, bấm một bài "Học thử" | Slug không tồn tại hoặc khóa ở `DRAFT` → `not-found.tsx`. Bài preview không phát được → `PreviewDialog` chuyển sang `ErrorState` kèm "Thử lại", phần còn lại của trang vẫn nguyên |
+| 3 | `/courses/[slug]` | Đọc mô tả, mở `CurriculumAccordion`, bấm một bài "Học thử" | Slug không tồn tại hoặc khóa ở `DRAFT` → `not-found.tsx`. Bài "Học thử" mở trong chính trình học `/learn/[courseSlug]/[lessonId]` ở chế độ học thử (Phase 3 chưa dựng `PreviewDialog`): layout dựng khung từ outline công khai, "Trước/Sau" chỉ bước giữa các bài học thử, không ghi tiến độ. Chưa đăng nhập → `/login?next=…` (playback token bắt buộc có phiên). Bài preview không phát được → `ErrorState` trong khung player kèm "Thử lại" |
 | 4 | `/courses/[slug]` | Bấm `EnrollCta` | Chưa đăng nhập → sang bước 5. Đã có quyền → nhảy thẳng bước 9 |
 | 5 | `/login?next=/courses/[slug]` | Điền email và mật khẩu | 401 → `Alert` dưới form: "Email hoặc mật khẩu không đúng." Không nói rõ sai cái nào. 429 → nút khóa kèm đếm ngược. 403 CSRF → tự lấy lại token và gửi lại **một** lần, thất bại thì yêu cầu tải lại trang |
 | 6 | `/register` *(nếu người dùng mới)* | Điền tên hiển thị, email, mật khẩu ≥ 8 ký tự | 409 → lỗi ngay tại ô email: "Email này đã được đăng ký." kèm link "Đăng nhập". Lỗi validate → focus vào ô sai đầu tiên |
 | 7 | `/verify-email` | Nhận thông báo đã gửi thư | Driver mail ở chế độ demo → `DemoNotice` hiện link xác minh kèm nút sao chép. Đây là cách duy nhất xác minh được trên máy cá nhân |
 | 8 | `/courses/[slug]` (quay lại theo `next`) | `EnrollCta` giờ hiện "Liên hệ để đăng ký" (checkout tắt) hoặc "Đăng ký học · giá" (checkout bật) | Checkout tắt → `/contact?course=[slug]`, form gửi `POST /contact` kèm `courseSlug`, thư về hộp thư chủ sở hữu, rồi admin cấp quyền thủ công theo luồng 5.4. Checkout bật → bảng nhánh ở §3.1 |
-| 9 | `/learn/[courseSlug]` | Layout tự chuyển hướng tới bài phù hợp | Không có enrollment → về `/courses/[slug]?denied=1`, trang chi tiết hiện `Alert` "Bạn chưa có quyền học khóa này." |
+| 9 | `/learn/[courseSlug]` | Layout tự chuyển hướng tới bài phù hợp | Không có enrollment → về `/courses/[slug]?denied=1`, trang chi tiết hiện `Alert` "Bạn chưa có quyền học khóa này." Ngoại lệ: mở thẳng một bài "Học thử" của khóa `PUBLISHED` thì layout không chuyển hướng mà dựng khung học thử (bước 3); mọi bài khác vẫn về `?denied=1` |
 | 10 | `/learn/[courseSlug]/[lessonId]` | Xem video, đọc nội dung, bấm "Đánh dấu hoàn thành và học tiếp" | Không lấy được URL phát → `ErrorState` trong khung player, nội dung chữ và tài liệu vẫn đọc được. Lưu tiến độ thất bại → giữ tiến độ trong bộ nhớ, hiện chip "Chưa đồng bộ tiến độ", tự thử lại khi có mạng |
 
 ### 5.2 Học viên quay lại khóa đang học dở
@@ -856,7 +856,7 @@ Nhãn hai nút của từng dialog — nút chính nhắc lại hành động, k
 | 3 | `/my-courses` | Bấm "Tiếp tục học" trên `CourseProgressCard` | Khóa đã bị `ARCHIVED` → vẫn vào học được; hiện `Alert` info "Khóa học này đã ngừng nhận học viên mới. Bạn vẫn học được đầy đủ." |
 | 4 | `/learn/[courseSlug]` | Server đọc `LessonProgress`, `redirect` tới bài chưa hoàn thành đầu tiên | Toàn bộ bài đã xong → chuyển tới bài **cuối cùng** kèm `Toast` "Bạn đã hoàn thành khóa học này." |
 | 5 | `/learn/[courseSlug]/[lessonId]` | Player tự tua tới `lastPositionSeconds` khi có metadata | Vị trí lưu vượt quá thời lượng video (video được thay) → bắt đầu từ 0, không báo lỗi |
-| 6 | Trang bài học | `CurriculumAccordion` tự mở chương chứa bài hiện tại và cuộn bài đó vào tầm nhìn | Curriculum lỗi tải → sidebar hiện `ErrorState` `sm`, `LessonNav` Trước/Sau vẫn cho đi tiếp |
+| 6 | Trang bài học | `CurriculumAccordion` tự mở chương chứa bài hiện tại và cuộn bài đó vào tầm nhìn | Curriculum lỗi tải → `learn/error.tsx` hiện **"Không tải được chương trình học"** → "Thử lại" thay cho cả trình học. Khung, curriculum và dữ liệu Trước/Sau cùng đến từ một lời gọi `GET /learn/{slug}`, nên không có trạng thái "sidebar lỗi nhưng `LessonNav` vẫn chạy". Lỗi riêng nội dung bài học → `[lessonId]/error.tsx` bên trong layout |
 
 ### 5.3 Admin dựng một khóa học từ rỗng tới xuất bản
 
@@ -957,6 +957,7 @@ Bốn trạng thái là bắt buộc cho mọi bề mặt có dữ liệu: loadi
 - Skeleton chỉ dùng cho lần tải đầu. Khi lọc lại hay đổi trang, giữ nội dung cũ ở `opacity: 0.6` kèm `aria-busy="true"` — người dùng không mất chỗ đang nhìn.
 - `EmptyState` luôn có CTA. Trạng thái rỗng không có lối ra là ngõ cụt.
 - `ErrorState` luôn nói được cái gì hỏng và làm gì tiếp. Không bao giờ hiện mã lỗi thô hay stack trace.
+  Ngoại lệ đã biết: URL file đã ký (`/api/v1/media/local/*`) được trình duyệt mở trực tiếp, không qua trang web nào. Mở lại một URL tài liệu cũ đã hết hạn thì trình duyệt hiện body JSON `403 SIGNATURE_INVALID` thô. `ResourceList` không có toast "Liên kết tải xuống đã hết hạn." vì mỗi lần bấm "Tải xuống" đều ký URL mới rồi điều hướng ngay — lối ra là bấm lại "Tải xuống" trên trang bài học.
 - Skeleton mang `aria-hidden="true"`; vùng chứa mang `aria-busy="true"` và một `<span class="sr-only">Đang tải…</span>`.
 
 ### 6.2 Bảng trạng thái theo bề mặt

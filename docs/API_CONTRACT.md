@@ -207,9 +207,9 @@ Chuỗi lấy nguyên văn từ UX_PLAN.md §6.2 và §6.3 khi ở đó đã có
 | `UNAUTHENTICATED` | "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." | `Toast` `error` không tự đóng | Chuyển `/login?next=` sau 2 giây |
 | `INVALID_CREDENTIALS` | "Email hoặc mật khẩu không đúng." | `Alert` `destructive` dưới form | — (không focus ô nào: không được gợi ý sai ô nào) |
 | `CSRF_INVALID` | "Không thực hiện được thao tác. Tải lại trang rồi thử lại." | `Alert` sau khi đã tự thử lại **một** lần | Nút "Tải lại trang" |
-| `NOT_ENROLLED` | "Bạn chưa có quyền học khoá này." | Trang lỗi trong layout player | Nút "Xem khoá học" → `/courses/[slug]` |
+| `NOT_ENROLLED` | "Bạn chưa có quyền học khoá này." | Player chuyển hướng về `/courses/[slug]?denied=1`, trang khoá học hiện `Alert` `warning` (UX_PLAN.md §2.3, §5.1). Riêng bài "Học thử" vẫn mở trong player ở chế độ học thử | Trang khoá học chính là hành động kèm theo |
 | `EMAIL_NOT_VERIFIED` | "Xác minh email trước khi thanh toán." | `Alert` `warning` trên trang checkout `/checkout/[courseSlug]` | Nút "Gửi lại email xác minh" → `POST /auth/verify-email/request`, cooldown 120 giây như banner ở UX_PLAN.md §3.2 |
-| `SIGNATURE_INVALID` | "Liên kết tải xuống đã hết hạn." | `Toast` `error` | Nút "Lấy liên kết mới" |
+| `SIGNATURE_INVALID` | Không có câu trên web. `GET /lessons/{id}/resources/{rid}/download` không bao giờ trả mã này: mỗi lần bấm "Tải xuống" ký một URL mới rồi điều hướng ngay, nên `ResourceList` không có nhánh toast. Mã chỉ đến từ `/media/local/*` khi ai đó mở lại một URL cũ đã hết hạn hoặc sai chữ ký | Trình duyệt hiện body JSON `403` thô (khoảng trống đã biết, `PHASE_3_REPORT.md` §4) | Bấm lại "Tải xuống" trên trang bài học |
 | `NOT_FOUND` | Trang 404 chuẩn của web, không phải toast | Trang lỗi | Nút "Về trang chủ" |
 | `EMAIL_TAKEN` | "Email này đã được đăng ký." | Lỗi dưới ô `email` | Link "Đăng nhập" |
 | `ALREADY_ENROLLED` | "Bạn đã có quyền học khoá này." | `Alert` `info` trên trang checkout | Nút "Vào học" |

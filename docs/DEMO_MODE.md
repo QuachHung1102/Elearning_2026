@@ -117,10 +117,22 @@ Ba điểm về mẫu này:
 Controller chỉ tồn tại ở demo cũng khai báo theo cách này:
 
 ```ts
-controllers: process.env.STORAGE_DRIVER === 'r2' ? [] : [LocalFileController],
+controllers: [
+  ...(config.storageDriver === 'r2' && config.videoDriver === 'cloudflare'
+    ? []
+    : [LocalFileController]),
+],
 ```
 
-Ở production route đó **không tồn tại**, không phải bị guard chặn.
+Ở production (cả hai driver thật, `assertNoDemoDriversInProduction` bắt buộc) route đó **không tồn tại**, không phải bị guard chặn.
+
+Từ Phase 3 route này còn phục vụ video mẫu đã ký (mục 2), nên điều kiện gồm cả `VIDEO_DRIVER`:
+
+| `STORAGE_DRIVER` | `VIDEO_DRIVER` | `/api/v1/media/local/*` |
+|---|---|---|
+| `demo` | bất kỳ | Đủ mọi key: tài liệu, ảnh bìa, upload `PUT`, video mẫu `videos/*.mp4` |
+| `r2` | `demo` (chỉ ngoài production) | Chỉ key `videos/{base64url}.mp4` của video mẫu; mọi key khác, cả `GET` lẫn `PUT`, trả `404` — file thật nằm trên R2 (`local-file-r2.spec.ts`) |
+| `r2` | `cloudflare` | Route không tồn tại |
 
 ### CSRF trên các endpoint mới
 
@@ -335,7 +347,7 @@ Dùng lại `AUTH_JWT_SECRET` thay vì thêm biến mới, có tiền tố `loca
 
 Không ký `maxBytes` vào URL: `MAX_UPLOAD_BYTES` là hằng số phía server, handler đọc trực tiếp. Ký một giá trị mà chỉ server đặt và chỉ server đọc là thêm bề mặt mà không thêm bảo đảm.
 
-### `LocalFileController` (chỉ tồn tại khi `STORAGE_DRIVER=demo`)
+### `LocalFileController` (đủ mọi key khi `STORAGE_DRIVER=demo`; chỉ video mẫu khi `r2` + `VIDEO_DRIVER=demo` — bảng ở mục 1)
 
 #### Khai báo route — cú pháp Express 5
 

@@ -548,7 +548,7 @@ Ba chi tiết của `AuditLog` phải viết đúng, cả ba đều làm code ch
 |---|---|
 | `src/enrollment/enrollment.service.spec.ts` | cấp trùng không tạo bản ghi thứ hai; thu hồi rồi cấp lại thì tái kích hoạt bản ghi cũ; mọi lần đều ghi `AuditLog` |
 | `src/media/playback-token.spec.ts` | token hết hạn bị từ chối; token của user A không dùng được cho user B; token của lesson X không dùng được cho lesson Y; sửa một byte trong chữ ký → từ chối |
-| `src/learning/progress.service.spec.ts` | `lastPositionSeconds` không lùi về nhỏ hơn giá trị đã lưu; vượt 95% thời lượng thì set `completedAt`; `completedAt` đã có thì không bị ghi đè |
+| `src/learning/progress.service.spec.ts` | `lastPositionSeconds` không lùi về nhỏ hơn giá trị đã lưu; `completed: true` thì set `completedAt`; `completedAt` đã có thì không bị ghi đè. Ngưỡng 95% tính ở **client** trên `video.duration` của thẻ `<video>` đang phát (spec hàm thuần ở `apps/web`), rồi client gửi `completed: true` — server không tự hoàn thành theo `Lesson.durationSeconds` vì thời lượng seed là số giả |
 | `src/enrollment/enrollment.service.spec.ts` (mở rộng) | `hasAccess()` trả `true` cho course `ARCHIVED` khi enrollment còn `ACTIVE` |
 | `test/learning.e2e-spec.ts` | Fixture là seed thật: `student3@elearning.local` chưa mua, `student1@elearning.local` đã có quyền học C1 `lap-trinh-web-voi-react-va-nextjs`, C6 `lap-trinh-di-dong-voi-react-native` là khóa `ARCHIVED`. Ma trận: user chưa enroll `403 NOT_ENROLLED` ở `playback-token`; user đã enroll `200`; sau khi revoke thì `403`; bài `isPreview` của khóa `PUBLISHED` → **`401` cho khách chưa đăng nhập**, **`200` cho người đã đăng nhập chưa mua**; bài `isPreview` của khóa `DRAFT` → `404`; admin không có `Enrollment` → `200`; bài `ARTICLE` → `404`; `GET /lessons/{id}/content` cho user chưa enroll `403` và body không có `content`; đăng nhập bằng tài khoản `BLOCKED` → `401 INVALID_CREDENTIALS` |
 
@@ -568,7 +568,7 @@ Ba chi tiết của `AuditLog` phải viết đúng, cả ba đều làm code ch
 12. Copy `playbackUrl` ở bước 6 — nó là một URL trên `/api/v1/media/local/…` có `exp` và `sig` — dán vào cửa sổ ẩn danh sau khi hết TTL → `403 SIGNATURE_INVALID`.
 13. Admin thu hồi quyền → học viên tải lại trang học → bị đẩy về `/courses/[slug]?denied=1` kèm `Alert` "Bạn chưa có quyền học khóa này."
 14. Admin archive khóa đó rồi cấp lại quyền → học viên vẫn vào `/learn/[courseSlug]` học bình thường kèm `Alert` info "Khóa học này đã ngừng nhận học viên mới", nhưng `/courses` ở cửa sổ ẩn danh không còn khóa đó.
-15. Admin `/admin/users/[id]` → "Khóa tài khoản" → học viên tải lại bất kỳ trang nào → bị đăng xuất; đăng nhập lại → `Alert` "Tài khoản đã bị khóa. Liên hệ hỗ trợ để được mở lại." `/admin/audit-logs` có dòng `user.blocked`. Mở khóa lại.
+15. Admin `/admin/users/[id]` → "Khóa tài khoản" → học viên tải lại bất kỳ trang nào → bị đăng xuất; đăng nhập lại → `Alert` "Email hoặc mật khẩu không đúng." — **đúng câu của sai mật khẩu**, không có câu "Tài khoản đã bị khóa" (N3.14, API_CONTRACT.md §6.3: câu riêng là một oracle trạng thái tài khoản). `/admin/audit-logs` có dòng `user.blocked`. Mở khóa lại.
 16. Đăng nhập admin, mở `/learn/kien-truc-backend-voi-nestjs` (khóa C5 `DRAFT`) → vào được nhờ nhánh bypass theo vai trò, header hiện banner "Bạn đang xem trước với quyền quản trị. Tiến độ học không được ghi lại." `psql` xác nhận **không** có hàng `lesson_progress` nào mới.
 17. Đi hết trình học chỉ bằng bàn phím ở 375px và 1440px.
 
