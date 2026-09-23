@@ -9,6 +9,7 @@ datasource db {
 
 enum UserRole {
   STUDENT
+  INSTRUCTOR
   ADMIN
 }
 
@@ -39,6 +40,7 @@ model User {
   grantedEnrollments Enrollment[]     @relation("EnrollmentGrantedBy")
   lessonProgress     LessonProgress[]
   auditLogs          AuditLog[]
+  taughtCourses      Course[]         @relation("CourseInstructor")
 
   @@map("users")
 }
@@ -124,6 +126,7 @@ model Category {
 model Course {
   id                   String           @id @default(uuid()) @db.Uuid
   categoryId           String?          @map("category_id") @db.Uuid
+  instructorId         String?          @map("instructor_id") @db.Uuid
   slug                 String           @unique @db.VarChar(120)
   title                String           @db.VarChar(160)
   subtitle             String?          @db.VarChar(240)
@@ -151,11 +154,13 @@ model Course {
   updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   category    Category?    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  instructor  User?        @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
   sections    Section[]
   enrollments Enrollment[]
 
   @@index([status, publishedAt])
   @@index([categoryId, status])
+  @@index([instructorId])
   @@map("courses")
 }
 

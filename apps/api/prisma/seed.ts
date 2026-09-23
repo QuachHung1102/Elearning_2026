@@ -44,6 +44,13 @@ const users = [
     role: UserRole.STUDENT,
     emailVerifiedAt: null,
   },
+  {
+    email: 'instructor@elearning.local',
+    password: 'Demo!Instructor123',
+    displayName: 'Giảng viên demo',
+    role: UserRole.INSTRUCTOR,
+    emailVerifiedAt: verifiedAt,
+  },
 ] as const;
 
 try {
@@ -76,6 +83,18 @@ try {
   process.stdout.write(`Seeded ${users.length} demo accounts\n`);
   await seedCatalog(prisma);
   await seedLearning(prisma);
+  const instructor = await prisma.user.findUniqueOrThrow({
+    where: { email: 'instructor@elearning.local' },
+    select: { id: true },
+  });
+  await prisma.course.updateMany({
+    where: {
+      slug: {
+        in: ['kien-truc-backend-voi-nestjs', 'lap-trinh-di-dong-voi-react-native'],
+      },
+    },
+    data: { instructorId: instructor.id },
+  });
 } finally {
   await prisma.$disconnect();
 }
