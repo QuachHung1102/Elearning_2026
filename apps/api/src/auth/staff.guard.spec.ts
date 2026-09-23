@@ -11,7 +11,7 @@ const COURSE = '22222222-2222-4222-8222-222222222222';
 function build(opts: {
   role?: UserRole;
   kind?: StaffAccessKind;
-  id?: string;
+  id?: string | null;
   instructorId?: string | null;
 }) {
   class Target {
@@ -20,7 +20,7 @@ function build(opts: {
   if (opts.kind) StaffAccess(opts.kind)(Target.prototype, 'handler', Object.getOwnPropertyDescriptor(Target.prototype, 'handler')!);
   const request = {
     cookies: { elearning_session: 'token' },
-    params: { id: opts.id ?? COURSE },
+    params: opts.id === null ? {} : { id: opts.id ?? COURSE },
   };
   const auth = opts.role ? { user: { id: OWN, role: opts.role }, sessionId: 's' } : null;
   const found = opts.instructorId === undefined ? null : { instructorId: opts.instructorId };
@@ -105,6 +105,12 @@ describe('StaffGuard', () => {
   it('leaves a malformed id to ParseUUIDPipe (no lookup, passes)', async () => {
     const { guard, context, prisma } = build({ role: UserRole.INSTRUCTOR, kind: 'course', id: 'nope' });
     await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(prisma.course.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when an owner-checked route has no id param', async () => {
+    const { guard, context, prisma } = build({ role: UserRole.INSTRUCTOR, kind: 'course', id: null });
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.course.findUnique).not.toHaveBeenCalled();
   });
 });

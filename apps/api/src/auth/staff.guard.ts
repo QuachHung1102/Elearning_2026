@@ -61,8 +61,10 @@ export class StaffGuard implements CanActivate {
     if (kind === 'scoped') return true;
 
     const raw = (request as Request).params?.id;
-    // Malformed ids never reach the database; ParseUUIDPipe answers 400.
-    if (typeof raw !== 'string' || !isUUID(raw, '4')) return true;
+    // A misconfigured route with no :id param fails closed.
+    if (typeof raw !== 'string') throw new NotFoundException();
+    // A malformed id never reaches the database; ParseUUIDPipe answers 400.
+    if (!isUUID(raw, '4')) return true;
     const owner = await this.ownerOf(kind, raw.toLowerCase());
     if (owner === undefined || owner !== auth.user.id) throw new NotFoundException();
     return true;
