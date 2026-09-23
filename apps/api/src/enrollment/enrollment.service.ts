@@ -59,16 +59,16 @@ export type RevokeInput = {
 export function resolveAccess(input: {
   courseStatus: CourseStatus;
   enrolled: boolean;
-  isAdmin: boolean;
+  canManage: boolean;
   isPreview: boolean;
 }): AccessMode | 'NOT_FOUND' | 'NOT_ENROLLED' {
   const visible =
     input.courseStatus === CourseStatus.PUBLISHED ||
-    input.isAdmin ||
+    input.canManage ||
     (input.courseStatus === CourseStatus.ARCHIVED && input.enrolled);
   if (!visible) return 'NOT_FOUND';
   if (input.enrolled) return 'ENROLLED';
-  if (input.isAdmin) return 'ADMIN';
+  if (input.canManage) return 'ADMIN';
   if (input.isPreview) return 'PREVIEW';
   return 'NOT_ENROLLED';
 }
@@ -257,13 +257,15 @@ export class EnrollmentService {
 
   private async decide(
     viewer: Viewer,
-    course: { id: string; status: CourseStatus },
+    course: { id: string; status: CourseStatus; instructorId: string | null },
     isPreview: boolean,
   ): Promise<AccessMode> {
     const decision = resolveAccess({
       courseStatus: course.status,
       enrolled: await this.hasAccess(viewer.id, course.id),
-      isAdmin: viewer.role === UserRole.ADMIN,
+      canManage:
+        viewer.role === UserRole.ADMIN ||
+        (viewer.role === UserRole.INSTRUCTOR && course.instructorId === viewer.id),
       isPreview,
     });
     if (decision === 'NOT_FOUND') notFound();

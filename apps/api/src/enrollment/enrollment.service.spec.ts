@@ -21,14 +21,17 @@ function fakeDatabase() {
       slug: 'published',
       status: 'PUBLISHED',
       enrollmentCount: 0,
+      instructorId: null,
     },
     {
       id: 'archived',
       slug: 'archived',
       status: 'ARCHIVED',
       enrollmentCount: 0,
+      instructorId: null,
     },
-    { id: 'draft', slug: 'draft', status: 'DRAFT', enrollmentCount: 0 },
+    { id: 'draft', slug: 'draft', status: 'DRAFT', enrollmentCount: 0, instructorId: null },
+    { id: 'instructor-draft', slug: 'instructor-draft', status: 'DRAFT', enrollmentCount: 0, instructorId: 'instructor-1' },
   ];
   const lessons: Row[] = [
     { id: 'paid-lesson', courseId: 'published', isPreview: false },
@@ -388,12 +391,12 @@ describe('EnrollmentService', () => {
 
 describe('resolveAccess', () => {
   it.each([
-    // courseStatus, enrolled, isAdmin, isPreview, expected
+    // courseStatus, enrolled, canManage, isPreview, expected
     ['PUBLISHED', true, false, false, 'ENROLLED'],
     ['PUBLISHED', false, false, true, 'PREVIEW'],
     ['PUBLISHED', false, false, false, 'NOT_ENROLLED'],
     ['PUBLISHED', false, true, false, 'ADMIN'],
-    // An admin who also holds an ACTIVE enrollment learns as a student.
+    // An admin or instructor owner who also holds an ACTIVE enrollment learns as a student.
     ['PUBLISHED', true, true, false, 'ENROLLED'],
     ['ARCHIVED', true, false, false, 'ENROLLED'],
     ['ARCHIVED', false, false, true, 'NOT_FOUND'],
@@ -403,11 +406,19 @@ describe('resolveAccess', () => {
     ['DRAFT', true, false, false, 'NOT_FOUND'],
     ['DRAFT', false, true, true, 'ADMIN'],
   ] as const)(
-    '%s, enrolled=%s, admin=%s, preview=%s → %s',
-    (courseStatus, enrolled, isAdmin, isPreview, expected) => {
+    '%s, enrolled=%s, canManage=%s, preview=%s → %s',
+    (courseStatus, enrolled, canManage, isPreview, expected) => {
       expect(
-        resolveAccess({ courseStatus, enrolled, isAdmin, isPreview }),
+        resolveAccess({ courseStatus, enrolled, canManage, isPreview }),
       ).toBe(expected);
     },
   );
+
+  describe('resolveAccess for a course owner', () => {
+    it('lets the owning instructor preview a DRAFT course like an admin', () => {
+      expect(
+        resolveAccess({ courseStatus: 'DRAFT', enrolled: false, canManage: true, isPreview: false }),
+      ).toBe('ADMIN');
+    });
+  });
 });
