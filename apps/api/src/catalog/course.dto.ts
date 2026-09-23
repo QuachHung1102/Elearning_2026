@@ -277,6 +277,10 @@ export class UpdateCourseDto {
   categoryId?: string | null;
 
   @IsOptional()
+  @IsUUID('4')
+  instructorId?: string | null;
+
+  @IsOptional()
   @compactStrings()
   @IsArray()
   @ArrayMaxSize(12)

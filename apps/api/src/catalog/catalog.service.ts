@@ -10,7 +10,7 @@ import {
   type Paginated,
 } from '../common/pagination.js';
 import { config } from '../config.js';
-import { Prisma } from '../generated/prisma/client.js';
+import { Prisma, UserRole } from '../generated/prisma/client.js';
 import {
   CourseLevel,
   CourseStatus,
@@ -306,9 +306,13 @@ export class CatalogService {
 
   // ── Admin: courses ───────────────────────────────────────────────
 
-  async listCoursesForAdmin(query: AdminCourseListQuery) {
+  async listCoursesForAdmin(
+    query: AdminCourseListQuery,
+    ownerId: string | null = null,
+  ) {
     const page = resolvePage(query);
     const where: Prisma.CourseWhereInput = {};
+    if (ownerId) where.instructorId = ownerId;
     if (query.q) where.searchText = { contains: normalize(query.q) };
     if (query.status?.length) where.status = { in: query.status };
 
@@ -319,7 +323,7 @@ export class CatalogService {
     const [items, total] = await Promise.all([
       this.prisma.course.findMany({
         where,
-        select: { ...CARD_SELECT, status: true, updatedAt: true },
+        select: { ...CARD_SELECT, status: true, updatedAt: true, instructorId: true },
         orderBy: { [field]: direction },
         skip: page.skip,
         take: page.take,
@@ -331,6 +335,7 @@ export class CatalogService {
         ...this.toCourseCard(course),
         status: course.status,
         updatedAt: course.updatedAt,
+        instructorId: course.instructorId,
       })),
       total,
       page,
@@ -347,6 +352,7 @@ export class CatalogService {
       ...this.toCourseDetail(course),
       status: course.status,
       archivedAt: course.archivedAt,
+      instructorId: course.instructorId,
       videoAssets: course.sections.flatMap((section) =>
         section.lessons.flatMap((lesson) =>
           lesson.videoAsset
@@ -365,7 +371,11 @@ export class CatalogService {
     };
   }
 
-  async createCourse(input: CreateCourseDto, actor: AuditActorContext) {
+  async createCourse(
+    input: CreateCourseDto,
+    actor: AuditActorContext,
+    ownerId: string | null = null,
+  ) {
     const slug = await this.resolveSlug(input.slug, input.title, 120, (value) =>
       this.courseSlugTaken(value),
     );
@@ -379,6 +389,7 @@ export class CatalogService {
           searchText: buildSearchText(input.title),
           priceVnd: 0,
           categoryId: input.categoryId ?? null,
+          instructorId: ownerId,
           learningOutcomes: [],
           requirements: [],
           targetAudience: [],
@@ -426,6 +437,19 @@ export class CatalogService {
       }
     }
     if (input.categoryId) await this.mustFindCategory(input.categoryId);
+    if (input.instructorId) {
+      const teacher = await this.prisma.user.findUnique({
+        where: { id: input.instructorId },
+        select: { role: true },
+      });
+      if (teacher?.role !== UserRole.INSTRUCTOR) {
+        throw appError(
+          HttpStatus.BAD_REQUEST,
+          ERROR_CODE.VALIDATION_FAILED,
+          'instructorId must reference an instructor',
+        );
+      }
+    }
 
     const title = input.title ?? course.title;
     const subtitle =
@@ -463,6 +487,9 @@ export class CatalogService {
           ...(input.categoryId === undefined
             ? {}
             : { categoryId: input.categoryId ?? null }),
+          ...(input.instructorId === undefined
+            ? {}
+            : { instructorId: input.instructorId ?? null }),
           ...(input.learningOutcomes === undefined
             ? {}
             : { learningOutcomes: input.learningOutcomes }),

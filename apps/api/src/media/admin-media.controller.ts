@@ -8,8 +8,8 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { AdminGuard } from '../auth/admin.guard.js';
 import { AuthRateLimitGuard } from '../auth/auth-rate-limit.guard.js';
+import { StaffAccess, StaffGuard } from '../auth/staff.guard.js';
 import { AdminMutationRateLimit } from '../auth/rate-limit.decorator.js';
 import {
   CoverUploadUrlDto,
@@ -32,7 +32,7 @@ const uuid = () => new ParseUUIDPipe({ version: '4' });
  * what stops an uploader from writing outside its own prefix.
  */
 @Controller('admin')
-@UseGuards(AdminGuard, AuthRateLimitGuard)
+@UseGuards(StaffGuard, AuthRateLimitGuard)
 export class AdminMediaController {
   constructor(
     private readonly prisma: PrismaService,
@@ -40,6 +40,7 @@ export class AdminMediaController {
   ) {}
 
   @Post('courses/:id/cover-upload-url')
+  @StaffAccess('course')
   @AdminMutationRateLimit()
   async coverUploadUrl(
     @Param('id', uuid()) id: string,
@@ -56,6 +57,7 @@ export class AdminMediaController {
   }
 
   @Post('lessons/:id/resources/upload-url')
+  @StaffAccess('lesson')
   @AdminMutationRateLimit()
   async resourceUploadUrl(
     @Param('id', uuid()) id: string,

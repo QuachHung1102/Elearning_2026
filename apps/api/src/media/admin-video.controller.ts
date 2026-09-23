@@ -9,8 +9,8 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { AdminGuard } from '../auth/admin.guard.js';
 import { AuthRateLimitGuard } from '../auth/auth-rate-limit.guard.js';
+import { StaffAccess, StaffGuard } from '../auth/staff.guard.js';
 import { AdminMutationRateLimit } from '../auth/rate-limit.decorator.js';
 import { CreateVideoDto } from '../catalog/course.dto.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
@@ -29,8 +29,10 @@ const uuid = () => new ParseUUIDPipe({ version: '4' });
  * one owner uploads a handful of videos a month, so `GET /admin/videos/{id}`
  * polls while the lesson screen is open.
  */
+// ponytail: video assets are not owner-scoped; any staff member can register or
+// poll one by id. Add VideoAsset.ownerId if instructors must not see each other's.
 @Controller('admin/videos')
-@UseGuards(AdminGuard, AuthRateLimitGuard)
+@UseGuards(StaffGuard, AuthRateLimitGuard)
 export class AdminVideoController {
   constructor(
     private readonly prisma: PrismaService,
@@ -38,6 +40,7 @@ export class AdminVideoController {
   ) {}
 
   @Post()
+  @StaffAccess('scoped')
   @AdminMutationRateLimit()
   async create(@Body() input: CreateVideoDto) {
     const provider = this.provider();
@@ -70,6 +73,7 @@ export class AdminVideoController {
   }
 
   @Get(':id')
+  @StaffAccess('scoped')
   async get(@Param('id', uuid()) id: string) {
     const asset = await this.prisma.videoAsset.findUnique({ where: { id } });
     if (!asset) {
