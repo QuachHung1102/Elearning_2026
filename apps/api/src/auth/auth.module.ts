@@ -9,6 +9,7 @@ import { AuthController, UsersController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { AuthTokenService } from './auth-token.service.js';
 import { SessionAuthGuard } from './session-auth.guard.js';
+import { StaffGuard } from './staff.guard.js';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { SessionAuthGuard } from './session-auth.guard.js';
     SessionAuthGuard,
     AdminGuard,
     AuthRateLimitGuard,
+    StaffGuard,
   ],
-  exports: [AuthService, SessionAuthGuard, AdminGuard, AuthRateLimitGuard],
+  exports: [AuthService, SessionAuthGuard, AdminGuard, AuthRateLimitGuard, StaffGuard],
 })
 export class AuthModule {}
