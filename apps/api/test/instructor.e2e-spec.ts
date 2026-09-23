@@ -262,4 +262,39 @@ describe('Instructor role (e2e)', () => {
         sizeBytes: 1024,
       }).expect(400);
   });
+
+  it('lists only enrollments of the instructor’s courses, with progress', async () => {
+    const admin = await createUser('ADMIN');
+    const a = await createUser('INSTRUCTOR');
+    const learner = await createUser('STUDENT');
+    const sAdmin = await signIn(admin.email);
+    const sa = await signIn(a.email);
+    const mine = await api().post('/api/v1/admin/courses').set(as(sa))
+      .send({ title: 'Khóa học của tôi' }).expect(201);
+    const theirs = await api().post('/api/v1/admin/courses').set(as(sAdmin))
+      .send({ title: 'Khóa học khác' }).expect(201);
+    await prisma.course.updateMany({
+      where: { id: { in: [mine.body.id, theirs.body.id] } },
+      data: { status: 'PUBLISHED' },
+    });
+    for (const courseId of [mine.body.id, theirs.body.id]) {
+      await api().post('/api/v1/admin/enrollments').set(as(sAdmin))
+        .send({ userId: learner.id, courseId }).expect(201);
+    }
+
+    const list = await api().get('/api/v1/admin/enrollments').set(as(sa)).expect(200);
+    expect(list.body.items).toHaveLength(1);
+    expect(list.body.items[0].course.id).toBe(mine.body.id);
+    expect(list.body.items[0].progress).toEqual({ completedLessons: 0, totalLessons: 0, percent: 0 });
+
+    await api().post('/api/v1/admin/enrollments').set(as(sa))
+      .send({ userId: learner.id, courseId: mine.body.id }).expect(404);
+
+    const overview = await api().get('/api/v1/admin/reports/instructor-overview')
+      .set(as(sa)).expect(200);
+    expect(overview.body).toEqual({
+      publishedCourses: 1, draftCourses: 0, activeEnrollments: 1, newEnrollments30d: 1,
+    });
+    await api().get('/api/v1/admin/reports/overview').set(as(sa)).expect(404);
+  });
 });

@@ -5,7 +5,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { AdminGuard } from '../auth/admin.guard.js';
+import { OwnerScope, StaffAccess, StaffGuard } from '../auth/staff.guard.js';
 import { ReportRangeQuery } from '../catalog/course.dto.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
 import {
@@ -32,9 +32,24 @@ const dayFormatter = new Intl.DateTimeFormat('en-CA', {
  * always present so the shape does not change when it is switched on.
  */
 @Controller('admin/reports')
-@UseGuards(AdminGuard)
+@UseGuards(StaffGuard)
 export class ReportingController {
   constructor(private readonly prisma: PrismaService) {}
+
+  @Get('instructor-overview')
+  @StaffAccess('scoped')
+  async instructorOverview(@OwnerScope() ownerId: string | null) {
+    const course = ownerId ? { instructorId: ownerId } : {};
+    const since = new Date(Date.now() - 30 * DAY_MS);
+    const [publishedCourses, draftCourses, activeEnrollments, newEnrollments30d] =
+      await Promise.all([
+        this.prisma.course.count({ where: { ...course, status: CourseStatus.PUBLISHED } }),
+        this.prisma.course.count({ where: { ...course, status: CourseStatus.DRAFT } }),
+        this.prisma.enrollment.count({ where: { status: EnrollmentStatus.ACTIVE, course } }),
+        this.prisma.enrollment.count({ where: { grantedAt: { gte: since }, course } }),
+      ]);
+    return { publishedCourses, draftCourses, activeEnrollments, newEnrollments30d };
+  }
 
   @Get('overview')
   async overview(@Query() query: ReportRangeQuery) {
