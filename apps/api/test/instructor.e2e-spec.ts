@@ -182,4 +182,47 @@ describe('Instructor role (e2e)', () => {
     await api().delete(`/api/v1/admin/lessons/${lesson.body.id}`).set(as(sb)).expect(404);
     await api().get(`/api/v1/admin/lessons/${lesson.body.id}`).set(as(sa)).expect(200);
   });
+
+  it('rejects a resource objectKey that does not belong to the target lesson', async () => {
+    const a = await createUser('INSTRUCTOR');
+    const b = await createUser('INSTRUCTOR');
+    const sa = await signIn(a.email);
+    const sb = await signIn(b.email);
+
+    const courseA = await api().post('/api/v1/admin/courses').set(as(sa))
+      .send({ title: 'Khóa học A' }).expect(201);
+    const sectionA = await api().post(`/api/v1/admin/courses/${courseA.body.id}/sections`)
+      .set(as(sa)).send({ title: 'Chương A' }).expect(201);
+    const lessonA = await api().post(`/api/v1/admin/sections/${sectionA.body.id}/lessons`)
+      .set(as(sa)).send({ title: 'Bài A', type: 'ARTICLE' }).expect(201);
+
+    const courseB = await api().post('/api/v1/admin/courses').set(as(sb))
+      .send({ title: 'Khóa học B' }).expect(201);
+    const sectionB = await api().post(`/api/v1/admin/courses/${courseB.body.id}/sections`)
+      .set(as(sb)).send({ title: 'Chương B' }).expect(201);
+    const lessonB = await api().post(`/api/v1/admin/sections/${sectionB.body.id}/lessons`)
+      .set(as(sb)).send({ title: 'Bài B', type: 'ARTICLE' }).expect(201);
+
+    await api().post(`/api/v1/admin/lessons/${lessonB.body.id}/resources`).set(as(sb))
+      .send({
+        objectKey: `lessons/${lessonA.body.id}/resources/${randomUUID()}-tai-lieu.pdf`,
+        filename: 'tai-lieu.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 1024,
+      }).expect(400);
+  });
+
+  it('rejects a coverImageKey that does not belong to the target course', async () => {
+    const a = await createUser('INSTRUCTOR');
+    const sa = await signIn(a.email);
+
+    const courseA = await api().post('/api/v1/admin/courses').set(as(sa))
+      .send({ title: 'Khóa học có ảnh bìa' }).expect(201);
+    const otherCourseId = randomUUID();
+
+    await api().patch(`/api/v1/admin/courses/${courseA.body.id}`).set(as(sa))
+      .send({
+        coverImageKey: `public/courses/${otherCourseId}/cover/${randomUUID()}.jpg`,
+      }).expect(400);
+  });
 });

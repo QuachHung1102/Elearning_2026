@@ -50,10 +50,20 @@ export const COVER_KEY_PATTERN = new RegExp(
 
 export const RESOURCE_KEY_PREFIX = /^lessons\/[^/]+\/resources\//;
 
+/** Every cover key for a course lives under this prefix — the only shape `updateCourse` accepts. */
+export function coverKeyPrefix(courseId: string): string {
+  return `public/courses/${courseId}/cover/`;
+}
+
+/** Every resource key for a lesson lives under this prefix — the only shape `addResource` accepts. */
+export function resourceKeyPrefix(lessonId: string): string {
+  return `lessons/${lessonId}/resources/`;
+}
+
 export function coverKey(courseId: string, contentType: string): string {
   const extension = COVER_EXTENSION[contentType];
   if (!extension) throw new Error(`Unsupported cover type ${contentType}`);
-  return `public/courses/${courseId}/cover/${randomUUID()}.${extension}`;
+  return `${coverKeyPrefix(courseId)}${randomUUID()}.${extension}`;
 }
 
 export function resourceKey(lessonId: string, filename: string): string {
@@ -66,7 +76,7 @@ export function resourceKey(lessonId: string, filename: string): string {
       .replace(/^-+|-+$/g, '')
       .slice(0, 80) || 'tai-lieu';
   const safeExtension = normalize(extension).replace(/[^a-z0-9]/g, '');
-  return `lessons/${lessonId}/resources/${randomUUID()}-${safeStem}${safeExtension ? `.${safeExtension}` : ''}`;
+  return `${resourceKeyPrefix(lessonId)}${randomUUID()}-${safeStem}${safeExtension ? `.${safeExtension}` : ''}`;
 }
 
 /**

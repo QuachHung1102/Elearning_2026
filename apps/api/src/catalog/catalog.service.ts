@@ -19,7 +19,9 @@ import {
   StorageProvider,
 } from '../generated/prisma/enums.js';
 import {
+  coverKeyPrefix,
   OBJECT_STORAGE,
+  resourceKeyPrefix,
   type ObjectStorage,
 } from '../media/object-storage.js';
 import { STREAM_CLIENT, type StreamClient } from '../media/stream.client.js';
@@ -437,6 +439,13 @@ export class CatalogService {
       }
     }
     if (input.categoryId) await this.mustFindCategory(input.categoryId);
+    if (input.coverImageKey && !input.coverImageKey.startsWith(coverKeyPrefix(id))) {
+      throw appError(
+        HttpStatus.BAD_REQUEST,
+        ERROR_CODE.VALIDATION_FAILED,
+        'coverImageKey must belong to this course',
+      );
+    }
     if (input.instructorId) {
       const teacher = await this.prisma.user.findUnique({
         where: { id: input.instructorId },
@@ -1116,6 +1125,13 @@ export class CatalogService {
     actor: AuditActorContext,
   ) {
     await this.mustFindLesson(lessonId);
+    if (!input.objectKey.startsWith(resourceKeyPrefix(lessonId))) {
+      throw appError(
+        HttpStatus.BAD_REQUEST,
+        ERROR_CODE.VALIDATION_FAILED,
+        'objectKey must belong to this lesson',
+      );
+    }
     const last = await this.prisma.lessonResource.findFirst({
       where: { lessonId },
       orderBy: { position: 'desc' },
