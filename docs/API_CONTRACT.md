@@ -183,7 +183,7 @@ Giữ nguyên ba field mà Nest đang trả, **thêm** một field `code`. Một
 | `VIDEO_NOT_READY` | 409 | Xin playback token cho `VideoAsset` chưa ở trạng thái `READY` |
 | `PAYMENT_EXPIRED` | 409 | Thao tác trên `PaymentAttempt` đã hết hạn |
 | `PURCHASE_NOT_REFUNDABLE` | 409 | Hoàn tiền một `Purchase` chưa `PAID`, đã `REFUNDED`, hoặc ngoài chính sách PLAN_SUPPLEMENT.md §4.5; `details` nêu lý do |
-| `SELF_ACTION_FORBIDDEN` | 409 | Admin tự khoá tài khoản của chính mình |
+| `SELF_ACTION_FORBIDDEN` | 409 | Admin tự khoá tài khoản của chính mình, hoặc tự đổi vai trò của chính mình |
 | `PAYLOAD_TOO_LARGE` | 413 | Body vượt giới hạn ở mục 2.2 |
 | `UNSUPPORTED_MEDIA_TYPE` | 415 | `Content-Type` không nằm trong danh sách cho phép của endpoint |
 | `COURSE_NOT_PURCHASABLE` | 422 | Khoá `DRAFT`/`ARCHIVED` hoặc `priceVnd = 0` |
@@ -222,7 +222,7 @@ Chuỗi lấy nguyên văn từ UX_PLAN.md §6.2 và §6.3 khi ở đó đã có
 | `VIDEO_NOT_READY` | "Video đang được xử lý" / "Bài học sẽ xem được sau vài phút." | `ErrorState` trong khung player (UX_PLAN.md §6.2) | Nút "Kiểm tra lại" |
 | `PAYMENT_EXPIRED` | "Mã QR đã hết hạn." | `QrPanel` trạng thái `expired` | Nút "Tạo lại mã QR" |
 | `PURCHASE_NOT_REFUNDABLE` | "Đơn này ngoài chính sách hoàn tiền." | `Alert` `destructive` trong dialog hoàn tiền | Hiện `details` (ngày mua, số ngày, % tiến độ) + ô tick "Vẫn hoàn" (`force`) |
-| `SELF_ACTION_FORBIDDEN` | "Bạn không thể khoá tài khoản của chính mình." | `Alert` trong `BlockUserDialog` | — |
+| `SELF_ACTION_FORBIDDEN` | "Bạn không thể khoá tài khoản của chính mình." / "Bạn không thể tự đổi vai trò của chính mình." | `Alert` trong `BlockUserDialog` / form đổi vai trò | — |
 | `PAYLOAD_TOO_LARGE` | "Tệp vượt quá {maxBytes} cho phép." | Lỗi dưới `FileDropzone` | Nút "Chọn tệp khác" |
 | `UNSUPPORTED_MEDIA_TYPE` | "Định dạng tệp không được hỗ trợ." | Lỗi dưới `FileDropzone` | Nêu rõ định dạng cho phép |
 | `COURSE_NOT_PURCHASABLE` | "Khoá học này hiện không bán." | `Alert` `warning` thay chỗ `EnrollCta` | Nút "Xem khoá học khác" |
@@ -316,6 +316,7 @@ Ngưỡng nâng cấp: khi `EXPLAIN ANALYZE` của `GET /courses?q=` vượt 50 
 | `AuthRateLimitGuard` | Theo route, qua `@RateLimit({...})` | Mục 8 |
 | `SessionAuthGuard` | Theo route, **chỉ ngoài `/admin/*`** | Cookie → JWT → bản ghi `Session` → `request.auth` |
 | `AdminGuard` | Theo route/controller dưới `/admin/*` và `/dev/*`, **thay thế** `SessionAuthGuard` chứ không đứng sau nó | Tự resolve session bằng `AuthService.authenticate`, đặt `request.auth`, và ném `NotFoundException` ở **mọi** nhánh thất bại |
+| `StaffGuard` | Thay `AdminGuard` trên các controller soạn nội dung (`AdminCatalogController`, `AdminMediaController`, `AdminVideoController`, `AdminEnrollmentController`, `ReportingController.instructorOverview`) | Admin qua tất cả. `INSTRUCTOR` chỉ qua handler gắn `@StaffAccess(kind)`; handler không gắn giữ **default deny** (`404`), kể cả với `INSTRUCTOR` |
 
 Đổi `CsrfGuard` từ per-route sang toàn cục là thay đổi bắt buộc: với hơn 50 endpoint mutation, quên gắn decorator một lần là đủ để mở lỗ. `@SkipCsrf()` chỉ được dùng ở đúng hai chỗ: `POST /payments/{provider}/callback` (server-to-server, xác thực bằng HMAC, không có cookie) và `PUT /media/local/{key}` (xác thực bằng chữ ký trong URL).
 
@@ -334,6 +335,17 @@ Rate limit đứng cuối để có thể đếm theo `userId`.
 
 `AdminGuard` do đó phải tự làm cả hai việc: gọi `AuthService.authenticate(token)` (dùng lại đúng hàm đang có, không viết lại), rồi `throw new NotFoundException()` cho mọi nhánh — thiếu cookie, JWT hỏng, session bị thu hồi hoặc hết hạn, user không `ACTIVE`, `role !== ADMIN`. Chỉ nhánh thành công mới đặt `request.auth` và cho đi tiếp.
 
+#### `StaffGuard`, `@StaffAccess`, `@OwnerScope` (2026-09-23)
+
+`apps/api/src/auth/staff.guard.ts`. Cùng logic 404-on-failure của `AdminGuard`, mở rộng cho vai trò `INSTRUCTOR`:
+
+- `role === ADMIN`: qua mọi handler của controller, không lọc.
+- `role === INSTRUCTOR`: chỉ qua handler có decorator `@StaffAccess(kind)`. Handler không gắn decorator → `404` (default deny), kể cả khi route tồn tại và instructor đã đăng nhập hợp lệ.
+- `kind` ∈ `'course' | 'section' | 'lesson' | 'resource' | 'scoped'`. Bốn kind đầu đọc `:id` của param route, tra ngược lên `Course.instructorId` của khoá sở hữu entity đó (`section` → `course`, `lesson` → `section.course`, `resource` → `lesson.section.course`); khớp `auth.user.id` thì cho qua, khác hoặc không tồn tại → `404`. Thiếu `:id` trên route gắn kind entity → `404` (route cấu hình sai coi như không có quyền); `:id` sai định dạng UUID → lọt qua guard để `ParseUUIDPipe` trả `400` (guard không tự đoán).
+- `kind = 'scoped'`: guard chỉ xác thực vai trò, không tự lọc — handler tự lọc bằng `@OwnerScope()`, decorator trả về `null` cho `ADMIN` (không lọc) hoặc `auth.user.id` cho `INSTRUCTOR` (lọc theo `course.instructorId`). Dùng cho endpoint danh sách/tổng hợp không có một `:id` entity duy nhất (`GET /admin/courses`, `GET /admin/categories`, `GET /admin/enrollments`, `GET /admin/reports/instructor-overview`).
+
+Người ẩn danh và `STUDENT` nhận `404` giống hệt `AdminGuard`, không phân biệt được với route không tồn tại — tính chất ở mục 3.3 áp dụng nguyên vẹn cho `StaffGuard`.
+
 ### 3.2 Bảng vai trò theo tiền tố
 
 Đây là quy tắc; cột **Vai trò** trong mục 5 là bảng đầy đủ theo từng endpoint.
@@ -347,9 +359,9 @@ Rate limit đứng cuối để có thể đếm theo `userId`.
 | `/categories*`, `/courses*` | không | Công khai |
 | `POST /contact` | `RateLimit` (CSRF như mọi form) | Công khai |
 | `/enrollments/me` | `SessionAuth` | `STUDENT`, `ADMIN` |
-| `/learn/*`, `/lessons/*` | `SessionAuth` + kiểm tra `Enrollment`; endpoint **đọc** có nhánh bypass cho `ADMIN` (mục 5.5) | `STUDENT`, `ADMIN` |
+| `/learn/*`, `/lessons/*` | `SessionAuth` + kiểm tra `Enrollment`; endpoint **đọc** có nhánh bypass cho `ADMIN` và cho `INSTRUCTOR` chủ khoá (mục 5.5) | `STUDENT`, `INSTRUCTOR`, `ADMIN` |
 | `/checkout/*`, `/purchases/*` | `SessionAuth` | `STUDENT`, `ADMIN` |
-| `/admin/*` | `AdminGuard` **một mình** (mục 3.1) | `ADMIN`. Mọi vai trò khác, kể cả chưa đăng nhập → `404`. |
+| `/admin/*` | `AdminGuard` **một mình** (mục 3.1) trên hầu hết; `StaffGuard` (mục 3.1) trên các controller soạn nội dung, danh sách/gán quyền học và `reports/instructor-overview` | `ADMIN` mọi nơi; `INSTRUCTOR` chỉ trên handler gắn `@StaffAccess`, và chỉ với khoá mình đứng tên `instructorId`. Mọi vai trò khác, kể cả chưa đăng nhập → `404`. |
 | `/dev/*` | `AdminGuard` **một mình**, module chỉ được import khi có driver demo | `ADMIN` |
 | `/payments/{provider}/callback` | `@SkipCsrf`, xác minh HMAC | Máy chủ nhà cung cấp |
 | `/media/local/{key}` | `@SkipCsrf`, xác minh HMAC trong URL | Bất kỳ ai có URL còn hạn |
@@ -389,7 +401,7 @@ Category        { id, slug, name, description, icon, position, courseCount }
 CourseCard      { id, slug, title, subtitle, coverUrl, priceVnd, compareAtPriceVnd,
                   level, language, lessonCount, totalDurationSeconds,
                   enrollmentCount, ratingAverage, ratingCount, demoStats,
-                  category: Category | null }
+                  category: Category | null, instructorName: string | null }
 CourseDetail    CourseCard + { description, learningOutcomes: string[],
                   requirements: string[], targetAudience: string[],
                   publishedAt, updatedAt, sections: SectionOutline[] }
@@ -404,7 +416,8 @@ CourseProgress  { completedLessons, totalLessons, percent }
 EnrollmentItem  { id, course: CourseCard, status, source, grantedAt,
                   progress: CourseProgress, resumeLessonId }
 AdminEnrollment { id, user: { id, email, displayName }, course: { id, title },
-                  status, source, grantedAt, revokedAt, grantedById }
+                  status, source, grantedAt, revokedAt, grantedById,
+                  progress: CourseProgress }
 PurchaseRow     { id, courseId, courseTitle, priceVnd, status,
                   createdAt, paidAt, refundedAt }
                 status ∈ PENDING | PAID | REFUND_REQUESTED | REFUNDED | CANCELLED
@@ -422,7 +435,7 @@ Enum lấy nguyên văn từ DATA_MODEL.md: `LessonType` = `VIDEO` \| `ARTICLE`;
 
 `Course.description` và `Lesson.content` chứa **Markdown thô**. API không render HTML.
 
-`CourseDetail` **không có** khối `instructor`. Hệ thống một chủ sở hữu: giảng viên là chủ website, và giới thiệu giảng viên là nội dung tĩnh của trang web, không phải dữ liệu theo từng khoá. Thêm field đó bây giờ là tạo một bảng chỉ có một dòng.
+`CourseCard`/`CourseDetail` chỉ có `instructorName: string | null` — tên hiển thị của `Course.instructor`, `null` cho khoá của chủ sở hữu site. Không có khối `instructor` đầy đủ (tiểu sử, ảnh, liên kết mạng xã hội): mỗi giảng viên vẫn là một `User`, không có hồ sơ mở rộng, nên chỉ tên là dữ liệu thật; phần còn lại vẫn là nội dung tĩnh nếu cần sau này.
 
 `User` là chính xác kiểu `AuthUser` đang có trong `auth.service.ts`. Không thêm field vào nó mà không đọc mục 6.2.
 
@@ -455,6 +468,7 @@ Cột **Vai trò**: `—` là công khai. Mọi endpoint mutation đều có th�
 | `GET /admin/users` | ADMIN | `/admin/users` | `q`, `email` (khớp chính xác, không phân biệt hoa thường), `status`, `role`, `page`, `pageSize`, `sort` ∈ `createdAt`,`email` | `200 Paginated<AdminUserRow>` | `404` |
 | `GET /admin/users/{id}` | ADMIN | `/admin/users/[id]` | param UUID | `200 { user: AdminUserRow, enrollments: AdminEnrollment[], purchases: PurchaseRow[] }` | `404` |
 | `PATCH /admin/users/{id}` | ADMIN | `/admin/users/[id]` | `status` `@IsEnum(UserStatus)` | `200 { user: AdminUserRow }`; `BLOCKED` thu hồi mọi session, ghi `AuditLog` | `400`, `404`, `409 SELF_ACTION_FORBIDDEN` |
+| `PATCH /admin/users/{id}/role` | ADMIN | `/admin/users/[id]` | `role` `@IsEnum(UserRole)` | `200 { user: AdminUserRow }`, ghi `AuditLog` `user.role_changed` (`fromRole`, `toRole`); không đổi gì và không ghi log nếu `role` trùng vai trò hiện tại | `400`, `404`, `409 SELF_ACTION_FORBIDDEN` (tự đổi vai trò của chính mình) |
 
 Đổi mật khẩu thu hồi **toàn bộ** session kể cả session hiện tại, đúng như PROJECT_PLAN.md yêu cầu. Web hiển thị "Đổi mật khẩu thành công, vui lòng đăng nhập lại" rồi chuyển sang `/login`.
 
@@ -498,9 +512,13 @@ Trang chủ **không có endpoint riêng**: khối "Khoá học nổi bật" g�
 
 `ratingAverage` và `ratingCount` không có đường ghi nào từ người dùng cho tới khi có module đánh giá (PROJECT_PLAN.md hoãn tính năng này): giá trị duy nhất khác `null`/`0` là do seed ghi, và những hàng đó mang `demoStats = true`. Card ẩn cụm sao khi `ratingCount = 0` hoặc `ratingAverage = null`, và gắn `Badge` `Dữ liệu demo` cạnh cụm sao khi `demoStats = true`. Không có endpoint gửi đánh giá. Xem mục 9.
 
-### 5.3 Catalog — soạn nội dung (admin)
+### 5.3 Catalog — soạn nội dung (`ADMIN` + `INSTRUCTOR` chủ khoá)
 
-Mọi endpoint dưới đây: `ADMIN`, sai vai trò → `404`. Mọi mutation ghi một dòng `AuditLog` với `action` lấy từ **bảng từ vựng đóng ở mục 5.7** — không tự đặt chuỗi mới.
+Guard là `StaffGuard` (mục 3.1), không phải `AdminGuard`. `ADMIN` qua mọi endpoint dưới đây. `INSTRUCTOR` qua đúng các endpoint này, chỉ trên khoá học mà `Course.instructorId` bằng chính mình (route có `:id` khoá/section/lesson/resource), hoặc thấy đúng khoá của mình khi endpoint là danh sách/tổng hợp (`GET /admin/courses`, `GET /admin/categories`). Khoá không thuộc về mình hoặc thuộc site owner (`instructorId = null`) → `404`, giống hệt khoá không tồn tại. Vai trò khác, kể cả chưa đăng nhập → `404`.
+
+`GET /admin/categories` đọc được bởi cả hai vai trò (form tạo/sửa khoá cần danh sách danh mục). Mọi endpoint category còn lại (`POST`/`PATCH`/`DELETE`/`PUT .../order`) vẫn **chỉ `ADMIN`** — danh mục là tài nguyên dùng chung, không thuộc về một giảng viên.
+
+Mọi mutation ghi một dòng `AuditLog` với `action` lấy từ **bảng từ vựng đóng ở mục 5.7** — không tự đặt chuỗi mới.
 
 | Method + Path | Trang | Request | 2xx | Lỗi |
 |---|---|---|---|---|
@@ -512,7 +530,7 @@ Mọi endpoint dưới đây: `ADMIN`, sai vai trò → `404`. Mọi mutation gh
 | `GET /admin/courses` | `/admin/courses` | `q`, `status` csv enum, `page`, `pageSize`, `sort` ∈ `updatedAt`,`title`,`enrollmentCount` | `200 Paginated<CourseCard & { status, updatedAt }>` | `400`, `404` |
 | `POST /admin/courses` | `/admin/courses/new` | `title` `@Length(3,160)`; `slug?` `@Matches(slug)` — thiếu thì sinh từ title, bỏ dấu tiếng Việt; `categoryId?` `@IsUUID` | `201 CourseDetail` (`DRAFT`) | `400`, `404`, `409 SLUG_TAKEN` |
 | `GET /admin/courses/{id}` | `/admin/courses/[id]` | param UUID | `200 CourseDetail + { status, archivedAt, videoAssets: [{ lessonId, provider, externalId, status, durationSeconds }] }` | `404` |
-| `PATCH /admin/courses/{id}` | `/admin/courses/[id]` | tất cả optional: `title` `@Length(3,160)`; `slug` `@Matches(slug)`; `subtitle` `@MaxLength(240)`; `description` `@MaxLength(20000)`; `priceVnd` `@IsInt @Min(0) @Max(100000000)`; `compareAtPriceVnd` `@IsInt @Min(0)`; `level` `@IsEnum(CourseLevel)`; `language` `@MaxLength(10)`; `categoryId` `@IsUUID @IsOptional` (null để gỡ); `learningOutcomes`/`requirements`/`targetAudience` `@IsString({each}) @ArrayMaxSize(12) @MaxLength(200,{each})`; `coverImageKey` `@MaxLength(400)` | `200 CourseDetail` | `400`, `404` |
+| `PATCH /admin/courses/{id}` | `/admin/courses/[id]` | tất cả optional: `title` `@Length(3,160)`; `slug` `@Matches(slug)`; `subtitle` `@MaxLength(240)`; `description` `@MaxLength(20000)`; `priceVnd` `@IsInt @Min(0) @Max(100000000)`; `compareAtPriceVnd` `@IsInt @Min(0)`; `level` `@IsEnum(CourseLevel)`; `language` `@MaxLength(10)`; `categoryId` `@IsUUID @IsOptional` (null để gỡ); `learningOutcomes`/`requirements`/`targetAudience` `@IsString({each}) @ArrayMaxSize(12) @MaxLength(200,{each})`; `coverImageKey` `@MaxLength(400)`, phải khớp đúng shape `coverKey(courseId, …)`; `instructorId` `@IsUUID @IsOptional` (null để gỡ) — **chỉ `ADMIN`**, trường bị lược khỏi body khi người gọi là `INSTRUCTOR` | `200 CourseDetail` | `400` (kể cả `instructorId` không trỏ tới một `INSTRUCTOR`, hoặc `coverImageKey` sai shape), `404` |
 | `POST /admin/courses/{id}/publish` | `/admin/courses/[id]` | — | `200 CourseDetail` (`PUBLISHED`) — nhận `DRAFT` hoặc `ARCHIVED` làm đầu vào | `404`, `422 COURSE_NOT_PUBLISHABLE`, `409 CONFLICT` khi khoá đã `PUBLISHED` |
 | `POST /admin/courses/{id}/unpublish` | `/admin/courses/[id]` | — | `200` (`DRAFT`) — nhận **cả** `PUBLISHED` lẫn `ARCHIVED` làm đầu vào | `404`, `409 CONFLICT` khi khoá đang ở `DRAFT`, `409 COURSE_HAS_ENROLLMENTS` khi khoá còn `Enrollment` `ACTIVE` (bản nháp không cho ai học, PLAN_SUPPLEMENT.md §4.10) |
 | `POST /admin/courses/{id}/archive` | `/admin/courses/[id]` | — | `200` (`ARCHIVED`) — chỉ nhận `PUBLISHED` làm đầu vào (DATA_MODEL.md §Chuyển trạng thái) | `404`, `409 CONFLICT` khi khoá không ở `PUBLISHED` |
@@ -525,7 +543,7 @@ Mọi endpoint dưới đây: `ADMIN`, sai vai trò → `404`. Mọi mutation gh
 | `PATCH /admin/lessons/{id}` | `/admin/courses/[id]/lessons/[lessonId]` | optional: `title` `@Length(1,160)`; `type` `@IsEnum(LessonType)`; `content` `@MaxLength(50000)`; `videoAssetId` `@IsUUID @IsOptional` (null để gỡ); `isPreview` `@IsBoolean` | `200 LessonOutline & { content, videoAssetId }` | `400`, `404`, `409 VIDEO_ALREADY_ATTACHED` |
 | `DELETE /admin/lessons/{id}` | `/admin/courses/[id]/curriculum` | — | `204` (xoá kèm `LessonProgress`) | `404` |
 | `PUT /admin/sections/{id}/lessons/order` | `/admin/courses/[id]/curriculum` | `lessonIds` `@IsUUID each @ArrayNotEmpty` | `204` | `400 ORDER_MISMATCH`, `404` |
-| `POST /admin/lessons/{id}/resources` | `/admin/courses/[id]/lessons/[lessonId]` | `objectKey` `@IsString @MaxLength(400)`; `filename` `@Length(1,200)`; `contentType` `@IsIn(['application/pdf','application/zip','image/png','image/jpeg','text/plain'])`; `sizeBytes` `@IsInt @Min(1) @Max(MAX_UPLOAD_BYTES)` | `201 Resource` | `400`, `404`, `415 UNSUPPORTED_MEDIA_TYPE` |
+| `POST /admin/lessons/{id}/resources` | `/admin/courses/[id]/lessons/[lessonId]` | `objectKey` `@IsString @MaxLength(400)`, phải khớp đúng shape `resourceKey(lessonId, …)` dưới `lessons/{lessonId}/resources/`; `filename` `@Length(1,200)`; `contentType` `@IsIn(['application/pdf','application/zip','image/png','image/jpeg','text/plain'])`; `sizeBytes` `@IsInt @Min(1) @Max(MAX_UPLOAD_BYTES)` | `201 Resource` | `400 VALIDATION_FAILED` (kể cả `objectKey` không canonical), `404`, `415 UNSUPPORTED_MEDIA_TYPE` |
 | `DELETE /admin/resources/{id}` | `/admin/courses/[id]/lessons/[lessonId]` | — | `204` (xoá cả object trong storage) | `404` |
 
 `COURSE_NOT_PUBLISHABLE` trả đầy đủ lý do trong một lần, không bắt admin sửa từng cái rồi bấm lại:
@@ -579,9 +597,11 @@ Lý do phải đổi: không endpoint nào ở trên có điều kiện tiên qu
 | Method + Path | Vai trò | Trang | Request | 2xx | Lỗi |
 |---|---|---|---|---|---|
 | `GET /enrollments/me` | any | `/my-courses`, `/courses/[slug]`, layout | `page`, `pageSize`, `status` ∈ `ACTIVE`,`REVOKED`; `completed` `@IsBoolean @IsOptional`; `courseId` `@IsUUID @IsOptional`; `sort` mặc định `grantedAt:desc` | `200 Paginated<EnrollmentItem>` | `400`, `401` |
-| `GET /admin/enrollments` | ADMIN | `/admin/enrollments` | `courseId`, `userId`, `status`, `page`, `pageSize` | `200 Paginated<AdminEnrollment>` | `400`, `404` |
+| `GET /admin/enrollments` | ADMIN, INSTRUCTOR (chỉ khoá mình dạy) | `/admin/enrollments` | `courseId`, `userId`, `status`, `page`, `pageSize` | `200 Paginated<AdminEnrollment>` — mỗi dòng có thêm `progress` | `400`, `404` |
 | `POST /admin/enrollments` | ADMIN | `/admin/users/[id]`, `/admin/enrollments` | `userId` `@IsUUID`; `courseId` `@IsUUID`; `note` `@MaxLength(500) @IsOptional` | `201 AdminEnrollment` lần đầu, `200` nếu đã active | `400`, `404` |
 | `DELETE /admin/enrollments/{id}` | ADMIN | `/admin/enrollments` | — | `204`, chuyển `status = REVOKED` (soft), giữ bản ghi + `AuditLog` | `404` |
+
+Mỗi dòng `AdminEnrollment` có thêm `progress: { completedLessons, totalLessons, percent }`, tính từ `LessonProgress` của học viên trên khoá đó — cùng shape `CourseProgress` ở mục 4.
 
 `note` không có cột riêng trên `Enrollment`; nó đi vào `AuditLog.metadata`, còn người cấp lưu ở `Enrollment.grantedById`. Lý do cấp quyền là dữ liệu kiểm toán, không phải thuộc tính của quyền học.
 
@@ -601,13 +621,13 @@ Hai filter thêm vào tồn tại vì hai chỗ tiêu thụ đó cần khác nha
 
 | Method + Path | Vai trò | Trang | Request | 2xx | Lỗi |
 |---|---|---|---|---|---|
-| `GET /learn/{courseSlug}` | enrollment **hoặc** `ADMIN` | `/learn/[courseSlug]/[lessonId]` | param slug | `200 { course: CourseDetail, progress: CourseProgress, completedLessonIds: string[], resumeLessonId }` | `401`, `403 NOT_ENROLLED`, `404` |
-| `GET /lessons/{lessonId}/content` | enrollment, **hoặc** lesson `isPreview`, **hoặc** `ADMIN` | `/learn/...`, `/courses/[slug]`, `/admin/courses/[id]/lessons/[lessonId]` | param UUID | `200 LessonContent` | `401`, `403 NOT_ENROLLED`, `404` |
+| `GET /learn/{courseSlug}` | enrollment, **hoặc** `ADMIN`, **hoặc** `INSTRUCTOR` chủ khoá | `/learn/[courseSlug]/[lessonId]` | param slug | `200 { course: CourseDetail, progress: CourseProgress, completedLessonIds: string[], resumeLessonId }` | `401`, `403 NOT_ENROLLED`, `404` |
+| `GET /lessons/{lessonId}/content` | enrollment, **hoặc** lesson `isPreview`, **hoặc** `ADMIN`, **hoặc** `INSTRUCTOR` chủ khoá | `/learn/...`, `/courses/[slug]`, `/admin/courses/[id]/lessons/[lessonId]` | param UUID | `200 LessonContent` | `401`, `403 NOT_ENROLLED`, `404` |
 | `PUT /lessons/{lessonId}/progress` | any + enrollment | `/learn/...` | `lastPositionSeconds` `@IsInt @Min(0) @Max(86400)`; `completed` `@IsBoolean @IsOptional` | `200 { progress: Progress, courseProgress: CourseProgress }` | `400`, `401`, `403 NOT_ENROLLED`, `404`, `429` |
 
 Với lesson `isPreview` mà người gọi chưa có enrollment: `resources` trả `[]` và `progress` trả `null`. Bài preview không sinh `LessonProgress` — tiến độ chỉ có ý nghĩa với người đã có quyền học.
 
-**Nhánh `ADMIN` là đường xem trước, và nó phải im lặng.** `role = ADMIN` đi qua được cả hai endpoint đọc ở trên cho mọi khoá học ở mọi `status`, không cần `Enrollment`. Đổi lại, lượt xem của admin:
+**Nhánh xem trước phải im lặng.** `role = ADMIN` đi qua được cả hai endpoint đọc ở trên cho mọi khoá học ở mọi `status`, không cần `Enrollment`. Từ 2026-09-23, `role = INSTRUCTOR` cũng đi qua được, nhưng **chỉ** khi `course.instructorId === auth.user.id` — khoá của người khác hoặc của site owner vẫn cần `Enrollment` như một học viên bình thường (`EnrollmentService.decide()`, cờ `canManage`). Đổi lại, lượt xem xem-trước này (admin hoặc instructor chủ khoá):
 
 - **không** sinh hay cập nhật `LessonProgress` (`PUT /lessons/{id}/progress` **không** có nhánh admin — nó vẫn đòi `Enrollment` thật);
 - **không** tính vào `enrollmentCount` hay bất kỳ số liệu nào ở mục 5.7;
@@ -625,12 +645,14 @@ Không có nhánh này thì chủ sở hữu nhận `403 NOT_ENROLLED` trên ch�
 |---|---|---|---|---|---|
 | `POST /lessons/{lessonId}/playback-token` | enrollment, preview, hoặc `ADMIN` | `/learn/...`, `/courses/[slug]`, `/admin/courses/[id]/lessons/[lessonId]` | — | `200 Playback` | `401`, `403 NOT_ENROLLED`, `404`, `409 VIDEO_NOT_READY`, `429` |
 | `GET /lessons/{lessonId}/resources/{resourceId}/download` | any + enrollment | `/learn/...` | param UUID | `200 SignedDownload` | `401`, `403 NOT_ENROLLED`, `404` |
-| `POST /admin/courses/{id}/cover-upload-url` | ADMIN | `/admin/courses/[id]` | `filename` `@Length(1,200)`; `contentType` `@IsIn(['image/jpeg','image/png','image/webp'])`; `sizeBytes` `@IsInt @Min(1) @Max(MAX_UPLOAD_BYTES)` | `201 SignedUpload` | `400`, `404` |
-| `POST /admin/lessons/{id}/resources/upload-url` | ADMIN | `/admin/courses/[id]/lessons/[lessonId]` | `filename` `@Length(1,200)`; `contentType` `@IsIn(['application/pdf','application/zip','image/png','image/jpeg','text/plain'])`; `sizeBytes` `@IsInt @Min(1) @Max(MAX_UPLOAD_BYTES)` | `201 SignedUpload` | `400`, `404`, `415 UNSUPPORTED_MEDIA_TYPE` |
-| `POST /admin/videos` | ADMIN | `/admin/courses/[id]/lessons/[lessonId]` | `externalId` `@IsString @Length(1,120)` | `201 { id, provider, externalId, status, durationSeconds, thumbnailUrl }` | `400`, `404`, `409 EXTERNAL_ID_TAKEN` |
-| `GET /admin/videos/{id}` | ADMIN | `/admin/courses/[id]/lessons/[lessonId]` | — | `200 { id, provider, externalId, status, durationSeconds, thumbnailUrl }` — gọi `getStatus()` rồi ghi lại `status`/`durationSeconds` | `404` |
+| `POST /admin/courses/{id}/cover-upload-url` | ADMIN, INSTRUCTOR chủ khoá | `/admin/courses/[id]` | `filename` `@Length(1,200)`; `contentType` `@IsIn(['image/jpeg','image/png','image/webp'])`; `sizeBytes` `@IsInt @Min(1) @Max(MAX_UPLOAD_BYTES)` | `201 SignedUpload` | `400`, `404` |
+| `POST /admin/lessons/{id}/resources/upload-url` | ADMIN, INSTRUCTOR chủ khoá | `/admin/courses/[id]/lessons/[lessonId]` | `filename` `@Length(1,200)`; `contentType` `@IsIn(['application/pdf','application/zip','image/png','image/jpeg','text/plain'])`; `sizeBytes` `@IsInt @Min(1) @Max(MAX_UPLOAD_BYTES)` | `201 SignedUpload` | `400`, `404`, `415 UNSUPPORTED_MEDIA_TYPE` |
+| `POST /admin/videos` | ADMIN, INSTRUCTOR (**không** owner-scoped, xem ghi chú dưới) | `/admin/courses/[id]/lessons/[lessonId]` | `externalId` `@IsString @Length(1,120)` | `201 { id, provider, externalId, status, durationSeconds, thumbnailUrl }` | `400`, `404`, `409 EXTERNAL_ID_TAKEN` |
+| `GET /admin/videos/{id}` | ADMIN, INSTRUCTOR (**không** owner-scoped) | `/admin/courses/[id]/lessons/[lessonId]` | — | `200 { id, provider, externalId, status, durationSeconds, thumbnailUrl }` — gọi `getStatus()` rồi ghi lại `status`/`durationSeconds` | `404` |
 | `PUT /media/local/{key}` | chữ ký URL | uploader admin | body byte thô | `204` | `403 SIGNATURE_INVALID`, `404` khi `STORAGE_DRIVER != demo`, `413 PAYLOAD_TOO_LARGE`, `415 UNSUPPORTED_MEDIA_TYPE` |
 | `GET /media/local/{key}` | chữ ký URL | mọi nơi hiển thị file | query `exp`, `sig` | `200` file | `403 SIGNATURE_INVALID`, `404` khi `STORAGE_DRIVER != demo` |
+
+**Giới hạn đã chấp nhận:** `VideoAsset` không có cột chủ sở hữu (`Lesson.videoAssetId` là `@unique`, một video chỉ gắn được vào một lesson — DATA_MODEL.md). `StaffGuard` cho `AdminVideoController` chỉ xác thực vai trò (`@StaffAccess('scoped')` không lọc gì thêm ở đây), nên một `INSTRUCTOR` có thể đăng ký hoặc xem trạng thái video của lesson thuộc khoá học khác. Nâng cấp khi cần: thêm `VideoAsset.instructorId`.
 
 `objectKey` **do server sinh**, client không bao giờ chọn. Client chỉ gửi tên file gốc; server tạo key theo template trong DEMO_MODE.md §3 và trả về trong `SignedUpload`. Client không tự đặt key nghĩa là client không thể ghi ra ngoài prefix của mình.
 
@@ -643,8 +665,11 @@ Không có webhook Cloudflare Stream. Một chủ sở hữu upload vài video m
 | Method + Path | Vai trò | Trang | Request | 2xx | Lỗi |
 |---|---|---|---|---|---|
 | `GET /admin/reports/overview` | ADMIN | `/admin` | `from`, `to` `@IsISO8601 @IsOptional`, khoảng tối đa 366 ngày | `200 { revenueVnd, paidPurchases, newStudents, activeEnrollments, draftCourses, pendingPaymentAttempts, videoAssetsNotReady, series: [{ date, revenueVnd, purchases }] }` | `400`, `404` |
+| `GET /admin/reports/instructor-overview` | ADMIN, INSTRUCTOR (chỉ khoá mình dạy) | `/admin` | — | `200 { publishedCourses, draftCourses, activeEnrollments, newEnrollments30d }` | `404` |
 | `GET /admin/reports/courses` | ADMIN | `/admin` | `from`, `to` `@IsOptional`, `page`, `pageSize` | `200 Paginated<{ courseId, title, revenueVnd, newEnrollments, activeStudents, completionRate }>` | `400`, `404` |
 | `GET /admin/audit-logs` | ADMIN | `/admin/audit-logs` | `actorId`, `entityType`, `action`, `from`, `to`, `page`, `pageSize` | `200 Paginated<AuditLogRow>` | `400`, `404` |
+
+`GET /admin/reports/overview` (doanh thu, toàn site) dùng `AdminGuard`, không phải `StaffGuard` — vẫn **chỉ `ADMIN`**, `INSTRUCTOR` nhận `404`. `instructor-overview` là bản rút gọn không có tiền, đủ cho `/admin` của một giảng viên.
 
 Reporting **chỉ đọc**. Không endpoint nào trong nhóm này được phép ghi.
 

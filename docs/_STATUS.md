@@ -25,9 +25,8 @@ chỉ `LessonResource` dùng presigned URL.
 
 ## Quyết định đã chốt
 
-1. Khóa học kiểu Udemy về **hình thức catalog** (category, search, filter, curriculum
-   accordion, bài preview) nhưng **kinh tế vẫn một chủ sở hữu** — không marketplace
-   nhiều giảng viên, không chia doanh thu.
+1. Có vai trò INSTRUCTOR (2026-09-23): giảng viên tự soạn và xuất bản khóa của mình;
+   admin cấp vai trò và gán chủ khóa. Vẫn không chia doanh thu.
 2. **Thanh toán làm sau cùng.** Enrollment phải tồn tại từ đầu; đường cấp quyền học
    ngày một là admin manual grant.
 3. **Demo-first.** Chưa có ZaloPay / Cloudflare / email provider. Mọi phụ thuộc ngoài

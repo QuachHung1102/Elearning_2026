@@ -47,6 +47,7 @@ erDiagram
     User    ||--o{ Purchase       : "đơn mua"
     User    ||--o{ AuditLog       : "actor"
     User    ||--o{ Enrollment     : "grantedBy (admin cấp tay)"
+    User    ||--o{ Course         : "instructor (0..1 chủ khóa)"
 
     Category ||--o{ Course : "0..1 chủ đề"
 
@@ -72,6 +73,7 @@ Bản số cần nhớ:
 | `Lesson` — `VideoAsset` | 1 : 0..1, độc quyền | `Lesson.videoAssetId @unique` |
 | `Section` — `Lesson` | 1 : n, có thứ tự chặt | `@@unique([sectionId, position])` |
 | `Course` — `Category` | n : 0..1 | FK `Restrict` |
+| `Course` — `User` (instructor) | n : 0..1 | FK `Restrict`, `@@index([instructorId])`. `null` = khóa của chủ sở hữu site |
 
 ## Quy ước schema
 
@@ -123,6 +125,7 @@ datasource db {
 
 enum UserRole {
   STUDENT
+  INSTRUCTOR
   ADMIN
 }
 
@@ -215,6 +218,7 @@ model User {
 
   sessions           Session[]
   authTokens         AuthToken[]
+  taughtCourses      Course[]         @relation("CourseInstructor")
   enrollments        Enrollment[]     @relation("EnrollmentStudent")
   grantedEnrollments Enrollment[]     @relation("EnrollmentGrantedBy")
   lessonProgress     LessonProgress[]
@@ -270,6 +274,7 @@ model Category {
 model Course {
   id                   String           @id @default(uuid()) @db.Uuid
   categoryId           String?          @map("category_id") @db.Uuid
+  instructorId         String?          @map("instructor_id") @db.Uuid
   slug                 String           @unique @db.VarChar(120)
   title                String           @db.VarChar(160)
   subtitle             String?          @db.VarChar(240)
@@ -297,12 +302,14 @@ model Course {
   updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   category    Category?    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  instructor  User?        @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
   sections    Section[]
   enrollments Enrollment[]
   purchases   Purchase[]
 
   @@index([status, publishedAt])
   @@index([categoryId, status])
+  @@index([instructorId])
   @@map("courses")
 }
 
@@ -496,9 +503,9 @@ Quy ước ký hiệu: `NN` = NOT NULL, `U` = unique, `FK` = khóa ngoại.
 
 ### User
 
-Không thêm cột nào. Chỉ thêm bảy field quan hệ. Thông tin giảng viên (tiểu sử, ảnh, liên kết mạng xã hội) **không** nằm trong database: hệ thống có đúng một chủ sở hữu nên đó là nội dung tĩnh của `apps/web`, không phải dữ liệu.
+Không thêm cột nào. `role` nhận thêm giá trị `INSTRUCTOR` (migration `add_instructor`, 2026-09-23) — xem *Quyết định đã chốt* #1 ở `_STATUS.md`. Chỉ thêm tám field quan hệ, trong đó `taughtCourses` là các khóa mà một `INSTRUCTOR` đứng tên `instructorId`. Tiểu sử, ảnh, liên kết mạng xã hội của giảng viên vẫn **không** nằm trong database — đó là nội dung tĩnh của `apps/web`, không phải dữ liệu.
 
-Bất biến database: `email` unique. Bất biến ứng dụng: email lowercase + trim trước khi ghi (đã có trong `AuthService.normalizeEmail`), tài khoản `ADMIN` chỉ được tạo bằng seed/CLI.
+Bất biến database: `email` unique. Bất biến ứng dụng: email lowercase + trim trước khi ghi (đã có trong `AuthService.normalizeEmail`), tài khoản `ADMIN` chỉ được tạo bằng seed/CLI; `INSTRUCTOR` được tạo bằng seed hoặc `PATCH /admin/users/:id/role` (admin đổi vai trò, có audit).
 
 ### AuthToken
 
@@ -536,6 +543,7 @@ Không có `parentId`: catalog một chủ sở hữu với khoảng 8 chủ đ�
 |---|---|---|---|---|
 | `id` | `uuid` | ✓ | PK | |
 | `categoryId` | `uuid` | | FK → `categories` Restrict | Nullable để tạo draft trước khi chọn chủ đề |
+| `instructorId` | `uuid` | | FK → `users` Restrict, `@@index` | `null` = khóa của chủ sở hữu site. `Restrict` chặn xóa một `INSTRUCTOR` còn đứng tên khóa học |
 | `slug` | `varchar(120)` | ✓ | U | URL công khai, SEO |
 | `title` | `varchar(160)` | ✓ | | |
 | `subtitle` | `varchar(240)` | | | Dòng headline trên card và hero trang chi tiết |
@@ -1193,6 +1201,7 @@ Mật khẩu cố định, ghi thẳng trong seed và trong README, chỉ dùng 
 | Vai trò | Email | Mật khẩu | Trạng thái sau seed |
 |---|---|---|---|
 | Admin | `admin@elearning.local` | `Demo!Admin123` | `emailVerifiedAt` đã đặt |
+| Giảng viên | `instructor@elearning.local` | `Demo!Instructor123` | Đứng tên `instructorId` của `kien-truc-backend-voi-nestjs` và `lap-trinh-di-dong-voi-react-native` |
 | Học viên đang học | `student1@elearning.local` | `Demo!Student123` | Có quyền học C1 và C2, có 9 hàng tiến độ |
 | Học viên mới | `student2@elearning.local` | `Demo!Student123` | Có quyền học C1, chưa có tiến độ |
 | Khách chưa mua | `student3@elearning.local` | `Demo!Student123` | Không có quyền học nào — dùng để kiểm tra tường paywall |
