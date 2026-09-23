@@ -316,7 +316,7 @@ Ngưỡng nâng cấp: khi `EXPLAIN ANALYZE` của `GET /courses?q=` vượt 50 
 | `AuthRateLimitGuard` | Theo route, qua `@RateLimit({...})` | Mục 8 |
 | `SessionAuthGuard` | Theo route, **chỉ ngoài `/admin/*`** | Cookie → JWT → bản ghi `Session` → `request.auth` |
 | `AdminGuard` | Theo route/controller dưới `/admin/*` và `/dev/*`, **thay thế** `SessionAuthGuard` chứ không đứng sau nó | Tự resolve session bằng `AuthService.authenticate`, đặt `request.auth`, và ném `NotFoundException` ở **mọi** nhánh thất bại |
-| `StaffGuard` | Thay `AdminGuard` trên các controller soạn nội dung (`AdminCatalogController`, `AdminMediaController`, `AdminVideoController`, `AdminEnrollmentController`, `ReportingController.instructorOverview`) | Admin qua tất cả. `INSTRUCTOR` chỉ qua handler gắn `@StaffAccess(kind)`; handler không gắn giữ **default deny** (`404`), kể cả với `INSTRUCTOR` |
+| `StaffGuard` | Thay `AdminGuard` ở cấp **cả class** trên `AdminCatalogController`, `AdminMediaController`, `AdminVideoController`, `AdminEnrollmentController`, `ReportingController` (`AdminUserController` vẫn dùng `AdminGuard`) | Admin qua tất cả handler của class đó. `INSTRUCTOR` chỉ qua handler gắn `@StaffAccess(kind)` — trên `AdminEnrollmentController` chỉ `list`, trên `ReportingController` chỉ `instructorOverview`; handler không gắn giữ **default deny** (`404`), kể cả với `INSTRUCTOR` |
 
 Đổi `CsrfGuard` từ per-route sang toàn cục là thay đổi bắt buộc: với hơn 50 endpoint mutation, quên gắn decorator một lần là đủ để mở lỗ. `@SkipCsrf()` chỉ được dùng ở đúng hai chỗ: `POST /payments/{provider}/callback` (server-to-server, xác thực bằng HMAC, không có cookie) và `PUT /media/local/{key}` (xác thực bằng chữ ký trong URL).
 
@@ -669,7 +669,7 @@ Không có webhook Cloudflare Stream. Một chủ sở hữu upload vài video m
 | `GET /admin/reports/courses` | ADMIN | `/admin` | `from`, `to` `@IsOptional`, `page`, `pageSize` | `200 Paginated<{ courseId, title, revenueVnd, newEnrollments, activeStudents, completionRate }>` | `400`, `404` |
 | `GET /admin/audit-logs` | ADMIN | `/admin/audit-logs` | `actorId`, `entityType`, `action`, `from`, `to`, `page`, `pageSize` | `200 Paginated<AuditLogRow>` | `400`, `404` |
 
-`GET /admin/reports/overview` (doanh thu, toàn site) dùng `AdminGuard`, không phải `StaffGuard` — vẫn **chỉ `ADMIN`**, `INSTRUCTOR` nhận `404`. `instructor-overview` là bản rút gọn không có tiền, đủ cho `/admin` của một giảng viên.
+`ReportingController` cả lớp chạy dưới `StaffGuard`, không phải `AdminGuard`. `GET /admin/reports/overview` (doanh thu, toàn site) **không** gắn `@StaffAccess` — default deny của `StaffGuard` áp dụng, nên nó vẫn **chỉ `ADMIN`**, `INSTRUCTOR` nhận `404` giống hệt như thể route không tồn tại. Chỉ `instructor-overview` gắn `@StaffAccess('scoped')`; đây là bản rút gọn không có tiền, đủ cho `/admin` của một giảng viên.
 
 Reporting **chỉ đọc**. Không endpoint nào trong nhóm này được phép ghi.
 

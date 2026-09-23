@@ -15,7 +15,7 @@ Cập nhật: 2026-09-22.
 | **Phase 3 backend** | Migration `add_learning` (3 bảng, 2 enum), 13 route người dùng/quyền học/nhật ký/trình học, `AuditLog` cho mọi mutation admin, video demo qua URL ký gắn người xem |
 | **Phase 3 frontend** | 7 trang (`/my-courses`, 2 trang trình học, 4 trang quản trị), 16 file component mới |
 | PostgreSQL | 4 migration replay sạch trên `elearning_ci`, `prisma migrate diff` không lệch; seed chạy hai lần; đúng 1 admin; 2 `CHECK` còn nguyên sau replay |
-| Kiểm tra | lint ✓, typecheck ✓, 195 unit test ✓ (141 api + 54 web), 55 E2E ✓, build ✓ (cần API đang chạy ở :3001) |
+| Kiểm tra | lint ✓, typecheck ✓, 216 unit test ✓ (162 api + 54 web), 65 E2E ✓, build ✓ (cần API đang chạy ở :3001) |
 | Design token + palette | `design/contrast-check.py` → 23/23 cặp đạt WCAG AA, exit 0 |
 | Design system | `DESIGN.md` + `.impeccable/design.json`, đủ 8 phần chuẩn và 8 preview component |
 | CI | Workflow Ubuntu + PostgreSQL chạy D1–D7, `prisma generate` trước D1. Chưa chạy cho nhánh Phase 3 (chưa push); bước build dự kiến fail vì `web build` cần API đang chạy (`PHASE_3_REPORT.md` §6) |
