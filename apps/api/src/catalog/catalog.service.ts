@@ -520,13 +520,24 @@ export class CatalogService {
         },
         include: this.detailInclude,
       });
+      const instructorReassigned =
+        input.instructorId !== undefined &&
+        (input.instructorId ?? null) !== course.instructorId;
       await this.audit.record(
         {
           ...actor,
           action: 'course.updated',
           entityType: 'COURSE',
           entityId: id,
-          metadata: { slug: updated.slug },
+          metadata: {
+            slug: updated.slug,
+            ...(instructorReassigned
+              ? {
+                  fromInstructorId: course.instructorId,
+                  toInstructorId: input.instructorId ?? null,
+                }
+              : {}),
+          },
         },
         tx,
       );

@@ -49,6 +49,8 @@ export class AdminCatalogController {
 
   @Get('categories')
   @StaffAccess('scoped')
+  // Not owner-filtered: categories are shared taxonomy, not per-instructor
+  // data, so every staff role sees the same list.
   listCategories() {
     return this.catalog.listCategoriesForAdmin();
   }

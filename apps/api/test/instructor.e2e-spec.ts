@@ -164,6 +164,36 @@ describe('Instructor role (e2e)', () => {
       .send({ instructorId: null }).expect(200);
   });
 
+  it('audits ownership reassignment with from/to instructor ids', async () => {
+    const admin = await createUser('ADMIN');
+    const a = await createUser('INSTRUCTOR');
+    const b = await createUser('INSTRUCTOR');
+    const sa = await signIn(admin.email);
+    const sInst = await signIn(a.email);
+    const course = await api().post('/api/v1/admin/courses').set(as(sInst))
+      .send({ title: 'Khóa học chuyển giao' }).expect(201);
+
+    await api().patch(`/api/v1/admin/courses/${course.body.id}`).set(as(sa))
+      .send({ subtitle: 'Không đổi giảng viên' }).expect(200);
+    const unchanged = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'course.updated', entityId: course.body.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(unchanged.metadata).toEqual({ slug: course.body.slug });
+
+    await api().patch(`/api/v1/admin/courses/${course.body.id}`).set(as(sa))
+      .send({ instructorId: b.id }).expect(200);
+    const reassigned = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'course.updated', entityId: course.body.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(reassigned.metadata).toEqual({
+      slug: course.body.slug,
+      fromInstructorId: a.id,
+      toInstructorId: b.id,
+    });
+  });
+
   it('lets an instructor build curriculum on their own course only', async () => {
     const a = await createUser('INSTRUCTOR');
     const b = await createUser('INSTRUCTOR');
@@ -309,12 +339,27 @@ describe('Instructor role (e2e)', () => {
       .send({ role: 'INSTRUCTOR' }).expect(200);
     await api().get('/api/v1/admin/courses').set(as(su)).expect(200);
 
-    const log = await prisma.auditLog.findFirstOrThrow({ where: { action: 'user.role_changed' } });
-    expect(log.metadata).toEqual({ fromRole: 'STUDENT', toRole: 'INSTRUCTOR' });
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'user.role_changed' },
+      orderBy: { createdAt: 'asc' },
+    });
+    expect(log.metadata).toEqual({ fromRole: 'STUDENT', toRole: 'INSTRUCTOR', releasedCourses: 0 });
+
+    const ownedCourse = await api().post('/api/v1/admin/courses').set(as(su))
+      .send({ title: 'Khóa học sẽ bị thu hồi' }).expect(201);
 
     await api().patch(`/api/v1/admin/users/${user.id}/role`).set(as(sa))
       .send({ role: 'STUDENT' }).expect(200);
     await api().get('/api/v1/admin/courses').set(as(su)).expect(404);
+
+    expect(
+      (await prisma.course.findUniqueOrThrow({ where: { id: ownedCourse.body.id } })).instructorId,
+    ).toBeNull();
+    const demoteLog = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'user.role_changed' },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(demoteLog.metadata).toEqual({ fromRole: 'INSTRUCTOR', toRole: 'STUDENT', releasedCourses: 1 });
 
     await api().patch(`/api/v1/admin/users/${admin.id}/role`).set(as(sa))
       .send({ role: 'STUDENT' }).expect(409);

@@ -286,13 +286,21 @@ export class AdminUserController {
         data: { role: input.role },
       });
       if (count === 0) return; // lost a race to another admin; their row is the audit
+      let releasedCourses = 0;
+      if (current.role === UserRole.INSTRUCTOR && input.role !== UserRole.INSTRUCTOR) {
+        const released = await tx.course.updateMany({
+          where: { instructorId: id },
+          data: { instructorId: null },
+        });
+        releasedCourses = released.count;
+      }
       await this.audit.record(
         {
           ...actor,
           action: 'user.role_changed',
           entityType: 'USER',
           entityId: id,
-          metadata: { fromRole: current.role, toRole: input.role },
+          metadata: { fromRole: current.role, toRole: input.role, releasedCourses },
         },
         tx,
       );

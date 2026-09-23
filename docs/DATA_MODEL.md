@@ -886,7 +886,7 @@ Bảng dưới đây là **bảng hợp nhất duy nhất** của từ vựng `a
 | `action` | `entityType` | Ghi ở | `actor` | Khóa bắt buộc trong `metadata` | Nhãn tiếng Việt |
 |---|---|---|---|---|---|
 | `course.created` | `COURSE` | `POST /admin/courses` | admin | `slug` | Tạo khóa học |
-| `course.updated` | `COURSE` | `PATCH /admin/courses/{id}` | admin | `slug` | Sửa khóa học |
+| `course.updated` | `COURSE` | `PATCH /admin/courses/{id}` | admin | `slug`; kèm `fromInstructorId`, `toInstructorId` khi đổi chủ khóa học | Sửa khóa học |
 | `course.published` | `COURSE` | `POST /admin/courses/{id}/publish` | admin | `slug` | Xuất bản khóa học |
 | `course.unpublished` | `COURSE` | `POST /admin/courses/{id}/unpublish` | admin | `slug`, `fromStatus` | Gỡ xuất bản |
 | `course.archived` | `COURSE` | `POST /admin/courses/{id}/archive` | admin | `slug` | Lưu trữ khóa học |
@@ -912,7 +912,7 @@ Bảng dưới đây là **bảng hợp nhất duy nhất** của từ vựng `a
 | `enrollment.revoked` | `ENROLLMENT` | `revoke()` thành công | admin, hoặc `null` khi do hoàn tiền | `courseId`, `userId`, `reason`, `trigger` (`admin` \| `refund`) | Thu hồi quyền học |
 | `user.blocked` | `USER` | `PATCH /admin/users/{id}` → `BLOCKED` | admin | `reason`, `revokedSessions` | Khóa tài khoản |
 | `user.unblocked` | `USER` | `PATCH /admin/users/{id}` → `ACTIVE` | admin | — | Mở khóa tài khoản |
-| `user.role_changed` | `USER` | `PATCH /admin/users/{id}/role` | admin | `fromRole`, `toRole` | Đổi vai trò người dùng |
+| `user.role_changed` | `USER` | `PATCH /admin/users/{id}/role` | admin | `fromRole`, `toRole`, `releasedCourses` (số khóa học bị thu hồi quyền sở hữu khi rời vai trò giảng viên, 0 nếu không có) | Đổi vai trò người dùng |
 | `purchase.paid` | `PURCHASE` | `confirmPayment` chạy nhánh `count === 1` | `null` (hệ thống) | `courseId`, `priceVnd`, `appTransId` | Đơn hàng đã thanh toán |
 | `purchase.refund_requested` | `PURCHASE` | `POST /purchases/{id}/refund-request` | học viên | `reason` | Yêu cầu hoàn tiền |
 | `purchase.refund_approved` | `PURCHASE` | Admin duyệt yêu cầu | admin | `reason` | Duyệt hoàn tiền |
