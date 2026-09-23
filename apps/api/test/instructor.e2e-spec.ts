@@ -225,4 +225,41 @@ describe('Instructor role (e2e)', () => {
         coverImageKey: `public/courses/${otherCourseId}/cover/${randomUUID()}.jpg`,
       }).expect(400);
   });
+
+  it('rejects a resource objectKey that traverses out of its own lesson prefix', async () => {
+    const a = await createUser('INSTRUCTOR');
+    const b = await createUser('INSTRUCTOR');
+    const sa = await signIn(a.email);
+    const sb = await signIn(b.email);
+
+    const courseA = await api().post('/api/v1/admin/courses').set(as(sa))
+      .send({ title: 'Khóa học A2' }).expect(201);
+    const sectionA = await api().post(`/api/v1/admin/courses/${courseA.body.id}/sections`)
+      .set(as(sa)).send({ title: 'Chương A2' }).expect(201);
+    const lessonA = await api().post(`/api/v1/admin/sections/${sectionA.body.id}/lessons`)
+      .set(as(sa)).send({ title: 'Bài A2', type: 'ARTICLE' }).expect(201);
+
+    const courseB = await api().post('/api/v1/admin/courses').set(as(sb))
+      .send({ title: 'Khóa học B2' }).expect(201);
+    const sectionB = await api().post(`/api/v1/admin/courses/${courseB.body.id}/sections`)
+      .set(as(sb)).send({ title: 'Chương B2' }).expect(201);
+    const lessonB = await api().post(`/api/v1/admin/sections/${sectionB.body.id}/lessons`)
+      .set(as(sb)).send({ title: 'Bài B2', type: 'ARTICLE' }).expect(201);
+
+    const file = `${randomUUID()}-tai-lieu.pdf`;
+    await api().post(`/api/v1/admin/lessons/${lessonB.body.id}/resources`).set(as(sb))
+      .send({
+        objectKey: `lessons/${lessonB.body.id}/resources/../../${lessonA.body.id}/resources/${file}`,
+        filename: 'tai-lieu.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 1024,
+      }).expect(400);
+    await api().post(`/api/v1/admin/lessons/${lessonB.body.id}/resources`).set(as(sb))
+      .send({
+        objectKey: `lessons/${lessonB.body.id}/resources/..\\..\\${lessonA.body.id}\\resources\\${file}`,
+        filename: 'tai-lieu.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 1024,
+      }).expect(400);
+  });
 });

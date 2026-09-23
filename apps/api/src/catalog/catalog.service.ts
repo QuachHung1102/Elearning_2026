@@ -19,9 +19,9 @@ import {
   StorageProvider,
 } from '../generated/prisma/enums.js';
 import {
-  coverKeyPrefix,
+  isCoverKeyFor,
+  isResourceKeyFor,
   OBJECT_STORAGE,
-  resourceKeyPrefix,
   type ObjectStorage,
 } from '../media/object-storage.js';
 import { STREAM_CLIENT, type StreamClient } from '../media/stream.client.js';
@@ -439,7 +439,7 @@ export class CatalogService {
       }
     }
     if (input.categoryId) await this.mustFindCategory(input.categoryId);
-    if (input.coverImageKey && !input.coverImageKey.startsWith(coverKeyPrefix(id))) {
+    if (input.coverImageKey && !isCoverKeyFor(id, input.coverImageKey)) {
       throw appError(
         HttpStatus.BAD_REQUEST,
         ERROR_CODE.VALIDATION_FAILED,
@@ -1125,7 +1125,7 @@ export class CatalogService {
     actor: AuditActorContext,
   ) {
     await this.mustFindLesson(lessonId);
-    if (!input.objectKey.startsWith(resourceKeyPrefix(lessonId))) {
+    if (!isResourceKeyFor(lessonId, input.objectKey)) {
       throw appError(
         HttpStatus.BAD_REQUEST,
         ERROR_CODE.VALIDATION_FAILED,

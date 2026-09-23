@@ -60,6 +60,25 @@ export function resourceKeyPrefix(lessonId: string): string {
   return `lessons/${lessonId}/resources/`;
 }
 
+/**
+ * `startsWith(prefix)` alone lets `lessons/<own>/resources/../<victim>/resources/x`
+ * pass the prefix check and then resolve outside it on disk (`LocalDiskStorage`
+ * only rejects the *final* resolved path escaping the storage root, not a `..`
+ * segment inside an owned prefix). These two match the exact shape `coverKey()`
+ * and `resourceKey()` generate, so nothing but their own output is ever accepted.
+ * `courseId`/`lessonId` are route params already validated as UUIDs by
+ * `ParseUUIDPipe`/`StaffGuard`, so they carry no regex metacharacters.
+ */
+export function isCoverKeyFor(courseId: string, key: string): boolean {
+  return new RegExp(`^${coverKeyPrefix(courseId)}${UUID}\\.(jpg|png|webp)$`).test(key);
+}
+
+export function isResourceKeyFor(lessonId: string, key: string): boolean {
+  return new RegExp(
+    `^${resourceKeyPrefix(lessonId)}${UUID}-[a-z0-9-]{1,80}(\\.[a-z0-9]+)?$`,
+  ).test(key);
+}
+
 export function coverKey(courseId: string, contentType: string): string {
   const extension = COVER_EXTENSION[contentType];
   if (!extension) throw new Error(`Unsupported cover type ${contentType}`);
