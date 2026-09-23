@@ -66,6 +66,7 @@ export const CARD_SELECT = {
   ratingCount: true,
   demoStats: true,
   category: true,
+  instructor: { select: { displayName: true } },
 } satisfies Prisma.CourseSelect;
 
 function notFound(): never {
@@ -1241,6 +1242,7 @@ export class CatalogService {
 
   private readonly detailInclude = {
     category: true,
+    instructor: { select: { displayName: true } },
     sections: {
       orderBy: { position: 'asc' },
       include: { lessons: { orderBy: { position: 'asc' } } },
@@ -1251,6 +1253,7 @@ export class CatalogService {
   private adminDetailInclude() {
     return {
       category: true,
+      instructor: { select: { displayName: true } },
       sections: {
         orderBy: { position: 'asc' },
         include: {
@@ -1378,6 +1381,7 @@ export class CatalogService {
       category: course.category
         ? this.toCategory({ ...course.category })
         : null,
+      instructorName: course.instructor?.displayName ?? null,
     };
   }
 
@@ -1472,6 +1476,7 @@ type CourseCardRow = {
     icon: string | null;
     position: number;
   } | null;
+  instructor: { displayName: string } | null;
 };
 
 type CourseDetailRow = {
@@ -1506,6 +1511,7 @@ export type CourseCard = {
   ratingCount: number;
   demoStats: boolean;
   category: CategoryDto | null;
+  instructorName: string | null;
 };
 
 export type CategoryDto = {

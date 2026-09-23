@@ -323,4 +323,19 @@ describe('Instructor role (e2e)', () => {
     await api().patch(`/api/v1/admin/users/${admin.id}/role`).set(as(su))
       .send({ role: 'ADMIN' }).expect(404);
   });
+
+  it('exposes the instructor display name on public course payloads', async () => {
+    const teacher = await createUser('INSTRUCTOR');
+    const course = await prisma.course.create({
+      data: {
+        slug: `khoa-${randomUUID().slice(0, 8)}`, title: 'Khóa công khai', description: '',
+        priceVnd: 0, status: 'PUBLISHED', publishedAt: new Date(), instructorId: teacher.id,
+        learningOutcomes: [], requirements: [], targetAudience: [],
+      },
+    });
+    const detail = await api().get(`/api/v1/courses/${course.slug}`).expect(200);
+    expect(detail.body.instructorName).toBe('Giảng viên');
+    const list = await api().get('/api/v1/courses').expect(200);
+    expect(list.body.items[0].instructorName).toBe('Giảng viên');
+  });
 });
