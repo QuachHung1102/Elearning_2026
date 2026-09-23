@@ -67,6 +67,7 @@ export const AUDIT_VOCABULARY = {
   },
   'user.blocked': { entityType: 'USER', keys: ['reason', 'revokedSessions'] },
   'user.unblocked': { entityType: 'USER', keys: [] },
+  'user.role_changed': { entityType: 'USER', keys: ['fromRole', 'toRole'] },
   'purchase.paid': {
     entityType: 'PURCHASE',
     keys: ['courseId', 'priceVnd', 'appTransId'],

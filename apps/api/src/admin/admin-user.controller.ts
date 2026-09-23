@@ -78,6 +78,11 @@ export class UpdateUserStatusDto {
   status: UserStatus;
 }
 
+export class UpdateUserRoleDto {
+  @IsEnum(UserRole)
+  role: UserRole;
+}
+
 const uuid = () => new ParseUUIDPipe({ version: '4' });
 
 /**
@@ -254,6 +259,44 @@ export class AdminUserController {
       }
     });
 
+    return { user: await this.findRow(id) };
+  }
+
+  @Patch(':id/role')
+  @AdminMutationRateLimit()
+  async updateRole(
+    @Param('id', uuid()) rawId: string,
+    @Body() input: UpdateUserRoleDto,
+    @AuditActor() actor: AuditActorContext,
+  ) {
+    const id = rawId.toLowerCase();
+    if (id === actor.actorId) {
+      throw appError(
+        HttpStatus.CONFLICT,
+        ERROR_CODE.SELF_ACTION_FORBIDDEN,
+        'An admin cannot change their own role',
+      );
+    }
+    await this.prisma.$transaction(async (tx) => {
+      const current = await tx.user.findUnique({ where: { id }, select: { role: true } });
+      if (!current) notFound();
+      if (current.role === input.role) return;
+      const { count } = await tx.user.updateMany({
+        where: { id, role: current.role },
+        data: { role: input.role },
+      });
+      if (count === 0) return; // lost a race to another admin; their row is the audit
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'user.role_changed',
+          entityType: 'USER',
+          entityId: id,
+          metadata: { fromRole: current.role, toRole: input.role },
+        },
+        tx,
+      );
+    });
     return { user: await this.findRow(id) };
   }
 

@@ -297,4 +297,30 @@ describe('Instructor role (e2e)', () => {
     });
     await api().get('/api/v1/admin/reports/overview').set(as(sa)).expect(404);
   });
+
+  it('lets an admin change a role, audited, never their own', async () => {
+    const admin = await createUser('ADMIN');
+    const user = await createUser('STUDENT');
+    const sa = await signIn(admin.email);
+    const su = await signIn(user.email);
+
+    await api().get('/api/v1/admin/courses').set(as(su)).expect(404);
+    await api().patch(`/api/v1/admin/users/${user.id}/role`).set(as(sa))
+      .send({ role: 'INSTRUCTOR' }).expect(200);
+    await api().get('/api/v1/admin/courses').set(as(su)).expect(200);
+
+    const log = await prisma.auditLog.findFirstOrThrow({ where: { action: 'user.role_changed' } });
+    expect(log.metadata).toEqual({ fromRole: 'STUDENT', toRole: 'INSTRUCTOR' });
+
+    await api().patch(`/api/v1/admin/users/${user.id}/role`).set(as(sa))
+      .send({ role: 'STUDENT' }).expect(200);
+    await api().get('/api/v1/admin/courses').set(as(su)).expect(404);
+
+    await api().patch(`/api/v1/admin/users/${admin.id}/role`).set(as(sa))
+      .send({ role: 'STUDENT' }).expect(409);
+    await api().patch(`/api/v1/admin/users/${user.id}/role`).set(as(sa))
+      .send({ role: 'OWNER' }).expect(400);
+    await api().patch(`/api/v1/admin/users/${admin.id}/role`).set(as(su))
+      .send({ role: 'ADMIN' }).expect(404);
+  });
 });
