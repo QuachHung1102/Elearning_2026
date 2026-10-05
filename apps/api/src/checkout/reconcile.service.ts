@@ -73,7 +73,9 @@ export class ReconcileService implements OnModuleInit, OnModuleDestroy {
   /**
    * Ask, then close, then cancel — in that order. Closing first would mark an
    * attempt EXPIRED while the provider has just paid it, and the payment would
-   * arrive as a "late" one instead of being confirmed on time.
+   * arrive as a "late" one instead of being confirmed on time. For the same
+   * reason an attempt whose question or confirmation threw this run is not
+   * closed this run: it stays PENDING and is asked again next time.
    *
    * Every instance runs this. With one that is nothing to think about; with
    * several it costs extra provider calls but stays correct, because
@@ -91,8 +93,8 @@ export class ReconcileService implements OnModuleInit, OnModuleDestroy {
     if (this.running) return summary;
     this.running = true;
     try {
-      await this.askProvider(now, summary);
-      summary.expired = await this.expireLapsed(now);
+      const unanswered = await this.askProvider(now, summary);
+      summary.expired = await this.expireLapsed(now, unanswered);
       summary.cancelled = await this.cancelAbandoned(now);
     } finally {
       this.running = false;
@@ -151,11 +153,14 @@ export class ReconcileService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Step 1: PENDING attempts older than RECONCILE_MIN_AGE, oldest first. */
+  /**
+   * Step 1: PENDING attempts older than RECONCILE_MIN_AGE, oldest first.
+   * Returns the ids of those whose question or confirmation threw.
+   */
   private async askProvider(
     now: Date,
     summary: ReconcileSummary,
-  ): Promise<void> {
+  ): Promise<string[]> {
     const attempts = await this.prisma.paymentAttempt.findMany({
       where: {
         status: PaymentAttemptStatus.PENDING,
@@ -168,6 +173,7 @@ export class ReconcileService implements OnModuleInit, OnModuleDestroy {
       take: BATCH,
       select: { id: true, appTransId: true },
     });
+    const unanswered: string[] = [];
     for (const attempt of attempts) {
       try {
         const applied = await this.apply(attempt, { actorId: null });
@@ -175,6 +181,7 @@ export class ReconcileService implements OnModuleInit, OnModuleDestroy {
         if (applied.status === 'FAILED' && applied.changed) summary.failed += 1;
       } catch (error) {
         // One attempt the provider cannot answer for must not starve the rest.
+        unanswered.push(attempt.id);
         logEvent(
           {
             evt: 'reconcile.attempt_failed',
@@ -185,6 +192,7 @@ export class ReconcileService implements OnModuleInit, OnModuleDestroy {
         );
       }
     }
+    return unanswered;
   }
 
   private async apply(
@@ -246,11 +254,15 @@ export class ReconcileService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  /** Step 2: still PENDING past `expiresAt` → EXPIRED, one conditional write. */
-  private expireLapsed(now: Date): Promise<number> {
+  /**
+   * Step 2: still PENDING past `expiresAt` → EXPIRED, one conditional write.
+   * `unanswered` are skipped: the provider may have been paid for them.
+   */
+  private expireLapsed(now: Date, unanswered: string[]): Promise<number> {
     return this.prisma.$transaction(async (tx) => {
       const lapsed = await tx.paymentAttempt.updateManyAndReturn({
         where: {
+          id: { notIn: unanswered },
           status: PaymentAttemptStatus.PENDING,
           expiresAt: { lt: now },
         },
