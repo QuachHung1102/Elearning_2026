@@ -97,3 +97,7 @@ Diễn tập khôi phục (A5.5) vào một database **trống** có tên chứa
 ```
 
 Script tự `pg_dump` nguồn (nếu không có `-DumpFile`), `pg_restore` vào đích, rồi kiểm tra `_prisma_migrations` so với `apps/api/prisma/migrations` (migration chưa có trong bản dump chỉ cảnh báo) và số dòng từng bảng so với nguồn. Nó từ chối đích trùng tên nguồn, đích đã có bảng, hoặc tên không giống DB nháp — `-Force` để bỏ qua (trùng cả host lẫn tên thì luôn từ chối). `-RunE2e` chạy e2e của API, vốn đọc `apps/api/.env.test`: sửa `DATABASE_URL` trong đó trỏ vào DB đích trước (e2e sẽ xóa dữ liệu và chạy `prisma migrate deploy`). Nguồn đang có người ghi thì số dòng có thể lệch; so trên bản sao chụp hoặc lúc ít truy cập.
+
+## Triển khai trên Railway
+
+Hai service `web` và `api` phải có **cùng** `INTERNAL_API_SECRET` (chuỗi ngẫu nhiên ≥ 32 byte, ví dụ `openssl rand -base64 48`; dùng shared variable của Railway). Máy chủ Next gửi nó kèm IP của khách trong mọi request tới API, để rate limit và audit log tính theo từng khách thay vì theo máy chủ Next (API_CONTRACT.md §8.1). Thiếu ở production thì API không boot và `web` không build/start; lệch giá trị thì mọi khách lại dùng chung một bucket. Không bao giờ đặt tên nó với tiền tố `NEXT_PUBLIC_`.

@@ -1,6 +1,7 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers as requestHeaders } from "next/headers";
 import { ApiError } from "./api";
+import { forwardVisitor } from "./internal-api";
 import { API_ORIGIN } from "./site";
 
 export type User = {
@@ -25,7 +26,10 @@ export async function serverFetch(
   init: RequestInit = {},
 ): Promise<Response> {
   const cookie = (await cookies()).toString();
-  const headers = new Headers(init.headers);
+  const headers = forwardVisitor(
+    new Headers(init.headers),
+    await requestHeaders(),
+  );
   if (cookie) headers.set("cookie", cookie);
   return fetch(`${API_ORIGIN}/api/v1${path}`, {
     ...init,

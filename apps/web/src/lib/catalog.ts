@@ -120,6 +120,10 @@ export async function publicFetch<T>(
   path: string,
   revalidate = 300,
 ): Promise<T> {
+  // ponytail: no `forwardVisitor` here. Headers are part of the data-cache key,
+  // so naming the visitor would cache per visitor; the API counts these cache
+  // misses (one per URL per `revalidate`) against this server's own bucket.
+  // Exempt trusted no-visitor calls in `clientIp` if that bucket ever fills.
   const response = await fetch(`${API_ORIGIN}/api/v1${path}`, {
     next: { revalidate },
     signal: AbortSignal.timeout(10_000),

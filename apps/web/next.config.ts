@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 import { securityHeaders } from "./src/lib/security-headers";
+import { internalApiSecret } from "./src/lib/internal-api";
 import { API_ORIGIN } from "./src/lib/site";
+
+// Fail the build and the start, not the first request, when production lacks it.
+internalApiSecret();
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { forwardVisitor } from "./lib/internal-api";
 import { catalogResource } from "./lib/routes";
 import { API_ORIGIN } from "./lib/site";
 
@@ -17,6 +18,7 @@ async function catalogStatus(request: NextRequest, resource: string) {
   // catalog ever sees real traffic.
   const response = await fetch(`${API_ORIGIN}/api/v1${resource}`, {
     method: "HEAD",
+    headers: forwardVisitor(new Headers(), request.headers),
     signal: AbortSignal.timeout(3_000),
   }).catch(() => null);
   // Anything but a clear 404 (API down or slow) is left to the page.
@@ -26,6 +28,15 @@ async function catalogStatus(request: NextRequest, resource: string) {
 }
 
 export async function proxy(request: NextRequest) {
+  // The `/api/*` rewrite in next.config.ts forwards these request headers.
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    const headers = forwardVisitor(
+      new Headers(request.headers),
+      request.headers,
+    );
+    return NextResponse.next({ request: { headers } });
+  }
+
   const resource = catalogResource(request.nextUrl.pathname);
   if (resource) return catalogStatus(request, resource);
 
@@ -50,6 +61,7 @@ export const config = {
   matcher: [
     "/account/:path*",
     "/admin/:path*",
+    "/api/:path*",
     "/categories/:slug",
     "/checkout/:path*",
     "/courses/:slug",

@@ -70,7 +70,7 @@ Thứ tự guard hiện tại là `@UseGuards(CsrfGuard, AuthRateLimitGuard)`. H
 | Khoá đếm | `${clientIp}:${request.path}` — register và login có quota riêng |
 | Cửa sổ | `60_000` ms, cố định (fixed window) |
 | Giới hạn | `10` request / cửa sổ |
-| Nguồn IP | `X-Real-IP` khi có `RAILWAY_ENVIRONMENT_ID` và header là IP hợp lệ; ngược lại `request.ip` |
+| Nguồn IP | `clientIp` — xem mục 8.1 (IP khách do máy chủ Next chuyển kèm secret, rồi `X-Real-IP` trên Railway, rồi `request.ip`) |
 | Bộ nhớ | `Map` trong process, xoá sạch khi vượt `10_000` khoá |
 | Khi vượt | Header `Retry-After` (giây) + `429` |
 
@@ -965,7 +965,19 @@ Bảng này là danh sách đầy đủ. Endpoint không có mặt ở đây th�
 
 Response khi vượt: `429` với `code: RATE_LIMITED` và header `Retry-After` tính bằng giây (`RateLimitedError` mang số giây, `AppExceptionFilter` đặt header). Không thêm header `X-RateLimit-*` — `Retry-After` đã đủ cho mọi client hiện có.
 
-**Điểm phải xác minh trước khi mở bán:** rate limit theo IP chỉ đúng nếu API nhận được IP thật của người dùng. Sau rewrite `/api/:path*` của Next, request tới API xuất phát từ service `web`. Cần kiểm chứng bằng log trên Railway rằng `X-Real-IP` (hoặc `X-Forwarded-For`) đến được API. Nếu không đến, mọi limit theo `ip` trở thành limit toàn cục và sẽ chặn nhầm người dùng thật — khi đó chuyển các endpoint đã đăng nhập sang `key: 'user'` và đưa `/auth/*` ra sau một proxy giữ được IP. Đây là kiểm chứng bằng lệnh, không phải suy luận.
+### 8.1 IP nào được đếm (`clientIp`, T4.17)
+
+Mọi request tới API từ máy chủ Next (render phía server, `HEAD` trong `proxy.ts`, rewrite `/api/:path*`) đều xuất phát từ **một** địa chỉ: service `web`. Nếu API đếm theo địa chỉ đó, mọi khách dùng chung một bucket và vài chục người xem cùng lúc là `429`. Vì vậy `clientIp` chọn theo thứ tự:
+
+1. `X-Visitor-Ip`, **chỉ khi** kèm `X-Internal-Api-Secret` khớp `INTERNAL_API_SECRET` (so sánh thời gian hằng trên SHA-256) và là IP hợp lệ. Sai, thiếu secret hay không phải IP thì bỏ qua cả header — không ai tự chọn được bucket.
+2. `X-Real-IP` khi có `RAILWAY_ENVIRONMENT_ID` (edge Railway ghi đè header này).
+3. `request.ip` (socket).
+
+Phía web (`src/lib/internal-api.ts`, `forwardVisitor`) luôn **xoá** hai header trên khỏi request của trình duyệt (rewrite sao chép mọi header của trình duyệt), rồi chỉ đặt lại khi chạy trên Railway (`RAILWAY_ENVIRONMENT_ID`), lấy IP từ `X-Real-IP` mà edge của service `web` đã ghi. Ngoài Railway không có header nào đáng tin, nên không chuyển gì: API đếm theo máy chủ Next như trước. Được dùng ở `serverFetch` (`lib/session.ts`), `HEAD` của catalog và nhánh `/api/*` trong `proxy.ts` (request header đặt ở proxy được chuyển tới đích rewrite). `publicFetch` (`lib/catalog.ts`) **không** dùng: header nằm trong khoá data cache của Next, nên gắn IP sẽ cache theo từng khách; các lần cache miss (một lần mỗi URL mỗi `revalidate`) vẫn tính vào bucket của máy chủ Next.
+
+`INTERNAL_API_SECRET` bắt buộc ở production trên cả hai service (API: boot guard, ≥ 32 byte; web: `next.config.ts` khi `RAILWAY_ENVIRONMENT_NAME=production`), ngoài production có giá trị mặc định cố định. Không bao giờ đặt tiền tố `NEXT_PUBLIC_`. Nó cũng là IP ghi vào audit log.
+
+Nguồn về Railway: tài liệu [Public Networking — Specs & Limits](https://docs.railway.com/networking/public-networking/specs-and-limits) ghi edge đặt `X-Real-IP` là IP client; nhân viên Railway xác nhận trên [Central Station](https://station.railway.com/questions/edge-proxy-x-forwarded-for-and-x-real-ip-c5a50049) (2024-08-23) rằng client không còn tự đặt được `X-Real-IP`. Tài liệu chính thức không nói rõ việc ghi đè, nên vẫn nên kiểm bằng log sau lần deploy đầu: gửi `X-Real-IP` giả tới web và xem audit log/`429` có theo IP thật không.
 
 ## 9. Điểm cần chủ sở hữu xác nhận
 
