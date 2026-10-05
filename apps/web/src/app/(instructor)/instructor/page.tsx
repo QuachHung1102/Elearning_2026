@@ -69,7 +69,7 @@ export default async function InstructorHomePage() {
               </h2>
               <Link
                 href="/instructor/courses?status=DRAFT"
-                className="text-sm text-primary-text hover:underline"
+                className="inline-flex min-h-11 items-center text-sm text-primary-text hover:underline"
               >
                 Xem tất cả bản nháp
               </Link>
@@ -86,7 +86,7 @@ export default async function InstructorHomePage() {
                     className="panel flex flex-wrap items-center justify-between gap-3 p-4"
                   >
                     <Link
-                      className="min-w-0 font-medium underline-offset-2 [overflow-wrap:anywhere] hover:underline"
+                      className="inline-flex min-h-11 min-w-0 items-center font-medium underline-offset-2 [overflow-wrap:anywhere] hover:underline"
                       href={`/instructor/courses/${course.id}`}
                     >
                       {course.title}
@@ -108,7 +108,7 @@ export default async function InstructorHomePage() {
               </h2>
               <Link
                 href="/instructor/students"
-                className="text-sm text-primary-text hover:underline"
+                className="inline-flex min-h-11 items-center text-sm text-primary-text hover:underline"
               >
                 Xem tất cả học viên
               </Link>

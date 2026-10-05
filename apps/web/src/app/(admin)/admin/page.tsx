@@ -54,7 +54,7 @@ export default async function AdminHomePage() {
 
       {overview.draftCourses > 0 && (
         <Alert variant="info" title="Có khóa học chưa xuất bản">
-          <Link className="underline" href="/admin/courses?status=DRAFT">
+          <Link className="inline-flex min-h-11 items-center underline" href="/admin/courses?status=DRAFT">
             Mở danh sách bản nháp
           </Link>
         </Alert>

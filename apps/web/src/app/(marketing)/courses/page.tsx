@@ -62,6 +62,10 @@ export default async function CoursesPage({
       </aside>
 
       <section className="grid content-start gap-6">
+        {/* The cards are h3: without this level the outline skips h2 (WCAG 1.3.1). */}
+        <h2 className="sr-only">
+          Danh sách khóa học
+        </h2>
         <div className="flex justify-end">
           <SortSelect
             value={state.sort ?? "enrollmentCount:desc"}

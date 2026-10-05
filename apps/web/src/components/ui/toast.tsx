@@ -53,7 +53,7 @@ export function Toaster() {
   }, [router]);
 
   return (
-    <aside className="fixed inset-x-4 top-4 z-50 grid gap-2 md:inset-x-auto md:bottom-4 md:right-4 md:top-auto md:w-96">
+    <aside aria-label="Thông báo" className="fixed inset-x-4 top-4 z-50 grid gap-2 md:inset-x-auto md:bottom-4 md:right-4 md:top-auto md:w-96">
       {items.map((toast) => (
         <div
           key={toast.id}

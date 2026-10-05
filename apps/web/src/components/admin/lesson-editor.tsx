@@ -328,7 +328,7 @@ export function LessonEditor({
                       router.refresh();
                     }}
                     trigger={
-                      <button type="button" className={buttonClass("ghost", "sm")}>
+                      <button type="button" className={buttonClass("ghost", "sm", "min-w-11")}>
                         <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
                         <span className="sr-only">Xóa {resource.filename}</span>
                       </button>

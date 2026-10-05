@@ -45,7 +45,7 @@ export default async function OrderPage({
       <nav aria-label="Đường dẫn" className="text-sm text-muted-foreground">
         <ol className="flex list-none flex-wrap items-center gap-1 p-0">
           <li>
-            <Link className="hover:text-primary-text" href="/account/orders">
+            <Link className="inline-flex min-h-11 items-center hover:text-primary-text" href="/account/orders">
               Đơn hàng
             </Link>
           </li>
