@@ -22,7 +22,7 @@ import {
   SessionAuthGuard,
   type AuthenticatedRequest,
 } from '../auth/session-auth.guard.js';
-import { CARD_SELECT, CatalogService } from '../catalog/catalog.service.js';
+import { CARD_SELECT, CourseService } from '../catalog/course.service.js';
 import { csv, PageQuery } from '../catalog/course.dto.js';
 import { paginated, resolvePage } from '../common/pagination.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -70,7 +70,7 @@ export class MyEnrollmentsQuery extends PageQuery {
 export class EnrollmentController {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly catalog: CatalogService,
+    private readonly catalog: CourseService,
   ) {}
 
   @Get('me')

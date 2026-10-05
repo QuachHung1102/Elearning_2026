@@ -374,8 +374,8 @@ describe('Phase 2 catalog (e2e)', () => {
       where: { id: videoAssetId },
       data: { status: 'PENDING' },
     });
-    const { CatalogService } = await import('../src/catalog/catalog.service.js');
-    const service = app.get(CatalogService);
+    const { CourseService } = await import('../src/catalog/course.service.js');
+    const service = app.get(CourseService);
     const stream = (service as unknown as { stream: { getStatus: unknown } })
       .stream;
     const original = stream.getStatus;

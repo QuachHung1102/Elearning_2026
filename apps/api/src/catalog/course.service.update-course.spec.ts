@@ -1,5 +1,5 @@
 import { HttpException } from '@nestjs/common';
-import { CatalogService } from './catalog.service.js';
+import { CourseService } from './course.service.js';
 import { buildSearchText } from './search-text.js';
 
 const ID = '11111111-1111-4111-8111-111111111111';
@@ -68,7 +68,7 @@ function setup() {
     course: { findUnique: vi.fn(async () => staleCourse) },
     $transaction: vi.fn(async (run: (t: typeof tx) => unknown) => run(tx)),
   };
-  const service = new CatalogService(
+  const service = new CourseService(
     prisma as never,
     { record: vi.fn(async () => undefined) } as never,
     { publicUrl: (key: string) => `/files/${key}` } as never,

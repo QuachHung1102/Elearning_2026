@@ -18,7 +18,9 @@ import type { AuditActorContext } from '../audit/audit.service.js';
 import { AuthRateLimitGuard } from '../auth/auth-rate-limit.guard.js';
 import { OwnerScope, StaffAccess, StaffGuard } from '../auth/staff.guard.js';
 import { AdminMutationRateLimit } from '../auth/rate-limit.decorator.js';
-import { CatalogService } from './catalog.service.js';
+import { CategoryService } from './category.service.js';
+import { CourseService } from './course.service.js';
+import { CurriculumService } from './curriculum.service.js';
 import {
   AdminCourseListQuery,
   CategoryOrderDto,
@@ -43,7 +45,11 @@ const uuid = () => new ParseUUIDPipe({ version: '4' });
 @Controller('admin')
 @UseGuards(StaffGuard, AuthRateLimitGuard)
 export class AdminCatalogController {
-  constructor(private readonly catalog: CatalogService) {}
+  constructor(
+    private readonly categories: CategoryService,
+    private readonly courses: CourseService,
+    private readonly curriculum: CurriculumService,
+  ) {}
 
   // ── Categories ───────────────────────────────────────────────────
 
@@ -52,7 +58,7 @@ export class AdminCatalogController {
   // Not owner-filtered: categories are shared taxonomy, not per-instructor
   // data, so every staff role sees the same list.
   listCategories() {
-    return this.catalog.listCategoriesForAdmin();
+    return this.categories.listCategoriesForAdmin();
   }
 
   @Post('categories')
@@ -61,7 +67,7 @@ export class AdminCatalogController {
     @Body() input: CreateCategoryDto,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.createCategory(input, actor);
+    return this.categories.createCategory(input, actor);
   }
 
   /** Declared before `:id` so the literal segment is not eaten by the param. */
@@ -72,7 +78,7 @@ export class AdminCatalogController {
     @Body() input: CategoryOrderDto,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.reorderCategories(input.categoryIds, actor);
+    return this.categories.reorderCategories(input.categoryIds, actor);
   }
 
   @Patch('categories/:id')
@@ -82,7 +88,7 @@ export class AdminCatalogController {
     @Body() input: UpdateCategoryDto,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.updateCategory(id, input, actor);
+    return this.categories.updateCategory(id, input, actor);
   }
 
   @Delete('categories/:id')
@@ -92,7 +98,7 @@ export class AdminCatalogController {
     @Param('id', uuid()) id: string,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.deleteCategory(id, actor);
+    return this.categories.deleteCategory(id, actor);
   }
 
   // ── Courses ──────────────────────────────────────────────────────
@@ -100,7 +106,7 @@ export class AdminCatalogController {
   @Get('courses')
   @StaffAccess('scoped')
   listCourses(@Query() query: AdminCourseListQuery, @OwnerScope() ownerId: string | null) {
-    return this.catalog.listCoursesForAdmin(query, ownerId);
+    return this.courses.listCoursesForAdmin(query, ownerId);
   }
 
   @Post('courses')
@@ -111,13 +117,13 @@ export class AdminCatalogController {
     @AuditActor() actor: AuditActorContext,
     @OwnerScope() ownerId: string | null,
   ) {
-    return this.catalog.createCourse(input, actor, ownerId);
+    return this.courses.createCourse(input, actor, ownerId);
   }
 
   @Get('courses/:id')
   @StaffAccess('course')
   getCourse(@Param('id', uuid()) id: string) {
-    return this.catalog.getCourseForAdmin(id);
+    return this.courses.getCourseForAdmin(id);
   }
 
   @Patch('courses/:id')
@@ -131,7 +137,7 @@ export class AdminCatalogController {
   ) {
     // Only an admin reassigns ownership.
     const safe = ownerId ? { ...input, instructorId: undefined } : input;
-    return this.catalog.updateCourse(id, safe, actor);
+    return this.courses.updateCourse(id, safe, actor);
   }
 
   @Delete('courses/:id')
@@ -142,7 +148,7 @@ export class AdminCatalogController {
     @Param('id', uuid()) id: string,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.deleteCourse(id, actor);
+    return this.courses.deleteCourse(id, actor);
   }
 
   @Post('courses/:id/publish')
@@ -153,7 +159,7 @@ export class AdminCatalogController {
     @Param('id', uuid()) id: string,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.publishCourse(id, actor);
+    return this.courses.publishCourse(id, actor);
   }
 
   @Post('courses/:id/unpublish')
@@ -164,7 +170,7 @@ export class AdminCatalogController {
     @Param('id', uuid()) id: string,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.unpublishCourse(id, actor);
+    return this.courses.unpublishCourse(id, actor);
   }
 
   @Post('courses/:id/archive')
@@ -175,7 +181,7 @@ export class AdminCatalogController {
     @Param('id', uuid()) id: string,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.archiveCourse(id, actor);
+    return this.courses.archiveCourse(id, actor);
   }
 
   // ── Curriculum ───────────────────────────────────────────────────
@@ -188,7 +194,7 @@ export class AdminCatalogController {
     @Body() input: SectionTitleDto,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.createSection(id, input.title, actor);
+    return this.curriculum.createSection(id, input.title, actor);
   }
 
   @Put('courses/:id/sections/order')
@@ -200,7 +206,7 @@ export class AdminCatalogController {
     @Body() input: SectionOrderDto,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.reorderSections(id, input.sectionIds, actor);
+    return this.curriculum.reorderSections(id, input.sectionIds, actor);
   }
 
   @Patch('sections/:id')
@@ -211,7 +217,7 @@ export class AdminCatalogController {
     @Body() input: SectionTitleDto,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.updateSection(id, input.title, actor);
+    return this.curriculum.updateSection(id, input.title, actor);
   }
 
   @Delete('sections/:id')
@@ -222,7 +228,7 @@ export class AdminCatalogController {
     @Param('id', uuid()) id: string,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.deleteSection(id, actor);
+    return this.curriculum.deleteSection(id, actor);
   }
 
   @Post('sections/:id/lessons')
@@ -233,7 +239,7 @@ export class AdminCatalogController {
     @Body() input: CreateLessonDto,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.createLesson(id, input, actor);
+    return this.curriculum.createLesson(id, input, actor);
   }
 
   @Put('sections/:id/lessons/order')
@@ -245,13 +251,13 @@ export class AdminCatalogController {
     @Body() input: LessonOrderDto,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.reorderLessons(id, input.lessonIds, actor);
+    return this.curriculum.reorderLessons(id, input.lessonIds, actor);
   }
 
   @Get('lessons/:id')
   @StaffAccess('lesson')
   getLesson(@Param('id', uuid()) id: string) {
-    return this.catalog.getLessonForAdmin(id);
+    return this.curriculum.getLessonForAdmin(id);
   }
 
   @Patch('lessons/:id')
@@ -263,7 +269,7 @@ export class AdminCatalogController {
     @AuditActor() actor: AuditActorContext,
     @OwnerScope() ownerId: string | null,
   ) {
-    return this.catalog.updateLesson(id, input, actor, ownerId);
+    return this.curriculum.updateLesson(id, input, actor, ownerId);
   }
 
   @Delete('lessons/:id')
@@ -274,7 +280,7 @@ export class AdminCatalogController {
     @Param('id', uuid()) id: string,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.deleteLesson(id, actor);
+    return this.curriculum.deleteLesson(id, actor);
   }
 
   // ── Lesson resources ─────────────────────────────────────────────
@@ -282,7 +288,7 @@ export class AdminCatalogController {
   @Get('lessons/:id/resources')
   @StaffAccess('lesson')
   listResources(@Param('id', uuid()) id: string) {
-    return this.catalog.listResources(id);
+    return this.curriculum.listResources(id);
   }
 
   @Post('lessons/:id/resources')
@@ -293,7 +299,7 @@ export class AdminCatalogController {
     @Body() input: CreateResourceDto,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.addResource(id, input, actor);
+    return this.curriculum.addResource(id, input, actor);
   }
 
   @Delete('resources/:id')
@@ -304,6 +310,6 @@ export class AdminCatalogController {
     @Param('id', uuid()) id: string,
     @AuditActor() actor: AuditActorContext,
   ) {
-    return this.catalog.deleteResource(id, actor);
+    return this.curriculum.deleteResource(id, actor);
   }
 }
