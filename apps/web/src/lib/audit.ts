@@ -25,6 +25,7 @@ export const AUDIT_ACTION_LABEL = {
   "lesson.reordered": "Sắp xếp bài học",
   "resource.created": "Thêm tài liệu",
   "resource.deleted": "Xóa tài liệu",
+  "video.registered": "Đăng ký video",
   "video.attached": "Gắn video",
   "video.detached": "Gỡ video",
   "enrollment.granted": "Cấp quyền học",

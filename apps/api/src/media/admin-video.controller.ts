@@ -9,9 +9,21 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { AuditActor } from '../audit/audit-actor.decorator.js';
+import {
+  AuditService,
+  type AuditActorContext,
+} from '../audit/audit.service.js';
 import { AuthRateLimitGuard } from '../auth/auth-rate-limit.guard.js';
-import { StaffAccess, StaffGuard } from '../auth/staff.guard.js';
-import { AdminMutationRateLimit } from '../auth/rate-limit.decorator.js';
+import {
+  OwnerScope,
+  StaffAccess,
+  StaffGuard,
+} from '../auth/staff.guard.js';
+import {
+  AdminMutationRateLimit,
+  RateLimit,
+} from '../auth/rate-limit.decorator.js';
 import { CreateVideoDto } from '../catalog/course.dto.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
 import { config } from '../config.js';
@@ -24,25 +36,34 @@ import { STREAM_CLIENT, type StreamClient } from './stream.client.js';
 
 const uuid = () => new ParseUUIDPipe({ version: '4' });
 
+/** A poll younger than this is answered from the row, not the provider. */
+const STATUS_FRESH_MS = 10_000;
+
 /**
  * The only way a `VideoAsset` row comes into existence. No Cloudflare webhook:
  * one owner uploads a handful of videos a month, so `GET /admin/videos/{id}`
  * polls while the lesson screen is open.
+ *
+ * An asset belongs to whoever registered it (`instructorId`, null = an admin,
+ * i.e. the site owner); an instructor only ever sees their own.
  */
-// ponytail: video assets are not owner-scoped; any staff member can register or
-// poll one by id. Add VideoAsset.ownerId if instructors must not see each other's.
 @Controller('admin/videos')
 @UseGuards(StaffGuard, AuthRateLimitGuard)
 export class AdminVideoController {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
     @Inject(STREAM_CLIENT) private readonly stream: StreamClient,
   ) {}
 
   @Post()
   @StaffAccess('scoped')
   @AdminMutationRateLimit()
-  async create(@Body() input: CreateVideoDto) {
+  async create(
+    @Body() input: CreateVideoDto,
+    @AuditActor() actor: AuditActorContext,
+    @OwnerScope() ownerId: string | null,
+  ) {
     const provider = this.provider();
     const existing = await this.prisma.videoAsset.findUnique({
       where: {
@@ -59,25 +80,51 @@ export class AdminVideoController {
     }
 
     const status = await this.stream.getStatus(input.externalId);
-    const asset = await this.prisma.videoAsset.create({
-      data: {
-        provider,
-        externalId: input.externalId,
-        status: status.ready
-          ? VideoAssetStatus.READY
-          : VideoAssetStatus.PENDING,
-        durationSeconds: status.durationSeconds,
-      },
+    const asset = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.videoAsset.create({
+        data: {
+          provider,
+          externalId: input.externalId,
+          instructorId: ownerId,
+          status: status.ready
+            ? VideoAssetStatus.READY
+            : VideoAssetStatus.PENDING,
+          durationSeconds: status.durationSeconds,
+        },
+      });
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'video.registered',
+          entityType: 'VIDEO_ASSET',
+          entityId: created.id,
+          metadata: { provider, externalId: created.externalId },
+        },
+        tx,
+      );
+      return created;
     });
     return this.toDto(asset);
   }
 
   @Get(':id')
   @StaffAccess('scoped')
-  async get(@Param('id', uuid()) id: string) {
+  @RateLimit({ key: 'user', limit: 30, windowSeconds: 60 })
+  async get(
+    @Param('id', uuid()) id: string,
+    @OwnerScope() ownerId: string | null,
+  ) {
     const asset = await this.prisma.videoAsset.findUnique({ where: { id } });
-    if (!asset) {
+    if (!asset || (ownerId !== null && asset.instructorId !== ownerId)) {
       throw appError(HttpStatus.NOT_FOUND, ERROR_CODE.NOT_FOUND, 'Not Found');
+    }
+    // READY is final, and a fresh answer is reused: the provider is only asked
+    // about a pending video, at most once per STATUS_FRESH_MS.
+    if (
+      asset.status === VideoAssetStatus.READY ||
+      Date.now() - asset.updatedAt.getTime() < STATUS_FRESH_MS
+    ) {
+      return this.toDto(asset);
     }
     // Synchronous poll: read the provider, then write back what it said.
     const status = await this.stream.getStatus(asset.externalId);

@@ -41,6 +41,7 @@ model User {
   lessonProgress     LessonProgress[]
   auditLogs          AuditLog[]
   taughtCourses      Course[]         @relation("CourseInstructor")
+  videoAssets        VideoAsset[]     @relation("VideoAssetInstructor")
   purchases          Purchase[]
 
   @@map("users")
@@ -209,11 +210,15 @@ model VideoAsset {
   status          VideoAssetStatus @default(PENDING)
   durationSeconds Int              @default(0) @map("duration_seconds")
   thumbnailUrl    String?          @map("thumbnail_url") @db.VarChar(500)
+  // Who registered it; null = the site owner (an admin). Like `Course.instructorId`.
+  instructorId    String?          @map("instructor_id") @db.Uuid
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
   lesson          Lesson?
+  instructor      User?            @relation("VideoAssetInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
 
   @@unique([provider, externalId])
+  @@index([instructorId])
   @@map("video_assets")
 }
 

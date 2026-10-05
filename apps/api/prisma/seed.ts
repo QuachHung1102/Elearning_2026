@@ -100,6 +100,11 @@ try {
     },
     data: { instructorId: instructor.id },
   });
+  // A video belongs to whoever registered it; the instructor's lessons' videos are theirs.
+  await prisma.videoAsset.updateMany({
+    where: { lesson: { section: { course: { instructorId: instructor.id } } } },
+    data: { instructorId: instructor.id },
+  });
 } finally {
   await prisma.$disconnect();
 }

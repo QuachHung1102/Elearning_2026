@@ -1037,6 +1037,8 @@ export class CatalogService {
     id: string,
     input: UpdateLessonDto,
     actor: AuditActorContext,
+    /** `null` for an admin; an instructor attaches only videos they registered. */
+    ownerId: string | null,
   ) {
     const lesson = await this.mustFindLesson(id);
     const type = input.type ?? lesson.type;
@@ -1052,7 +1054,9 @@ export class CatalogService {
         where: { id: videoAssetId },
         include: { lesson: { select: { id: true } } },
       });
-      if (!asset) notFound();
+      if (!asset || (ownerId !== null && asset.instructorId !== ownerId)) {
+        notFound();
+      }
       if (asset.lesson && asset.lesson.id !== id) {
         throw appError(
           HttpStatus.CONFLICT,

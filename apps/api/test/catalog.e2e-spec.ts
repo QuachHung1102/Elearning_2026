@@ -883,8 +883,8 @@ describe('Phase 2 catalog (e2e)', () => {
     const { categoryId, courseId, lessonId, videoAssetId } =
       await buildCourse(admin);
 
-    // buildCourse: category, course, section, video (not an audited action),
-    // lesson, the lesson PATCH that attaches the video, the course PATCH.
+    // buildCourse: category, course, section, video, lesson, the lesson PATCH
+    // that attaches the video, the course PATCH.
     const built = await prisma.auditLog.findMany();
     expect(built.map((row) => row.action).sort()).toEqual([
       'category.created',
@@ -893,6 +893,7 @@ describe('Phase 2 catalog (e2e)', () => {
       'lesson.created',
       'section.created',
       'video.attached',
+      'video.registered',
     ]);
 
     const archive = () =>
@@ -953,7 +954,7 @@ describe('Phase 2 catalog (e2e)', () => {
     expect(await prisma.lessonProgress.count({ where: { lessonId } })).toBe(0);
 
     const rows = await prisma.auditLog.findMany();
-    expect(rows).toHaveLength(12);
+    expect(rows).toHaveLength(13);
     for (const row of rows) {
       const entry =
         AUDIT_VOCABULARY[row.action as keyof typeof AUDIT_VOCABULARY];
