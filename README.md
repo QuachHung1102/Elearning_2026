@@ -63,6 +63,20 @@ corepack pnpm build
 
 E2E dùng riêng database `elearning_test` với tài khoản PostgreSQL cùng tên, theo `apps/api/.env.test`. Không trỏ file này vào database dev hoặc production.
 
+### E2E trình duyệt (Playwright)
+
+```powershell
+corepack pnpm --filter web exec playwright install chromium   # một lần
+createdb -U elearning_test elearning_e2e                       # một lần, database trống
+corepack pnpm e2e:web
+```
+
+Bốn luồng trong `apps/web/e2e/`: khách đăng nhập rồi học (tiến độ được lưu), học viên mới bị chặn ở bài trả phí, checkout demo (admin xác nhận ở `/admin/orders`), giảng viên tạo và xuất bản khóa học. Lệnh tự build rồi chạy API ở cổng 3201 và web (bản production, bật checkout) ở cổng 3200, nên không đụng tới bộ dev 3000/3001. Trước mỗi lần chạy, database được `prisma migrate deploy`, xóa đơn hàng, quyền học, tiến độ, phiên đăng nhập cùng các tài khoản/khóa học `e2e-`, rồi seed lại.
+
+- `E2E_DATABASE_URL`: database dùng cho e2e, mặc định `postgresql://elearning_test:elearning_test@localhost:5432/elearning_e2e`. Không trỏ vào database dev hoặc production: dữ liệu trong đó bị xóa.
+- `E2E_REUSE_SERVERS=1`: dùng lại API/web đang chạy ở 3200/3201 thay vì build lại (phải chạy với cùng biến môi trường như `apps/web/e2e/env.ts`).
+- Lỗi thì xem trace: `corepack pnpm --filter web exec playwright show-trace test-results/<thư mục>/trace.zip` (đường dẫn tính từ `apps/web`).
+
 ## Sao lưu và khôi phục
 
 Cần `pg_dump`, `pg_restore`, `psql` (lấy từ `PATH`, nếu không có thì từ `C:\Program Files\PostgreSQL\*\bin`). Phiên bản client phải bằng hoặc mới hơn server. Script không in mật khẩu.
