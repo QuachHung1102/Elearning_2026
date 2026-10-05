@@ -1110,6 +1110,136 @@ describe('Phase 2 catalog (e2e)', () => {
     ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
+  // T2.13: the last resource position was read outside the transaction, so
+  // two uploads to one lesson picked the same position and one hit the index.
+  it('takes eight simultaneous resources on one lesson without a collision', async () => {
+    const admin = await signIn('ADMIN');
+    const { lessonId } = await buildCourse(admin);
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        request(app.getHttpServer())
+          .post(`/api/v1/admin/lessons/${lessonId}/resources`)
+          .set(as(admin))
+          .send({
+            objectKey: `lessons/${lessonId}/resources/${randomUUID()}-bai-${index + 1}.pdf`,
+            filename: `bai-${index + 1}.pdf`,
+            contentType: 'application/pdf',
+            sizeBytes: 1024,
+          }),
+      ),
+    );
+
+    expect(results.map((response) => response.status)).toEqual(
+      Array(8).fill(201),
+    );
+    const list = await request(app.getHttpServer())
+      .get(`/api/v1/admin/lessons/${lessonId}/resources`)
+      .set(as(admin))
+      .expect(200);
+    expect(
+      list.body.items.map((item: { position: number }) => item.position),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  });
+
+  // T2.13: the same race across categories. Category.position has no unique
+  // index, so the loser does not fail: two categories share a position.
+  it('takes eight simultaneous new categories at distinct positions', async () => {
+    const admin = await signIn('ADMIN');
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        request(app.getHttpServer())
+          .post('/api/v1/admin/categories')
+          .set(as(admin))
+          .send({ name: `Danh mục song song ${index + 1}` }),
+      ),
+    );
+
+    expect(results.map((response) => response.status)).toEqual(
+      Array(8).fill(201),
+    );
+    const categories = await prisma.category.findMany({
+      orderBy: { position: 'asc' },
+      select: { position: true },
+    });
+    expect(categories.map((row) => row.position)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8,
+    ]);
+  });
+
+  // T2.13: updateLesson and deleteLesson wrote the lesson row first and took
+  // the course lock only in `recompute`, while a reorder holds the course lock
+  // and then writes the same lesson rows: a deadlock, answered with a 500.
+  it('runs lesson updates, deletes and reorders side by side without a deadlock', async () => {
+    const admin = await signIn('ADMIN');
+    const { courseId, sectionId, lessonId } = await buildCourse(admin);
+    const created = [];
+    for (let index = 0; index < 6; index += 1) {
+      created.push(
+        await request(app.getHttpServer())
+          .post(`/api/v1/admin/sections/${sectionId}/lessons`)
+          .set(as(admin))
+          .send({ title: `Bài ${index + 2}`, type: 'VIDEO' })
+          .expect(201),
+      );
+    }
+    const ids = [lessonId, ...created.map((response) => response.body.id as string)];
+    const updated = ids.slice(0, 4);
+    const deleted = ids.slice(4);
+
+    const reorders = Array.from({ length: 6 }, (_, round) =>
+      request(app.getHttpServer())
+        .put(`/api/v1/admin/sections/${sectionId}/lessons/order`)
+        .set(as(admin))
+        .send({ lessonIds: round % 2 ? [...ids].reverse() : ids }),
+    );
+    const updates = updated.map((id, index) =>
+      request(app.getHttpServer())
+        .patch(`/api/v1/admin/lessons/${id}`)
+        .set(as(admin))
+        .send({ title: `Đổi tên ${index + 1}`, type: 'ARTICLE' }),
+    );
+    const deletes = deleted.map((id) =>
+      request(app.getHttpServer())
+        .delete(`/api/v1/admin/lessons/${id}`)
+        .set(as(admin)),
+    );
+    const [reordered, updatedResults, deletedResults] = await Promise.all([
+      Promise.all(reorders),
+      Promise.all(updates),
+      Promise.all(deletes),
+    ]);
+
+    expect(updatedResults.map((response) => response.status)).toEqual(
+      Array(updated.length).fill(200),
+    );
+    expect(deletedResults.map((response) => response.status)).toEqual(
+      Array(deleted.length).fill(204),
+    );
+    // A reorder that runs after a delete no longer names the current lessons.
+    for (const response of reordered) {
+      if (response.status !== 204) {
+        expect([response.status, response.body.code]).toEqual([
+          400,
+          'ORDER_MISMATCH',
+        ]);
+      }
+    }
+
+    const course = await prisma.course.findUniqueOrThrow({
+      where: { id: courseId },
+    });
+    const lessons = await prisma.lesson.findMany({
+      where: { section: { courseId } },
+    });
+    expect(lessons).toHaveLength(updated.length);
+    expect(course.lessonCount).toBe(lessons.length);
+    expect(course.totalDurationSeconds).toBe(
+      lessons.reduce((sum, lesson) => sum + lesson.durationSeconds, 0),
+    );
+  });
+
   it('deletes a draft course for good and frees its slug', async () => {
     const admin = await signIn('ADMIN');
     const { courseId, slug } = await buildCourse(admin);

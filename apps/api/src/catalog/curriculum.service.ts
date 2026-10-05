@@ -270,6 +270,9 @@ export class CurriculumService {
           : 0;
 
     return this.prisma.$transaction(async (tx) => {
+      // Course before lesson row, as every curriculum writer does: a reorder
+      // holds the course lock and then writes this row.
+      await lockCourse(tx, lesson.section.courseId);
       const updated = await tx.lesson.update({
         where: { id },
         data: {
@@ -341,6 +344,7 @@ export class CurriculumService {
   async deleteLesson(id: string, actor: AuditActorContext): Promise<void> {
     const lesson = await this.mustFindLesson(id);
     await this.prisma.$transaction(async (tx) => {
+      await lockCourse(tx, lesson.section.courseId);
       // Counted inside the transaction: the rows cascade with the lesson, and
       // the audit row is the only trace of how much progress went with it.
       const deletedProgressRows = await tx.lessonProgress.count({
@@ -405,7 +409,7 @@ export class CurriculumService {
     input: CreateResourceDto,
     actor: AuditActorContext,
   ) {
-    await this.mustFindLesson(lessonId);
+    const lesson = await this.mustFindLesson(lessonId);
     if (!isResourceKeyFor(lessonId, input.objectKey)) {
       throw appError(
         HttpStatus.BAD_REQUEST,
@@ -413,13 +417,11 @@ export class CurriculumService {
         'objectKey must belong to this lesson',
       );
     }
-    const position = await nextPosition(
-      this.prisma.lessonResource.findFirst({
-        where: { lessonId },
-        ...LAST_POSITION,
-      }),
-    );
     return this.prisma.$transaction(async (tx) => {
+      await lockCourse(tx, lesson.section.courseId);
+      const position = await nextPosition(
+        tx.lessonResource.findFirst({ where: { lessonId }, ...LAST_POSITION }),
+      );
       const resource = await tx.lessonResource.create({
         data: {
           lessonId,
