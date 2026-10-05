@@ -13,3 +13,4 @@ output/
 .playwright-mcp/
 .playwright-cli/
 .codex-tmp/
+backups/

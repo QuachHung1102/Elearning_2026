@@ -62,3 +62,24 @@ corepack pnpm build
 ```
 
 E2E dùng riêng database `elearning_test` với tài khoản PostgreSQL cùng tên, theo `apps/api/.env.test`. Không trỏ file này vào database dev hoặc production.
+
+## Sao lưu và khôi phục
+
+Cần `pg_dump`, `pg_restore`, `psql` (lấy từ `PATH`, nếu không có thì từ `C:\Program Files\PostgreSQL\*\bin`). Phiên bản client phải bằng hoặc mới hơn server. Script không in mật khẩu.
+
+Sao lưu (định dạng custom, không kèm owner/quyền nên restore được vào role khác). File nằm ở `backups/` (đã gitignore):
+
+```powershell
+./apps/api/scripts/backup.ps1 -DatabaseUrl "<URL Postgres>"   # bỏ -DatabaseUrl thì dùng $env:DATABASE_URL
+```
+
+Trên Railway, lấy `DATABASE_PUBLIC_URL` của service Postgres (URL nội bộ `*.railway.internal` không truy cập được từ máy local).
+
+Diễn tập khôi phục (A5.5) vào một database **trống** có tên chứa `test`/`scratch`/`restore`/`drill`/`tmp`:
+
+```powershell
+./apps/api/scripts/restore-drill.ps1 -SourceUrl "<URL nguồn>" -TargetUrl "<URL DB trống>" -RunE2e
+# hoặc khôi phục một file có sẵn: -DumpFile backups/<file>.dump
+```
+
+Script tự `pg_dump` nguồn (nếu không có `-DumpFile`), `pg_restore` vào đích, rồi kiểm tra `_prisma_migrations` so với `apps/api/prisma/migrations` (migration chưa có trong bản dump chỉ cảnh báo) và số dòng từng bảng so với nguồn. Nó từ chối đích trùng tên nguồn, đích đã có bảng, hoặc tên không giống DB nháp — `-Force` để bỏ qua (trùng cả host lẫn tên thì luôn từ chối). `-RunE2e` chạy e2e của API, vốn đọc `apps/api/.env.test`: sửa `DATABASE_URL` trong đó trỏ vào DB đích trước (e2e sẽ xóa dữ liệu và chạy `prisma migrate deploy`). Nguồn đang có người ghi thì số dòng có thể lệch; so trên bản sao chụp hoặc lúc ít truy cập.
