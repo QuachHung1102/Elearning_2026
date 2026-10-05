@@ -55,6 +55,10 @@ export const AUDIT_VOCABULARY = {
     entityType: 'RESOURCE',
     keys: ['lessonId', 'filename'],
   },
+  'video.registered': {
+    entityType: 'VIDEO_ASSET',
+    keys: ['provider', 'externalId'],
+  },
   'video.attached': { entityType: 'LESSON', keys: ['videoAssetId'] },
   'video.detached': { entityType: 'LESSON', keys: ['videoAssetId'] },
   'enrollment.granted': {

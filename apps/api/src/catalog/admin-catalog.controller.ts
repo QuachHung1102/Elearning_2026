@@ -261,8 +261,9 @@ export class AdminCatalogController {
     @Param('id', uuid()) id: string,
     @Body() input: UpdateLessonDto,
     @AuditActor() actor: AuditActorContext,
+    @OwnerScope() ownerId: string | null,
   ) {
-    return this.catalog.updateLesson(id, input, actor);
+    return this.catalog.updateLesson(id, input, actor, ownerId);
   }
 
   @Delete('lessons/:id')

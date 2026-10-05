@@ -29,12 +29,13 @@ import { AdminMutationRateLimit } from '../auth/rate-limit.decorator.js';
 import { OwnerScope, StaffAccess, StaffGuard } from '../auth/staff.guard.js';
 import { csv, PageQuery, trim } from '../catalog/course.dto.js';
 import { paginated, resolvePage } from '../common/pagination.js';
-import type { Prisma } from '../generated/prisma/client.js';
+import { Prisma } from '../generated/prisma/client.js';
 import {
   EnrollmentSource,
   EnrollmentStatus,
 } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { courseProgress, PROGRESS_STATS } from './course-progress.js';
 import {
   ADMIN_ENROLLMENT_SELECT,
   EnrollmentService,
@@ -98,7 +99,7 @@ export class AdminEnrollmentController {
     const [items, total] = await Promise.all([
       this.prisma.enrollment.findMany({
         where,
-        select: { ...ADMIN_ENROLLMENT_SELECT, userId: true, courseId: true },
+        select: ADMIN_ENROLLMENT_SELECT,
         // Newest grant first, so a fresh grant lands at the top (UX_PLAN.md §5.4).
         orderBy: [{ grantedAt: 'desc' }, { id: 'asc' }],
         skip: page.skip,
@@ -106,19 +107,18 @@ export class AdminEnrollmentController {
       }),
       this.prisma.enrollment.count({ where }),
     ]);
-    // ponytail: one progress query per row (page size bounded); groupBy if pages grow.
-    const withProgress = await Promise.all(
-      items.map(async ({ userId, courseId, ...item }) => {
-        const [totalLessons, completedLessons] = await Promise.all([
-          this.prisma.lesson.count({ where: { section: { courseId } } }),
-          this.prisma.lessonProgress.count({
-            where: { userId, completedAt: { not: null }, lesson: { section: { courseId } } },
-          }),
-        ]);
-        const percent = totalLessons ? Math.round((100 * completedLessons) / totalLessons) : 0;
-        return { ...item, progress: { completedLessons, totalLessons, percent } };
-      }),
-    );
+    // One statement for the whole page's progress, not two per row (REVIEW F-14).
+    const stats = items.length
+      ? await this.prisma.$queryRaw<{ id: string; total: number; completed: number }[]>`
+          SELECT e.id, stats.total, stats.completed
+          FROM enrollments e ${PROGRESS_STATS}
+          WHERE e.id IN (${Prisma.join(items.map(({ id }) => Prisma.sql`${id}::uuid`))})`
+      : [];
+    const byId = new Map(stats.map((row) => [row.id, row]));
+    const withProgress = items.map((item) => {
+      const row = byId.get(item.id);
+      return { ...item, progress: courseProgress(row?.completed ?? 0, row?.total ?? 0) };
+    });
     return paginated(withProgress, total, page);
   }
 

@@ -679,12 +679,12 @@ Không có nhánh này thì chủ sở hữu nhận `403 NOT_ENROLLED` trên ch�
 | `GET /lessons/{lessonId}/resources/{resourceId}/download` | any + enrollment | `/learn/...` | param UUID | `200 SignedDownload` | `401`, `403 NOT_ENROLLED`, `404` |
 | `POST /admin/courses/{id}/cover-upload-url` | ADMIN, INSTRUCTOR chủ khoá | `/admin/courses/[id]` | `filename` `@Length(1,200)`; `contentType` `@IsIn(['image/jpeg','image/png','image/webp'])`; `sizeBytes` `@IsInt @Min(1) @Max(MAX_UPLOAD_BYTES)` | `201 SignedUpload` | `400`, `404` |
 | `POST /admin/lessons/{id}/resources/upload-url` | ADMIN, INSTRUCTOR chủ khoá | `/admin/courses/[id]/lessons/[lessonId]` | `filename` `@Length(1,200)`; `contentType` `@IsIn(['application/pdf','application/zip','image/png','image/jpeg','text/plain'])`; `sizeBytes` `@IsInt @Min(1) @Max(MAX_UPLOAD_BYTES)` | `201 SignedUpload` | `400`, `404`, `415 UNSUPPORTED_MEDIA_TYPE` |
-| `POST /admin/videos` | ADMIN, INSTRUCTOR (**không** owner-scoped, xem ghi chú dưới) | `/admin/courses/[id]/lessons/[lessonId]` | `externalId` `@IsString @Length(1,120)` | `201 { id, provider, externalId, status, durationSeconds, thumbnailUrl }` | `400`, `404`, `409 EXTERNAL_ID_TAKEN` |
-| `GET /admin/videos/{id}` | ADMIN, INSTRUCTOR (**không** owner-scoped) | `/admin/courses/[id]/lessons/[lessonId]` | — | `200 { id, provider, externalId, status, durationSeconds, thumbnailUrl }` — gọi `getStatus()` rồi ghi lại `status`/`durationSeconds` | `404` |
+| `POST /admin/videos` | ADMIN, INSTRUCTOR (video đứng tên người gọi, xem ghi chú dưới) | `/admin/courses/[id]/lessons/[lessonId]` | `externalId` `@IsString @Length(1,120) @Matches(/^[A-Za-z0-9][A-Za-z0-9_/-]*$/)` | `201 { id, provider, externalId, status, durationSeconds, thumbnailUrl }` — ghi `VideoAsset.instructorId` (`null` khi admin gọi) và một dòng `AuditLog video.registered` | `400`, `404`, `409 EXTERNAL_ID_TAKEN`, `429` |
+| `GET /admin/videos/{id}` | ADMIN, INSTRUCTOR chủ video | `/admin/courses/[id]/lessons/[lessonId]` | — | `200 { id, provider, externalId, status, durationSeconds, thumbnailUrl }` — `status = READY` hoặc lần hỏi trước cách chưa tới 10 giây (`updatedAt`) thì trả thẳng hàng; còn lại gọi `getStatus()` rồi ghi lại `status`/`durationSeconds` | `404`, `429` |
 | `PUT /media/local/{key}` | chữ ký URL | uploader admin | body byte thô | `204` | `403 SIGNATURE_INVALID`, `404` khi `STORAGE_DRIVER != demo`, `413 PAYLOAD_TOO_LARGE`, `415 UNSUPPORTED_MEDIA_TYPE` |
 | `GET /media/local/{key}` | chữ ký URL | mọi nơi hiển thị file | query `exp`, `sig` | `200` file | `403 SIGNATURE_INVALID`, `404` khi `STORAGE_DRIVER != demo` |
 
-**Giới hạn đã chấp nhận:** `VideoAsset` không có cột chủ sở hữu (`Lesson.videoAssetId` là `@unique`, một video chỉ gắn được vào một lesson — DATA_MODEL.md). `StaffGuard` cho `AdminVideoController` chỉ xác thực vai trò (`@StaffAccess('scoped')` không lọc gì thêm ở đây), nên một `INSTRUCTOR` có thể đăng ký hoặc xem trạng thái video của lesson thuộc khoá học khác. Nâng cấp khi cần: thêm `VideoAsset.instructorId`.
+**Chủ sở hữu video:** `VideoAsset.instructorId` là người đăng ký (`null` = admin, tức chủ sở hữu site — cùng quy ước với `Course.instructorId`, DATA_MODEL.md §VideoAsset). `AdminVideoController` gắn `@StaffAccess('scoped')` và tự lọc theo `@OwnerScope()`: một `INSTRUCTOR` gọi `GET /admin/videos/{id}` với video không đứng tên mình nhận `404` như video không tồn tại, và `PATCH /admin/lessons/{id}` gắn `videoAssetId` của người khác (kể cả video của admin) cũng nhận `404`, bài học không đổi. Admin không bị lọc. Video đã gắn sẵn vào bài thì giữ nguyên khi PATCH các trường khác.
 
 `objectKey` **do server sinh**, client không bao giờ chọn. Client chỉ gửi tên file gốc; server tạo key theo template trong DEMO_MODE.md §3 và trả về trong `SignedUpload`. Client không tự đặt key nghĩa là client không thể ghi ra ngoài prefix của mình.
 
@@ -951,6 +951,7 @@ Hai dòng đầu là hiện trạng, giữ nguyên số.
 | `POST /users/me/password` | user | 300s | 5 | Chống dò `currentPassword` |
 | `GET /courses`, `GET /courses/{slug}` | ip | 60s | 120 | Chống cào catalog; đã cache 60s nên người dùng thật không chạm tới |
 | `POST /lessons/{id}/playback-token` | user | 60s | 30 | Một bài học sinh 1–2 token; 30 là dư cho seek liên tục |
+| `GET /admin/videos/{id}` | user | 60s | 30 | **Ngoại lệ** của dòng "`GET` trên `/admin/*` không giới hạn": mỗi lần đọc có thể là một lời gọi Cloudflare API bằng token của server. Trang bài học chỉ hỏi khi bấm "làm mới", và lần hỏi trong vòng 10 giây được trả từ database (§5.6) |
 | `PUT /lessons/{id}/progress` | user | 60s | 60 | Player gửi mỗi 15s + khi pause/seek |
 | `GET /lessons/{id}/resources/{rid}/download` | user | 300s | 30 | Chống tải hàng loạt tài liệu |
 | `POST /checkout/{courseSlug}` | user | 300s | 5 | Tạo QR là thao tác đắt phía nhà cung cấp |
@@ -958,7 +959,7 @@ Hai dòng đầu là hiện trạng, giữ nguyên số.
 | `POST /purchases/{id}/refund-request` | user | 300s | 5 | Chỉ có một lần thành công cho mỗi đơn; giới hạn để không dò được chính sách bằng cách bấm lặp |
 | `POST /payments/{provider}/callback` | ip, **chỉ đếm request sai HMAC** | 60s | 20 | Callback hợp lệ không bao giờ bị chặn. Chặn callback thật là mất tiền, còn nguy hiểm hơn thứ đang chống. Đếm cả body thiếu `data` hoặc `mac` (không có chữ ký nào để kiểm); vượt hạn thì `429` kèm `Retry-After` thay cho `-1`. |
 | Mọi mutation trên `/admin/*` (`POST\|PATCH\|PUT\|DELETE`) | user | 60s | 120 | Lưới an toàn chống script hỏng, không phải chống tấn công. Viết `POST /admin/*` là bỏ trống đúng những method sửa và xoá dữ liệu: `PATCH /admin/courses/{id}`, `PUT .../order`, `DELETE /admin/lessons/{id}` |
-| `GET` trên `/admin/*` và `/courses/{slug}` phía admin | — | — | — | **Không giới hạn, có chủ ý.** Đọc là thao tác rẻ, người gọi đã qua `AdminGuard`, và một bảng admin lọc nhanh không được biến thành `429` |
+| `GET` trên `/admin/*` và `/courses/{slug}` phía admin | — | — | — | **Không giới hạn, có chủ ý** (trừ `GET /admin/videos/{id}` ở trên). Đọc là thao tác rẻ, người gọi đã qua `AdminGuard`, và một bảng admin lọc nhanh không được biến thành `429` |
 
 Bảng này là danh sách đầy đủ. Endpoint không có mặt ở đây thì **không** có rate limit — nếu ai đó cho rằng một endpoint nên có, thêm dòng vào bảng chứ đừng gắn decorator rồi để tài liệu nói khác.
 

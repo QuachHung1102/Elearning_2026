@@ -74,6 +74,7 @@ Bản số cần nhớ:
 | `Section` — `Lesson` | 1 : n, có thứ tự chặt | `@@unique([sectionId, position])` |
 | `Course` — `Category` | n : 0..1 | FK `Restrict` |
 | `Course` — `User` (instructor) | n : 0..1 | FK `Restrict`, `@@index([instructorId])`. `null` = khóa của chủ sở hữu site |
+| `VideoAsset` — `User` (instructor) | n : 0..1 | FK `Restrict`, `@@index([instructorId])`. `null` = video do admin (chủ sở hữu site) đăng ký |
 
 ## Quy ước schema
 
@@ -219,6 +220,7 @@ model User {
   sessions           Session[]
   authTokens         AuthToken[]
   taughtCourses      Course[]         @relation("CourseInstructor")
+  videoAssets        VideoAsset[]     @relation("VideoAssetInstructor")
   enrollments        Enrollment[]     @relation("EnrollmentStudent")
   grantedEnrollments Enrollment[]     @relation("EnrollmentGrantedBy")
   lessonProgress     LessonProgress[]
@@ -356,11 +358,15 @@ model VideoAsset {
   status          VideoAssetStatus @default(PENDING)
   durationSeconds Int              @default(0) @map("duration_seconds")
   thumbnailUrl    String?          @map("thumbnail_url") @db.VarChar(500)
+  // Who registered it; null = the site owner (an admin). Like `Course.instructorId`.
+  instructorId    String?          @map("instructor_id") @db.Uuid
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
   lesson          Lesson?
+  instructor      User?            @relation("VideoAssetInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
 
   @@unique([provider, externalId])
+  @@index([instructorId])
   @@map("video_assets")
 }
 
@@ -503,7 +509,7 @@ Quy ước ký hiệu: `NN` = NOT NULL, `U` = unique, `FK` = khóa ngoại.
 
 ### User
 
-Không thêm cột nào. `role` nhận thêm giá trị `INSTRUCTOR` (migration `add_instructor`, 2026-09-23) — xem *Quyết định đã chốt* #1 ở `_STATUS.md`. Chỉ thêm tám field quan hệ, trong đó `taughtCourses` là các khóa mà một `INSTRUCTOR` đứng tên `instructorId`. Tiểu sử, ảnh, liên kết mạng xã hội của giảng viên vẫn **không** nằm trong database — đó là nội dung tĩnh của `apps/web`, không phải dữ liệu.
+Không thêm cột nào. `role` nhận thêm giá trị `INSTRUCTOR` (migration `add_instructor`, 2026-09-23) — xem *Quyết định đã chốt* #1 ở `_STATUS.md`. Chỉ thêm chín field quan hệ, trong đó `taughtCourses` là các khóa mà một `INSTRUCTOR` đứng tên `instructorId` và `videoAssets` là các video người đó đã đăng ký. Tiểu sử, ảnh, liên kết mạng xã hội của giảng viên vẫn **không** nằm trong database — đó là nội dung tĩnh của `apps/web`, không phải dữ liệu.
 
 Bất biến database: `email` unique. Bất biến ứng dụng: email lowercase + trim trước khi ghi (đã có trong `AuthService.normalizeEmail`), tài khoản `ADMIN` chỉ được tạo bằng seed/CLI; `INSTRUCTOR` được tạo bằng seed hoặc `PATCH /admin/users/:id/role` (admin đổi vai trò, có audit).
 
@@ -669,7 +675,8 @@ Giá trị âm ở pha 1 phân biệt nhau nên không vi phạm unique. Áp d�
 | `status` | `VideoAssetStatus` | ✓ | default `PENDING` | Chặn publish khi video chưa encode xong |
 | `durationSeconds` | `int` | ✓ | default 0 | |
 | `thumbnailUrl` | `varchar(500)` | | | Ảnh poster của player |
-| `createdAt` / `updatedAt` | `timestamptz(3)` | ✓ | | |
+| `instructorId` | `uuid` | | FK → `users` Restrict, `@@index` | Người đăng ký video. `null` = admin (chủ sở hữu site). Một `INSTRUCTOR` chỉ xem trạng thái (`GET /admin/videos/{id}`) và chỉ gắn vào bài (`PATCH /admin/lessons/{id}`) video của chính mình; admin không bị lọc. Migration `add_video_asset_owner` gán cho hàng cũ chủ của khóa học chứa bài đang dùng video đó |
+| `createdAt` / `updatedAt` | `timestamptz(3)` | ✓ | | `updatedAt` cũng là thời điểm hỏi nhà cung cấp gần nhất: `GET /admin/videos/{id}` trả thẳng hàng khi `status = READY` hoặc lần hỏi trước cách chưa tới 10 giây |
 
 Database bảo đảm: cùng một UID Cloudflare không đăng ký được hai lần. Uniqueness phải gồm `provider` vì không gian định danh của driver demo và của Cloudflare là hai không gian khác nhau.
 
@@ -906,6 +913,7 @@ Bảng dưới đây là **bảng hợp nhất duy nhất** của từ vựng `a
 | `lesson.reordered` | `SECTION` | `PUT /admin/sections/{id}/lessons/order` | admin | `lessonIds` | Sắp xếp bài học |
 | `resource.created` | `RESOURCE` | `POST /admin/lessons/{id}/resources` | admin | `lessonId`, `filename` | Thêm tài liệu |
 | `resource.deleted` | `RESOURCE` | `DELETE /admin/resources/{id}` | admin | `lessonId`, `filename` | Xóa tài liệu |
+| `video.registered` | `VIDEO_ASSET` | `POST /admin/videos` | admin hoặc giảng viên | `provider`, `externalId` | Đăng ký video |
 | `video.attached` | `LESSON` | `PATCH /admin/lessons/{id}` đặt `videoAssetId` | admin | `videoAssetId` | Gắn video |
 | `video.detached` | `LESSON` | `PATCH /admin/lessons/{id}` đặt `videoAssetId = null` | admin | `videoAssetId` | Gỡ video |
 | `enrollment.granted` | `ENROLLMENT` | `grant()` thành công, cả hai nguồn | admin, hoặc `null` khi do callback | `courseId`, `userId`, `source` | Cấp quyền học |
@@ -1036,6 +1044,7 @@ Prisma mặc định `onDelete: SetNull` cho quan hệ tùy chọn và `Restrict
 | `Lesson.section` | `Cascade` | Như trên |
 | `LessonResource.lesson` | `Cascade` | Như trên. Object trên R2 do ứng dụng dọn, xem quy tắc `@@unique([storage, objectKey])` |
 | `LessonProgress.lesson` | `Cascade` | Tiến độ của một bài đã bị xóa là dữ liệu vô nghĩa |
+| `VideoAsset.instructor` | `Restrict` | Như `Course.instructor`: không xóa được một người còn đứng tên video |
 | `Lesson.videoAsset` | `Restrict` | Nếu `SetNull`, xóa `VideoAsset` sẽ âm thầm để lại một bài `VIDEO` đã publish không có video. `Restrict` buộc admin gỡ tường minh trước |
 | `Enrollment.course` | `Restrict` | Không xóa được khóa học đang có người học. Ép đúng quy tắc "chỉ archive" của kế hoạch |
 | `Purchase.course` | `Restrict` | Không xóa được khóa học đã bán |
