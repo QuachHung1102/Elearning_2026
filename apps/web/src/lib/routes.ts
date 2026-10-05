@@ -6,6 +6,12 @@ export function homeFor(role: string): string {
   return role === "INSTRUCTOR" ? "/instructor" : LEARNER_HOME;
 }
 
+/** The API resource behind a public course or category page, else null. */
+export function catalogResource(pathname: string): string | null {
+  const match = /^\/(courses|categories)\/([^/]+)$/.exec(pathname);
+  return match ? `/${match[1]}/${match[2]}` : null;
+}
+
 /**
  * The `?next=` target after sign-in or sign-up, kept on this origin. Parsed the
  * way the browser will resolve it, so `/\evil.com` (a backslash counts as a

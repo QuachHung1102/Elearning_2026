@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button, buttonClass } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/feedback";
 import { RequestId } from "@/components/ui/request-id";
+import { SITE_OWNER } from "@/lib/site";
 
 /**
  * The course shell (`GET /learn/{slug}`) failed, so there is no curriculum to
@@ -19,6 +20,8 @@ export default function LearnError({
 }) {
   return (
     <main id="main" tabIndex={-1} className="page-shell">
+      {/* The page's own metadata failed with it, which leaves the title empty. */}
+      <title>{`Không tải được chương trình học · ${SITE_OWNER.name}`}</title>
       <ErrorState
         title="Không tải được chương trình học"
         description="Kiểm tra kết nối rồi thử lại."
