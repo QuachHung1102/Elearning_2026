@@ -26,10 +26,19 @@ test("a guest signs in from a course page, learns, and the progress is saved", a
   const done = page.getByRole("button", {
     name: "Đã hoàn thành, bấm để bỏ đánh dấu",
   });
+  // The button flips at once; the PUT goes through the progress queue. A reload
+  // before it lands loses it, which a loaded machine showed once.
+  const saved = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" &&
+      response.url().includes("/progress") &&
+      response.ok(),
+  );
   await page
     .getByRole("button", { name: "Đánh dấu hoàn thành", exact: true })
     .click();
   await expect(done).toBeVisible();
+  await saved;
 
   // Saved on the server, not just on screen.
   await page.reload();
