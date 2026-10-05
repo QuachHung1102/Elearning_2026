@@ -75,6 +75,17 @@ describe("securityHeaders (ROADMAP A5.1, REVIEW F-20)", () => {
     }
   });
 
+  it("lets hls.js play through Media Source and fetch HLS from a media host (REVIEW F-21)", () => {
+    const policy = csp(
+      securityHeaders({ dev: false, mediaOrigins: "https://videodelivery.net" }),
+    );
+
+    expect(directive(policy, "media-src")).toEqual(
+      expect.arrayContaining(["blob:", "https://videodelivery.net"]),
+    );
+    expect(directive(policy, "connect-src")).toContain("https://videodelivery.net");
+  });
+
   it("is applied to every page by next.config, and left to the API on /api", async () => {
     const rules = (await nextConfig.headers?.()) ?? [];
 

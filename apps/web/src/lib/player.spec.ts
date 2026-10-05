@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   commandForKey,
   mergeSave,
+  playbackEngine,
   rateLabel,
   reachedCompletion,
   resumeAt,
@@ -115,5 +116,17 @@ describe("stepRate", () => {
     expect(stepRate(2, 1)).toBe(2);
     expect(stepRate(0.75, -1)).toBe(0.75);
     expect(rateLabel(1.25)).toBe("1,25x");
+  });
+});
+
+describe("playbackEngine (REVIEW F-21)", () => {
+  it("lets the element play MP4 and HLS it can play itself", () => {
+    expect(playbackEngine("mp4", "")).toBe("native");
+    expect(playbackEngine("hls", "maybe")).toBe("native");
+    expect(playbackEngine("hls", "probably")).toBe("native");
+  });
+
+  it("hands HLS to hls.js when the element cannot play it", () => {
+    expect(playbackEngine("hls", "")).toBe("hls.js");
   });
 });

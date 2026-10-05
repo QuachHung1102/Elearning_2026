@@ -20,8 +20,10 @@ function parseOrigins(list: string): string[] {
  *
  * `mediaOrigins` (env `CSP_MEDIA_ORIGINS`) names the hosts images, video, HLS
  * and presigned uploads use when they are not served through this site's own
- * `/api` rewrite: the R2 public URL and upload host, a Cloudflare Stream
- * customer domain. `API_PUBLIC_URL` must be this site's own origin (the
+ * `/api` rewrite: the R2 public URL and upload host, the Cloudflare Stream
+ * playback host. hls.js fetches HLS over XHR (`connect-src`) and plays it
+ * through Media Source (`media-src blob:`); its ESM build starts no worker, so
+ * there is no `worker-src`. `API_PUBLIC_URL` must be this site's own origin (the
  * browser's, PHASE_2_REPORT §3.6), or the API's media is another origin too.
  *
  * ponytail: scripts and styles allow `'unsafe-inline'` because Next inlines its

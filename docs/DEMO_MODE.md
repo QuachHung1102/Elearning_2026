@@ -258,7 +258,9 @@ ffprobe -v error -show_entries format=duration -of csv=p=0 apps/api/assets/demo/
 Player đọc `kind` trong response, không đoán từ đuôi URL:
 
 - `kind: 'mp4'` → `<video src={playbackUrl}>` native.
-- `kind: 'hls'` → `hls.js` khi trình duyệt không hỗ trợ HLS native (Safari hỗ trợ sẵn).
+- `kind: 'hls'` → `hls.js` khi trình duyệt không hỗ trợ HLS native (Safari hỗ trợ sẵn). `hls.js` chỉ được `import()` khi đó, nên trang không tải nó cho MP4 hay HLS native.
+
+CSP của web với HLS qua `hls.js`: playlist và segment đi bằng XHR (`connect-src`), video phát qua Media Source (`media-src blob:`, đã có sẵn). Bản ESM của `hls.js` không tạo worker nên không cần `worker-src`. Host phát của Cloudflare Stream (`https://videodelivery.net`, hoặc customer domain nếu dùng) phải nằm trong `CSP_MEDIA_ORIGINS`, nếu không trình duyệt chặn playlist và player rơi vào "Không phát được video".
 
 Một nhánh `if`, đặt trong component player. Không có component riêng cho demo.
 
