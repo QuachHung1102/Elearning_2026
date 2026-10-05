@@ -2,7 +2,7 @@
 
 Đối chiếu với `docs/UX_PLAN.md` §2.3. Mở [elearning.pen](./elearning.pen) trong Pencil và tìm khung theo tên hoặc ID bên dưới.
 
-Có **36 route**: **35 trang có giao diện**, mỗi trang có bản desktop 1440 và mobile 375; một route chỉ chuyển hướng.
+Có **43 route**: **42 trang có giao diện**, mỗi trang có bản desktop 1440 và mobile 375; một route chỉ chuyển hướng.
 
 | Trang | Route | Desktop 1440 | Mobile 375 |
 |---|---|---|---|
@@ -42,6 +42,13 @@ Có **36 route**: **35 trang có giao diện**, mỗi trang có bản desktop 14
 | Quyền học · Quản trị | `/admin/enrollments` | `al4qG` | `Q8zLax` |
 | Đơn hàng · Quản trị | `/admin/orders` | `RjpXK` | `cgVuK` |
 | Nhật ký · Quản trị | `/admin/audit-logs` | `e0pQTr` | `y1DfV` |
+| Tổng quan · Giảng viên | `/instructor` | `Lhbf2` | `bEwhK` |
+| Khóa học của tôi · Giảng viên | `/instructor/courses` | `tr6oj` | `dgcMb` |
+| Tạo khóa học · Giảng viên | `/instructor/courses/new` | `BP6Fq` | `GDeXR` |
+| Thông tin khóa học · Giảng viên | `/instructor/courses/[id]` | `pad3g` | `v7xd6I` |
+| Chương trình học · Giảng viên | `/instructor/courses/[id]/curriculum` | `ezAxm` | `bVTiR` |
+| Soạn bài học · Giảng viên | `/instructor/courses/[id]/lessons/[lessonId]` | `gwm47` | `tZnAg` |
+| Học viên · Giảng viên | `/instructor/students` | `tb08v` | `zBVdk` |
 
 ## Các biến thể và trạng thái bổ sung
 
@@ -56,7 +63,7 @@ Các trạng thái trên có bản mobile 375; bản desktop nằm ở bảng d�
 
 ## Trạng thái bổ sung · desktop 1440
 
-98 màn trạng thái, hộp thoại và email, chỉ vẽ bản desktop 1440. Nằm bên dưới canvas, mỗi nhóm một hàng.
+101 màn trạng thái, hộp thoại và email, chỉ vẽ bản desktop 1440. Nằm bên dưới canvas, mỗi nhóm một hàng.
 
 | Nhóm | Màn | ID |
 |---|---|---|
@@ -105,6 +112,9 @@ Các trạng thái trên có bản mobile 375; bản desktop nằm ở bảng d�
 | Quản trị | Người dùng · Rỗng | `r7QfH` |
 | Quản trị | Quyền học · Rỗng | `VGm43` |
 | Quản trị | Nhật ký · Rỗng | `TOsmg` |
+| Quản trị | Hồ sơ người dùng · Đổi vai trò | `m8kG9d` |
+| Giảng viên | Khóa học của tôi · Rỗng | `VKDwv` |
+| Giảng viên | Học viên · Rỗng | `aP9Af` |
 | Quản trị | Khóa học · Lỗi tải | `W5b3z5` |
 | Quản trị | Khóa học · Dữ liệu cũ | `p9wH0p` |
 | Quản trị | Khóa học · Phiên hết hạn | `mQeli` |

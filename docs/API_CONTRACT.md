@@ -132,6 +132,20 @@ Mở rộng đúng quy ước đã có (`@Header('Cache-Control', 'no-store')` t
 
 Vì catalog công khai được cache, nó **không được** chứa bất kỳ thông tin riêng của người xem. Trạng thái "đã mua hay chưa" lấy từ `GET /enrollments/me`, không nhúng vào `GET /courses/{slug}`. Đây cũng là lý do không có guard "session tuỳ chọn" nào trong hệ thống.
 
+### 2.3b Header bảo mật
+
+Mọi response của API, kể cả lỗi từ guard và bộ lọc ngoại lệ, mang các header dưới đây. `securityHeaders` (`src/common/security-headers.middleware.ts`) gắn chúng ngay sau `X-Request-Id`. API trả JSON và tệp chứ không trả trang, nên chính sách là "không tải và không chạy gì".
+
+| Header | Giá trị |
+|---|---|
+| `X-Content-Type-Options` | `nosniff` |
+| `X-Frame-Options` | `DENY` |
+| `Referrer-Policy` | `no-referrer` |
+| `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'` |
+| `Strict-Transport-Security` | `max-age=31536000`, **chỉ khi** `NODE_ENV=production`: trình duyệt bỏ qua nó qua HTTP thường, nhưng HTTPS localhost của lập trình viên sẽ bị ghim một năm |
+
+`X-Powered-By` bị tắt. Web đặt bộ header riêng cho trang (`apps/web/src/lib/security-headers.ts`, CSP có `CSP_MEDIA_ORIGINS`) và **không** gắn chúng lên `/api/*`: phản hồi đi qua rewrite giữ nguyên header của API.
+
 ### 2.4 Envelope lỗi
 
 Giữ nguyên ba field mà Nest đang trả, **thêm** một field `code`. Một `AppExceptionFilter` toàn cục chuẩn hoá mọi lỗi:
@@ -157,6 +171,20 @@ Giữ nguyên ba field mà Nest đang trả, **thêm** một field `code`. Một
 `message` **giữ nguyên tiếng Anh**. Giao diện tiếng Việt map `code` sang câu chữ tiếng Việt ở phía web theo bảng ở mục 2.5b — đó chính là lý do `code` phải tồn tại. Không dịch `message` trong API: nó sẽ vào log và sẽ bị người ta copy vào tìm kiếm.
 
 **`X-Request-Id` có trên mọi response, không riêng lỗi.** Một middleware đứng trước mọi thứ khác: dùng lại giá trị client gửi lên nếu khớp `^[A-Za-z0-9_-]{8,64}$`, ngược lại sinh UUID v4; gắn vào `request`, echo ra response header, và đưa vào mọi dòng structured log của request đó (PROJECT_PLAN.md §Triển khai và PLAN_SUPPLEMENT.md đều bắt buộc "log chứa request ID" — đây là chỗ định nghĩa nó). Web hiện chuỗi này dưới thông báo lỗi 500 kèm nút copy; đó là mã tra cứu, không phải mã lỗi thô, nên không vi phạm quy tắc "không hiện mã lỗi thô" ở UX_PLAN.md §6.1.
+
+### 2.4b Log có cấu trúc
+
+Mỗi sự kiện là một dòng JSON (`logEvent`, `src/common/logger.ts`): `time`, `level` (`info` ra stdout, `error` ra stderr), `requestId` (tự lấy từ ngữ cảnh của request đang xử lý, nên trùng `X-Request-Id` khách thấy), `evt` và các trường của sự kiện.
+
+| `evt` | Khi nào | Trường |
+|---|---|---|
+| `http` | mỗi request khi xong (tắt bằng `LOG_REQUESTS=false`) | `method`, `path`, `status`, `ms`, `userId` nếu đã đăng nhập |
+| `http.error` | lỗi `5xx` | `message`, `stack`; thân trả về chỉ có `requestId` |
+| `checkout.created` | một QR mới được tạo | `purchaseId`, `appTransId`, `amountVnd` |
+| `payment.confirmed` | `confirmPayment` kết thúc | `status`, `appTransId`, `purchaseId` (nếu có), `reason` khi `REJECTED` |
+| `payment.callback_failed`, `reconcile.*`, `mail.send_failed` | lỗi phía mình | `appTransId` hoặc `tag`, `error` |
+
+**Không bao giờ có trong log:** query string (chữ ký của URL media, token trong đường dẫn), header, body, mật khẩu, hash mật khẩu, JWT phiên, token CSRF, `mac`. `http` ghi `path` chứ không URL và không đọc header hay body; `redact` là lưới dưới chân, che giá trị của khóa mang tên bí mật ở mọi độ sâu và mọi chuỗi hình JWT.
 
 ### 2.5 Danh mục `code`
 
@@ -186,7 +214,7 @@ Giữ nguyên ba field mà Nest đang trả, **thêm** một field `code`. Một
 | `SELF_ACTION_FORBIDDEN` | 409 | Admin tự khoá tài khoản của chính mình, hoặc tự đổi vai trò của chính mình |
 | `PAYLOAD_TOO_LARGE` | 413 | Body vượt giới hạn ở mục 2.2 |
 | `UNSUPPORTED_MEDIA_TYPE` | 415 | `Content-Type` không nằm trong danh sách cho phép của endpoint |
-| `COURSE_NOT_PURCHASABLE` | 422 | Khoá `DRAFT`/`ARCHIVED` hoặc `priceVnd = 0` |
+| `COURSE_NOT_PURCHASABLE` | 422 | Khoá `ARCHIVED` hoặc `priceVnd = 0`. Khoá `DRAFT` trả `404` như khoá không tồn tại (không lộ slug chưa xuất bản) |
 | `COURSE_NOT_PUBLISHABLE` | 422 | Publish khi nội dung chưa hợp lệ; `details.issues[]` liệt kê từng thiếu sót |
 | `RATE_LIMITED` | 429 | Vượt giới hạn ở mục 8; kèm header `Retry-After` |
 | `INTERNAL` | 500 | Lỗi không xác định. Không bao giờ lộ stack hay message gốc. |
@@ -418,11 +446,15 @@ EnrollmentItem  { id, course: CourseCard, status, source, grantedAt,
 AdminEnrollment { id, user: { id, email, displayName }, course: { id, title },
                   status, source, grantedAt, revokedAt, grantedById,
                   progress: CourseProgress }
-PurchaseRow     { id, courseId, courseTitle, priceVnd, status,
+PurchaseRow     { id, courseId, courseSlug, courseTitle, priceVnd, status,
                   createdAt, paidAt, refundedAt }
                 status ∈ PENDING | PAID | REFUND_REQUESTED | REFUNDED | CANCELLED
 CheckoutSession { purchaseId, paymentAttemptId, status, amountVnd, provider,
                   qrCode, orderUrl, createdAt, expiresAt }
+AdminPaymentRow PurchaseRow & { user: { id, email, displayName },
+                  attempts: AdminAttempt[] }      -- mới nhất trước
+AdminAttempt    { id, appTransId, providerTransId, provider, status, amountVnd,
+                  expiresAt, paidAt, createdAt }
 Playback        { playbackUrl, kind, expiresAt }
 SignedUpload    { uploadUrl, method, objectKey, expiresAt, maxBytes }
 SignedDownload  { url, filename, expiresAt }
@@ -468,7 +500,7 @@ Cột **Vai trò**: `—` là công khai. Mọi endpoint mutation đều có th�
 | `GET /admin/users` | ADMIN | `/admin/users` | `q`, `email` (khớp chính xác, không phân biệt hoa thường), `status`, `role`, `page`, `pageSize`, `sort` ∈ `createdAt`,`email` | `200 Paginated<AdminUserRow>` | `404` |
 | `GET /admin/users/{id}` | ADMIN | `/admin/users/[id]` | param UUID | `200 { user: AdminUserRow, enrollments: AdminEnrollment[], purchases: PurchaseRow[] }` | `404` |
 | `PATCH /admin/users/{id}` | ADMIN | `/admin/users/[id]` | `status` `@IsEnum(UserStatus)` | `200 { user: AdminUserRow }`; `BLOCKED` thu hồi mọi session, ghi `AuditLog` | `400`, `404`, `409 SELF_ACTION_FORBIDDEN` |
-| `PATCH /admin/users/{id}/role` | ADMIN | `/admin/users/[id]` | `role` `@IsEnum(UserRole)` | `200 { user: AdminUserRow }`, ghi `AuditLog` `user.role_changed` (`fromRole`, `toRole`); không đổi gì và không ghi log nếu `role` trùng vai trò hiện tại | `400`, `404`, `409 SELF_ACTION_FORBIDDEN` (tự đổi vai trò của chính mình) |
+| `PATCH /admin/users/{id}/role` | ADMIN | `/admin/users/[id]` | `role` `@IsIn([STUDENT, INSTRUCTOR])` — `ADMIN` chỉ tạo bằng seed nên trả `400` | `200 { user: AdminUserRow }`, ghi `AuditLog` `user.role_changed` (`fromRole`, `toRole`, `releasedCourses`, `releasedCourseIds`); không đổi gì và không ghi log nếu `role` trùng vai trò hiện tại. Trong transaction khóa mọi hàng `ADMIN` rồi kiểm lại người thực hiện vẫn là `ADMIN` (nếu không: `404`), nên hai admin hạ vai trò nhau cùng lúc không thể để lại 0 admin | `400`, `404`, `409 SELF_ACTION_FORBIDDEN` (tự đổi vai trò của chính mình) |
 
 Đổi mật khẩu thu hồi **toàn bộ** session kể cả session hiện tại, đúng như PROJECT_PLAN.md yêu cầu. Web hiển thị "Đổi mật khẩu thành công, vui lòng đăng nhập lại" rồi chuyển sang `/login`.
 
@@ -666,7 +698,7 @@ Không có webhook Cloudflare Stream. Một chủ sở hữu upload vài video m
 |---|---|---|---|---|---|
 | `GET /admin/reports/overview` | ADMIN | `/admin` | `from`, `to` `@IsISO8601 @IsOptional`, khoảng tối đa 366 ngày | `200 { revenueVnd, paidPurchases, newStudents, activeEnrollments, draftCourses, pendingPaymentAttempts, videoAssetsNotReady, series: [{ date, revenueVnd, purchases }] }` | `400`, `404` |
 | `GET /admin/reports/instructor-overview` | ADMIN, INSTRUCTOR (chỉ khoá mình dạy) | `/admin` | — | `200 { publishedCourses, draftCourses, activeEnrollments, newEnrollments30d }` | `404` |
-| `GET /admin/reports/courses` | ADMIN | `/admin` | `from`, `to` `@IsOptional`, `page`, `pageSize` | `200 Paginated<{ courseId, title, revenueVnd, newEnrollments, activeStudents, completionRate }>` | `400`, `404` |
+| `GET /admin/reports/courses` | ADMIN | `/admin` | `from`, `to` `@IsOptional`, `page`, `pageSize` | `200 Paginated<{ courseId, title, revenueVnd, newEnrollments, activeStudents, completionRate }>` — mọi khóa **không phải `DRAFT`**, sắp `revenueVnd` giảm dần rồi `activeStudents` giảm dần rồi tên. `revenueVnd` và `newEnrollments` (số `Enrollment` có `grantedAt` trong khoảng) **theo khoảng**; `activeStudents` và `completionRate` là **trạng thái hiện tại** | `400`, `404` |
 | `GET /admin/audit-logs` | ADMIN | `/admin/audit-logs` | `actorId`, `entityType`, `action`, `from`, `to`, `page`, `pageSize` | `200 Paginated<AuditLogRow>` | `400`, `404` |
 
 `ReportingController` cả lớp chạy dưới `StaffGuard`, không phải `AdminGuard`. `GET /admin/reports/overview` (doanh thu, toàn site) **không** gắn `@StaffAccess` — default deny của `StaffGuard` áp dụng, nên nó vẫn **chỉ `ADMIN`**, `INSTRUCTOR` nhận `404` giống hệt như thể route không tồn tại. Chỉ `instructor-overview` gắn `@StaffAccess('scoped')`; đây là bản rút gọn không có tiền, đủ cho `/admin` của một giảng viên.
@@ -681,6 +713,8 @@ Reporting **chỉ đọc**. Không endpoint nào trong nhóm này được phép
 | Gom nhóm ngày | `AT TIME ZONE 'Asia/Ho_Chi_Minh'` trong SQL. Gom theo UTC làm doanh thu lúc 07:00 sáng giờ VN rơi vào ngày hôm trước và toàn bộ biểu đồ lệch một ngày so với UX_PLAN.md §9.3 (mọi hiển thị dùng `Asia/Ho_Chi_Minh`). |
 | `series[].date` | Chuỗi `"YYYY-MM-DD"`. **Đây là ngoại lệ duy nhất của mục 2.9** — nó là một *ngày lịch* ở một múi giờ cụ thể, không phải một thời điểm, và ép nó thành ISO UTC sẽ tái tạo đúng lỗi lệch ngày ở trên. |
 | `completionRate` | Số thực `0`–`1`, làm tròn 4 chữ số. Tử số: số học viên có `completedLessons = totalLessons`. Mẫu số: số `Enrollment` `status = ACTIVE` của khoá. Mẫu số `0` → `null` (không phải `0`). |
+
+**Doanh thu là số ròng.** `revenueVnd` và `paidPurchases` đếm đơn `PAID` **và** `REFUND_REQUESTED` có `paidAt` trong khoảng (một yêu cầu hoàn tiền chưa được duyệt vẫn là tiền cho tới khi đơn thành `REFUNDED`); `REFUNDED`, `PENDING`, `CANCELLED` không tính. Ngày của `series` là ngày lịch giờ Việt Nam của `paidAt`, nên một đơn lúc 01:00 sáng 1/10 giờ Việt Nam (18:00 ngày 30/9 UTC) nằm ở `2026-10-01`, còn 23:59:59 ngày 30/9 giờ Việt Nam nằm ở `2026-09-30`. `AdminUserRow.purchaseCount` là số đơn **đã từng được trả** (`paidAt` khác null, kể cả đã hoàn tiền); `GET /admin/users/{id}` trả `purchases` là mọi đơn của người đó, mới nhất trước.
 
 Ba số `draftCourses`, `pendingPaymentAttempts`, `videoAssetsNotReady` là **trạng thái hiện tại, không phụ thuộc `from`/`to`**: chúng đếm toàn bộ `Course status = DRAFT`, `PaymentAttempt status = PENDING`, và `VideoAsset status != READY` tại thời điểm gọi. Chúng có mặt vì UX_PLAN.md §3.3 quy định `/admin` hiện đúng năm ô `StatTile` — ba ô đó không có nguồn dữ liệu nào khác ngoài đây, và gọi thêm ba endpoint list chỉ để đọc `total` là ba round-trip cho ba con số.
 
@@ -708,12 +742,13 @@ Tham số route checkout là **`courseSlug`**, không phải `purchaseId` — UX
 |---|---|---|---|---|---|
 | `POST /checkout/{courseSlug}` | any | `/courses/[slug]` → `/checkout/[courseSlug]` | — | `201 CheckoutSession` khi tạo mới, `200` khi trả lại QR còn hạn | `401`, `403 EMAIL_NOT_VERIFIED`, `404`, `409 ALREADY_ENROLLED`, `422 COURSE_NOT_PURCHASABLE`, `429` |
 | `GET /purchases/me` | any | `/account/orders` | `page`, `pageSize`, `status` | `200 Paginated<PurchaseRow>` | `401` |
-| `GET /purchases/{id}` | any (chủ sở hữu) | `/checkout/[courseSlug]`, `/account/orders/[id]` | param UUID | `200 PurchaseRow & { attempts: CheckoutSession[] }` — sắp `createdAt` giảm dần, `[]` khi chưa có lần nào | `401`, `404`, `429` |
-| `POST /purchases/{id}/refund-request` | any (chủ sở hữu) | `/account/orders/[id]` | `reason` `@Length(10,500)` | `202` — đặt `status = REFUND_REQUESTED`, ghi `AuditLog purchase.refund_requested` với `metadata.reason` | `400`, `401`, `404`, `409 PURCHASE_NOT_REFUNDABLE`, `429` |
-| `POST /payments/{provider}/callback` | `@SkipCsrf` | hệ thống | payload đúng schema nhà cung cấp | `200 { return_code: 1, return_message: "success" }` | `200 { return_code: -1 }` khi HMAC sai (không dùng 4xx — nhà cung cấp sẽ retry vô ích) |
-| `GET /admin/payments` | ADMIN | `/admin/orders` | `status`, `courseId`, `from`, `to`, `page`, `pageSize`, `duplicatePaid` `@IsBoolean @IsOptional` | `200 Paginated<PurchaseRow & { appTransId, providerTransId }>` | `400`, `404` |
-| `POST /admin/payments/{attemptId}/reconcile` | ADMIN | `/admin/orders` | — | `200 { status, changed: boolean }` — gọi `queryOrder` rồi chạy đúng `confirmPayment` | `404`, `409 PAYMENT_EXPIRED` |
-| `POST /admin/purchases/{id}/refund` | ADMIN | `/admin/orders` | `reason` `@Length(3,500)`; `force` `@IsBoolean @IsOptional` (mặc định `false`) | `200 PurchaseRow` — đánh dấu `REFUNDED`, thu hồi `Enrollment`, ghi `AuditLog` | `400`, `404`, `409 PURCHASE_NOT_REFUNDABLE` |
+| `GET /purchases/{id}` | any (chủ sở hữu) | `/checkout/[courseSlug]`, `/account/orders/[id]` | param UUID | `200 PurchaseRow & { attempts: CheckoutSession[] }` — sắp `createdAt` giảm dần, `[]` khi chưa có lần nào; chỉ liệt kê attempt đã có QR (attempt mà lời gọi nhà cung cấp hỏng giữa chừng không phải lịch sử học viên hành động được) | `401`, `404`, `429` |
+| `POST /purchases/{id}/refund-request` | any (chủ sở hữu) | `/account/orders/[id]` | `reason` `@Length(10,500)` | `202 PurchaseRow` — đặt `status = REFUND_REQUESTED`, ghi `AuditLog purchase.refund_requested` với `metadata.reason` | `400`, `401`, `404`, `409 PURCHASE_NOT_REFUNDABLE`, `429` |
+| `POST /payments/{provider}/callback` | `@SkipCsrf` (không cookie, không CSRF: nhà cung cấp không có) | hệ thống | `{ data, mac, type }`; `provider` chỉ nhận `zalopay` (khác → `404`); `type` là `1` (đơn hàng), loại khác bị bỏ qua | `200 { return_code, return_message }` **luôn HTTP 200 với callback có chữ ký hợp lệ**: `1 success` (xử lý xong, callback lặp, hoặc đơn/attempt đã đóng phía mình — tiền đã được ghi vết `payment.callback_rejected`, retry chỉ lặp lại vô ích); `-1` với `mac not equal`, `invalid body`, `invalid data`, `unsupported type`, `amount mismatch`, `unknown order`; `0 retry` khi lỗi ở phía mình (cơ sở dữ liệu…) để nhà cung cấp gọi lại (tối đa 3 lần, sau 15 phút phải đối soát bằng `queryOrder`) | Không dùng 4xx cho callback thật: nhà cung cấp sẽ retry vô ích. Ngoại lệ duy nhất là `429` kèm `Retry-After` cho một client gửi quá 20 callback không có chữ ký hợp lệ trong 60 giây (§8) |
+| `GET /admin/payments` | ADMIN | `/admin/orders` | `status` (csv), `courseId` (uuid), `from`, `to` (ISO 8601, mốc thời điểm chứ không phải ngày, lọc theo `createdAt` của đơn), `page`, `pageSize`, `duplicatePaid` `@IsBoolean @IsOptional` (chỉ `true` có tác dụng) | `200 Paginated<AdminPaymentRow>` — mỗi hàng là một **đơn** kèm học viên và **mọi** QR của nó (mới nhất trước): màn đối soát cần `attempts[].id` để gọi `reconcile` và `appTransId` để bấm xác nhận demo, còn đơn có hai attempt `SUCCEEDED` phải thấy được cả hai | `400`, `404` |
+| `POST /admin/payments/{attemptId}/reconcile` | ADMIN | `/admin/orders` | — | `200 { status, changed: boolean }` — gọi `queryOrder` rồi chạy đúng `confirmPayment` với `payment.reconciled` ghi dưới id của admin (job định kỳ ghi `actorId = null`). Nhà cung cấp báo đã trả → `SUCCEEDED` (kể cả attempt đã `EXPIRED`: thanh toán đến muộn); báo thất bại → `FAILED`; báo đang xử lý → giữ nguyên | `404`, `409 PAYMENT_EXPIRED` (nhà cung cấp chưa nhận tiền và QR đã chết: `EXPIRED` hoặc `expiresAt` đã qua), `409` (xác nhận bị từ chối, `message` nêu lý do) |
+| `POST /admin/purchases/{id}/refund` | ADMIN | `/admin/orders` | `reason` `@Length(3,500)`; `force` `@IsBoolean @IsOptional` (mặc định `false`) | `200 PurchaseRow` — đánh dấu `REFUNDED` (+ `refundedAt`), thu hồi `Enrollment` và trừ `enrollmentCount` **trong cùng transaction**, giữ nguyên `lesson_progress`. Audit: `purchase.refunded` (`amountVnd`, `reason`, `forced: true` nếu có) dưới id admin; đi từ `REFUND_REQUESTED` thì có thêm `purchase.refund_approved`; `enrollment.revoked` (`trigger: refund`) không có tác nhân vì admin đã nằm ở `purchase.refunded` | `400`, `404`, `409 PURCHASE_NOT_REFUNDABLE` |
+| `POST /admin/purchases/{id}/refund-reject` | ADMIN | `/admin/orders` | `reason` `@Length(3,500)` | `200 PurchaseRow` — `REFUND_REQUESTED → PAID`, ghi `purchase.refund_rejected` với `metadata.reason`; quyền học không đổi | `400`, `404`, `409` (đơn không ở `REFUND_REQUESTED`) |
 
 Trang checkout **chỉ polling `GET /purchases/{id}`**, mỗi 3 giây, tối đa `CHECKOUT_QR_TTL_MINUTES`. Nó không bao giờ tự kết luận thành công từ redirect, query param hay ảnh chụp màn hình (PROJECT_PLAN.md §Thiết kế thanh toán).
 
@@ -758,7 +793,7 @@ Quy tắc đã có sẵn ở PLAN_SUPPLEMENT.md §4.5 — hợp đồng này ch�
 }
 ```
 
-`details.reason` ∈ `NOT_PAID | ALREADY_REFUNDED | OUTSIDE_WINDOW | PROGRESS_TOO_HIGH | NOT_PURCHASED | FREE_COURSE`.
+`details.reason` ∈ `NOT_PAID | ALREADY_REQUESTED | ALREADY_REFUNDED | OUTSIDE_WINDOW | PROGRESS_TOO_HIGH | NOT_PURCHASED | FREE_COURSE`. `ALREADY_REQUESTED` (đơn đã ở `REFUND_REQUESTED`, học viên gửi lần hai) là bất biến như `NOT_PAID`: `force` không bỏ qua. Cùng `details` mang `paidAt`, `daysSincePaid`, `progressPercent`; tiến độ so với ngưỡng bằng **tỉ lệ chính xác** (`hoàn thành × 5 ≥ tổng số bài`), không bằng `percent` đã làm tròn — 49/250 bài hiển thị 20% nhưng chỉ là 19,6%, còn dưới ngưỡng.
 
 `force: true` bỏ qua **chỉ** ba điều kiện thuộc chính sách (`OUTSIDE_WINDOW`, `PROGRESS_TOO_HIGH`, `FREE_COURSE`) — đó là quyền quyết định của chủ sở hữu, và PLAN_SUPPLEMENT.md §4.5 vốn đã giao khâu duyệt cho con người. Nó **không** bỏ qua `NOT_PAID`, `ALREADY_REFUNDED` hay `NOT_PURCHASED`: ba cái đó là bất biến dữ liệu, không phải chính sách. Mọi lần `force = true` ghi `AuditLog` `purchase.refunded` với `metadata.forced = true`.
 
@@ -780,7 +815,7 @@ Duyệt vẫn là thao tác của admin, và nó có đúng hai lối ra, cả h
 | `GET /health` | — | giám sát | `200 { status: "ok", database: "up", uptimeSeconds }` | Thay thế `GET /api/v1` đang trả `Hello World!`. Không lộ tên driver, version hay biến môi trường. |
 | `GET /dev/mail` | ADMIN | terminal | `200` HTML | Chỉ tồn tại khi `MAIL_DRIVER=demo` — xem DEMO_MODE.md §4 |
 | `GET /dev/mail/{id}` | ADMIN | terminal | `200` HTML | |
-| `POST /dev/payments/{appTransId}/confirm` | ADMIN | `/admin/orders`, `/checkout/[courseSlug]` | `200` | Dựng payload callback thật rồi gọi `checkout.confirmPayment()`. Không tự cấp `Enrollment`. |
+| `POST /dev/payments/{appTransId}/confirm` | ADMIN | `/admin/orders`, `/checkout/[courseSlug]` | `200 { status: "PAID" \| "ALREADY_PROCESSED" \| "DUPLICATE_PAID" }` | Đặt đơn ở nhà cung cấp giả sang "đã trả", để nó ký callback bằng `key2` demo, **xác minh chữ ký bằng đúng hàm của callback thật**, rồi gọi `checkout.confirmPayment()`. Không tự cấp `Enrollment`. Bấm hai lần = callback lặp (`ALREADY_PROCESSED`, một enrollment, một email). Lỗi: `404` (không có attempt, hoặc người gọi không phải ADMIN — `AdminGuard` chặn kín), `409 PAYMENT_EXPIRED` (QR đã quá hạn), `409` (confirm bị từ chối; `message` nêu lý do), `400 SIGNATURE_INVALID`. Chỉ được đăng ký khi `PAYMENT_DRIVER=demo` — với driver thật route không tồn tại. |
 
 `GET /api/v1` bị gỡ. Route không khớp phải trả envelope JSON `404 NOT_FOUND`, không phải trang HTML mặc định của Express.
 
@@ -843,6 +878,8 @@ Ba lớp, lớp đầu là lớp thật sự có tác dụng:
 2. Mọi response chứa user đi qua đúng một projection: `toAuthUser()` đang có trong `auth.service.ts`, và `toAdminUserRow()` cho `/admin/users*`. Không controller nào trả trực tiếp entity Prisma.
 3. Một test e2e duyệt body của mọi response `2xx` và fail nếu chuỗi `passwordHash` xuất hiện.
 
+   **Đã áp dụng (T4.15):** lớp 1 ở `PrismaService` (cấu hình và kiểu), lớp 3 ở `test/password-hash.e2e-spec.ts`, kiểm cả giá trị băm thật trong DB chứ không chỉ tên trường.
+
 Cùng quy tắc áp cho: `Session` (không trả JWT hay token thô), `AuthToken` (chỉ lưu hash, không trả token qua bất kỳ endpoint nào — token chỉ đi qua email), `ZALOPAY_KEY1/KEY2`, `CLOUDFLARE_*`.
 
 ### 6.3 Không phân biệt được "không có quyền" với "không tồn tại"
@@ -903,6 +940,7 @@ Hai dòng đầu là hiện trạng, giữ nguyên số.
 |---|---|---|---|---|
 | `POST /auth/register` | ip | 60s | 10 | Đã cài đặt, không đổi |
 | `POST /auth/login` | ip | 60s | 10 | Đã cài đặt, không đổi |
+| `POST /auth/login`, theo tài khoản | email đã chuẩn hóa (chữ thường, bỏ khoảng trắng đầu cuối) | 900s | 10 | Chặn dò mật khẩu từ nhiều địa chỉ. Đếm **mọi** lần thử, kể cả đúng mật khẩu; đăng nhập thành công thì đếm lại. Đặt trước khi tra người dùng: email chưa đăng ký bị giới hạn y hệt nên giới hạn không lộ ai có tài khoản. Đánh đổi: ai biết email có thể chặn chủ tài khoản tối đa 15 phút |
 | `GET /auth/csrf` | ip | 60s | 60 | Layout gọi mỗi lần tải trang — chỉ an toàn sau khi `csrf()` thành idempotent (mục 1.4) |
 | `GET /auth/me` | ip | 60s | 120 | Mọi layout được bảo vệ gọi mỗi lần tải trang. Khoá theo `ip` chứ không `user`: người gọi có thể chưa đăng nhập |
 | `GET /enrollments/me` | user | 60s | 60 | Layout learner + trang chi tiết khoá học |
@@ -917,13 +955,14 @@ Hai dòng đầu là hiện trạng, giữ nguyên số.
 | `GET /lessons/{id}/resources/{rid}/download` | user | 300s | 30 | Chống tải hàng loạt tài liệu |
 | `POST /checkout/{courseSlug}` | user | 300s | 5 | Tạo QR là thao tác đắt phía nhà cung cấp |
 | `GET /purchases/{id}` | user | 60s | 120 | Trang checkout polling mỗi 3s = 20 req/phút |
-| `POST /payments/{provider}/callback` | ip, **chỉ đếm request sai HMAC** | 60s | 20 | Callback hợp lệ không bao giờ bị chặn. Chặn callback thật là mất tiền, còn nguy hiểm hơn thứ đang chống. |
+| `POST /purchases/{id}/refund-request` | user | 300s | 5 | Chỉ có một lần thành công cho mỗi đơn; giới hạn để không dò được chính sách bằng cách bấm lặp |
+| `POST /payments/{provider}/callback` | ip, **chỉ đếm request sai HMAC** | 60s | 20 | Callback hợp lệ không bao giờ bị chặn. Chặn callback thật là mất tiền, còn nguy hiểm hơn thứ đang chống. Đếm cả body thiếu `data` hoặc `mac` (không có chữ ký nào để kiểm); vượt hạn thì `429` kèm `Retry-After` thay cho `-1`. |
 | Mọi mutation trên `/admin/*` (`POST\|PATCH\|PUT\|DELETE`) | user | 60s | 120 | Lưới an toàn chống script hỏng, không phải chống tấn công. Viết `POST /admin/*` là bỏ trống đúng những method sửa và xoá dữ liệu: `PATCH /admin/courses/{id}`, `PUT .../order`, `DELETE /admin/lessons/{id}` |
 | `GET` trên `/admin/*` và `/courses/{slug}` phía admin | — | — | — | **Không giới hạn, có chủ ý.** Đọc là thao tác rẻ, người gọi đã qua `AdminGuard`, và một bảng admin lọc nhanh không được biến thành `429` |
 
 Bảng này là danh sách đầy đủ. Endpoint không có mặt ở đây thì **không** có rate limit — nếu ai đó cho rằng một endpoint nên có, thêm dòng vào bảng chứ đừng gắn decorator rồi để tài liệu nói khác.
 
-Response khi vượt: `429` với `code: RATE_LIMITED` và header `Retry-After` tính bằng giây. Không thêm header `X-RateLimit-*` — `Retry-After` đã đủ cho mọi client hiện có.
+Response khi vượt: `429` với `code: RATE_LIMITED` và header `Retry-After` tính bằng giây (`RateLimitedError` mang số giây, `AppExceptionFilter` đặt header). Không thêm header `X-RateLimit-*` — `Retry-After` đã đủ cho mọi client hiện có.
 
 **Điểm phải xác minh trước khi mở bán:** rate limit theo IP chỉ đúng nếu API nhận được IP thật của người dùng. Sau rewrite `/api/:path*` của Next, request tới API xuất phát từ service `web`. Cần kiểm chứng bằng log trên Railway rằng `X-Real-IP` (hoặc `X-Forwarded-For`) đến được API. Nếu không đến, mọi limit theo `ip` trở thành limit toàn cục và sẽ chặn nhầm người dùng thật — khi đó chuyển các endpoint đã đăng nhập sang `key: 'user'` và đưa `/auth/*` ra sau một proxy giữ được IP. Đây là kiểm chứng bằng lệnh, không phải suy luận.
 

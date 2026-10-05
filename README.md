@@ -5,6 +5,7 @@ Monorepo khởi đầu cho hệ thống bán khóa học trực tuyến:
 - `apps/web`: Next.js
 - `apps/api`: NestJS + Prisma
 - `docs/PROJECT_PLAN.md`: phân tích chức năng và kiến trúc đã thống nhất
+- `docs/_STATUS.md`: trạng thái triển khai; `docs/_PLAN.md`: việc còn lại, chia task nhỏ
 
 ## Chạy local
 
@@ -22,13 +23,23 @@ corepack pnpm dev
 
 Web chạy tại `http://localhost:3000`; API chạy tại `http://localhost:3001`.
 
-Seed tạo bốn tài khoản demo; email và mật khẩu được ghi trong `apps/api/prisma/seed.ts`. Seed tự từ chối chạy khi `NODE_ENV=production`.
+Seed tạo năm tài khoản demo (admin, giảng viên, ba học viên); email và mật khẩu được ghi trong `apps/api/prisma/seed.ts`. Seed tự từ chối chạy khi `NODE_ENV=production`.
 
 Tạo `AUTH_JWT_SECRET` bằng lệnh dưới đây rồi lưu kết quả vào `apps/api/.env`:
 
 ```powershell
 node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
 ```
+
+## Thử luồng thanh toán (demo)
+
+Mặc định `PAYMENT_DRIVER=demo`: mã QR là giả, không cần tài khoản ZaloPay. `NEXT_PUBLIC_CHECKOUT_ENABLED=true` (đã có ở `apps/web/.env.example`) bật nút "Đăng ký học", `/checkout`, `/account/orders` và `/admin/orders`; biến này được nhúng lúc build nên đổi giá trị thì phải build lại.
+
+1. Đăng nhập `student3@elearning.local`, mở một khóa có giá và bấm "Đăng ký học".
+2. Ở một trình duyệt khác, đăng nhập admin, vào `/admin/orders` và bấm "Xác nhận thanh toán".
+3. Trang thanh toán của học viên tự chuyển sang "Thanh toán thành công"; `/admin` hiện doanh thu.
+
+Các bước đầy đủ và kết quả mong đợi: `docs/ROADMAP.md` §8 (Demo script). `PAYMENT_DRIVER=zalopay` cần thông tin merchant sandbox và chưa được kiểm chứng (`docs/_PLAN.md`, A4.9).
 
 ## API authentication
 

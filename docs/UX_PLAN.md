@@ -8,7 +8,7 @@ Tài liệu là đầu vào cho hai thứ: file thiết kế `design/elearning.p
 
 | Ràng buộc | Ảnh hưởng giao diện |
 |---|---|
-| Catalog theo hình dáng Udemy nhưng kinh tế một chủ sở hữu | Có tìm kiếm, danh mục, bộ lọc, card có rating và số học viên. Không có trang giảng viên, không có so sánh giảng viên, không có chia doanh thu |
+| Catalog theo hình dáng Udemy nhưng kinh tế một chủ sở hữu | Có tìm kiếm, danh mục, bộ lọc, card có rating và số học viên. Không có trang hồ sơ giảng viên công khai (giảng viên soạn khóa ở khu vực `/instructor`), không có so sánh giảng viên, không có chia doanh thu |
 | Thanh toán dựng sau cùng | Mọi màn hình checkout được thiết kế nhưng không dựng ở vòng đầu. Cờ `NEXT_PUBLIC_CHECKOUT_ENABLED` quyết định CTA trên trang chi tiết khóa học |
 | Seam Enrollment tồn tại từ ngày đầu | `/my-courses` và `/learn/**` chỉ phụ thuộc Enrollment, không phụ thuộc Purchase. Cách duy nhất có Enrollment ở vòng đầu là admin cấp thủ công |
 | Demo-first, không có tài khoản ngoài | Player phải phát được nguồn MP4 cục bộ; màn hình xác minh email phải hiển thị link ở chế độ demo; ảnh bìa upload vào thư mục cục bộ |

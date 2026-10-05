@@ -570,6 +570,7 @@ export const ZALOPAY_CLIENT = Symbol('ZALOPAY_CLIENT');
 
 export type CreateOrderInput = {
   appTransId: string;      // do CheckoutService sinh, KHÔNG do client sinh
+  appUser: string;         // `app_user`: học viên đang trả tiền (id người dùng); nhà cung cấp từ chối giá trị rỗng
   amountVnd: number;       // = PaymentAttempt.amountVnd
   description: string;     // hiện trong app ZaloPay
   embedData: { courseId: string; purchaseId: string };

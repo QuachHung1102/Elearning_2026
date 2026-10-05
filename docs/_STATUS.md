@@ -1,6 +1,7 @@
 # Trạng thái triển khai
 
-Cập nhật: 2026-09-22.
+Cập nhật: 2026-09-30. Kế hoạch việc còn lại và trạng thái từng task: [_PLAN.md](./_PLAN.md);
+kết quả rà soát ngày 2026-09-30: [REVIEW_2026-09-30.md](./REVIEW_2026-09-30.md).
 
 ## Đã hoàn thành
 
@@ -14,11 +15,14 @@ Cập nhật: 2026-09-22.
 | **Phase 2 seed** | 8 danh mục, 6 khóa, 17 chương, 68 bài, 58 video asset, 12 tài liệu, ảnh bìa PNG sinh xác định — chạy lại hai lần cho cùng kết quả |
 | **Phase 3 backend** | Migration `add_learning` (3 bảng, 2 enum), 13 route người dùng/quyền học/nhật ký/trình học, `AuditLog` cho mọi mutation admin, video demo qua URL ký gắn người xem |
 | **Phase 3 frontend** | 7 trang (`/my-courses`, 2 trang trình học, 4 trang quản trị), 16 file component mới |
+| **Vai trò giảng viên** (nhánh `feat/instructor-role`, chưa merge) | Backend: `StaffGuard` default-deny, khóa học có chủ (`Course.instructorId`), soạn nội dung và media theo chủ khóa, ghi danh kèm tiến độ, đổi vai trò có audit. Web: khu vực `/instructor` (tổng quan, khóa học của tôi, học viên; các trang soạn khóa dùng chung với `/admin`), chọn chủ khóa và đổi vai trò ở `/admin`, tên giảng viên trên trang khóa học. Đã kiểm trên trình duyệt thật ở 1440 và 375; chưa so khung Pencil (`_PLAN.md` T5.1) |
+| **Phase 4 — thanh toán (driver demo)** (nhánh `feat/instructor-role`, chưa commit) | Backend: migration `add_payment` (`Purchase`, `PaymentAttempt`, 3 enum, `enrollments.purchase_id`, unique một phần và 2 `CHECK` viết tay); `CheckoutModule` với đúng một `confirmPayment` cho callback, reconcile và nút demo; 10 route thanh toán (1 checkout, 3 đơn của học viên, 2 đối soát, 2 hoàn tiền, 1 callback, 1 xác nhận demo đăng ký có điều kiện) và `GET /admin/reports/courses`; `ZaloPayHttpClient` viết theo tài liệu công khai, **chưa chạy với sandbox thật** (A4.9). Web: 4 trang (`/checkout/[courseSlug]`, `/account/orders`, `/account/orders/[id]`, `/admin/orders`) sau cờ `NEXT_PUBLIC_CHECKOUT_ENABLED`. Demo script bước 3–11 chạy đầu-cuối trên seed thật (`test/checkout-flow.e2e-spec.ts`) và trên trình duyệt thật ở 390 và 1440 px |
+| **Phase 5 — hardening (một phần)** (nhánh `feat/instructor-role`, chưa commit) | Header bảo mật cho API và web (CSP không nonce, HSTS chỉ ở production); một định nghĩa "production" cho boot guard, cookie `Secure`, HSTS và seed; rate limit cho catalog và callback, `no-store` cho danh sách phiên; log JSON có `requestId`, `purchaseId`, `appTransId` và che dữ liệu nhạy cảm; đăng nhập giới hạn theo tài khoản, scrypt có tham số trong chuỗi băm và băm lại khi đăng nhập; lớp `omit` cho `passwordHash`; SEO (JSON-LD `Course`, Open Graph, sitemap đủ mọi trang). Kèm việc dọn của WP2: tên tệp tiếng Việt khi tải về (trước đây 500), lỗi đua slug (5/6 yêu cầu song song nhận 409), index `lesson_progress(lesson_id)`, bỏ `sleep` trong e2e. Chi tiết và bằng chứng từng việc: `_PLAN.md` WP4 |
 | PostgreSQL | 4 migration replay sạch trên `elearning_ci`, `prisma migrate diff` không lệch; seed chạy hai lần; đúng 1 admin; 2 `CHECK` còn nguyên sau replay |
-| Kiểm tra | lint ✓, typecheck ✓, 216 unit test ✓ (162 api + 54 web), 65 E2E ✓, build ✓ (cần API đang chạy ở :3001) |
+| Kiểm tra | lint ✓, typecheck ✓, 556 unit test ✓ (393 api + 163 web), 348 E2E ✓ (33 tệp, chạy ba lần liên tiếp đều xanh), build ✓ (không cần API, cả hai trạng thái cờ thanh toán), `pnpm audit` không có lỗ hổng đã biết, `contrast-check.py` 23/23 — đo lại ngày 2026-09-30 sau Phase 4 và các việc hardening |
 | Design token + palette | `design/contrast-check.py` → 23/23 cặp đạt WCAG AA, exit 0 |
 | Design system | `DESIGN.md` + `.impeccable/design.json`, đủ 8 phần chuẩn và 8 preview component |
-| CI | Workflow Ubuntu + PostgreSQL chạy D1–D7, `prisma generate` trước D1. Chưa chạy cho nhánh Phase 3 (chưa push); bước build dự kiến fail vì `web build` cần API đang chạy (`PHASE_3_REPORT.md` §6) |
+| CI | Workflow Ubuntu + PostgreSQL chạy D1–D7, `prisma generate` trước D1. Chưa chạy cho nhánh Phase 3 và nhánh giảng viên (chưa push). Bước build không còn cần API đang chạy (`_PLAN.md` T0.9), đã chạy được ở máy local khi API tắt |
 
 `docs/PROJECT_PLAN.md` giữ sửa đổi làm rõ ảnh bìa khóa học đọc bằng URL không ký;
 chỉ `LessonResource` dùng presigned URL.
@@ -64,7 +68,7 @@ Chạy kiểm tra: `py -3 design/contrast-check.py`.
 
 Canvas đã được mở rộng từ phạm vi Phase 1 sang toàn bộ danh sách route của
 `UX_PLAN.md`: 35 trang có giao diện đều có bản desktop 1440 và mobile 375,
-cộng 98 màn trạng thái, hộp thoại và email bản desktop; 208 khung tổng cộng.
+cộng 98 màn trạng thái, hộp thoại và email bản desktop; 208 khung tổng cộng. Bổ sung 2026-09-25: 7 trang Giảng viên (desktop + mobile), 2 trạng thái rỗng và trạng thái "Đổi vai trò" ở hồ sơ người dùng admin — 225 khung.
 Sản phẩm chỉ có giao diện sáng. Danh sách trang, ID khung và giới hạn dữ liệu:
 [PAGE_INVENTORY.md](../design/PAGE_INVENTORY.md).
 
@@ -117,4 +121,29 @@ vẫn in số danh mục; PostgreSQL local chạy `Asia/Bangkok` làm mốc th�
 
 ## Phase 4 — Thanh toán
 
-Chưa bắt đầu. Đọc `ROADMAP.md` §8.
+Đã dựng với driver `demo` và kiểm chứng đầu-cuối. Đặc tả ở `ROADMAP.md` §8; từng task,
+bằng chứng và quyết định P4-1…P4-9 ở [_PLAN.md](./_PLAN.md) (WP3).
+
+Chưa làm hoặc chưa kiểm chứng:
+
+- **A4.9** — gọi sandbox ZaloPay thật: cần hồ sơ merchant và URL callback HTTPS công khai.
+  `ZaloPayHttpClient` được kiểm bằng `fetch` giả và hai vector MAC tính ngoài mã bằng `openssl`.
+- Nhánh "không xác định" (ba lần poll lỗi) và nhánh giá đổi giữa lúc mở trang chỉ có unit test.
+- DoD: D6 (replay trên DB sạch), D14 (CI, cần push), D10, D12, D13 và cặp màu mới của bốn trang
+  chưa rà riêng; D9 mới đo ở 390 và 1440 px.
+
+## Phase 5 — Hardening và mở bán
+
+Đang làm, thứ tự và bằng chứng ở [_PLAN.md](./_PLAN.md) (WP4).
+
+- **Xong:** T4.1 header bảo mật, T4.2 boot guard bổ sung, T4.3 rate limit và cache theo hợp đồng,
+  T4.4 log có cấu trúc, T4.6 siết đăng nhập, T4.7 SEO, T4.15 lớp `omit` cho `passwordHash`.
+- **Còn lại, làm được ngay:** T4.5 (video asset theo chủ sở hữu), T4.9 (Playwright), T4.10 (HLS),
+  T4.11 (sao lưu và diễn tập khôi phục), T4.13 (rà a11y).
+- **Chờ đầu vào từ chủ sở hữu:** T4.8 (nội dung pháp lý), T4.12 (tài khoản Cloudflare, R2, SMTP),
+  T4.14 (staging thật, phụ thuộc T4.12).
+- **Biến môi trường mới:** `CSP_MEDIA_ORIGINS` và `NEXT_PUBLIC_SITE_URL` (web), `LOG_REQUESTS` (API);
+  `PASSWORD_HASH_COST` chỉ dành cho `.env.test` và bị chặn khởi động ở production.
+- **Migration mới:** `20260930010000_add_lesson_progress_lesson_index`.
+- **Bản CSP còn dùng `'unsafe-inline'` cho script và style** (Next chèn payload hydrate); chuyển sang
+  nonce hoặc SRI khi cần bỏ nó — xem `ponytail:` ở `apps/web/src/lib/security-headers.ts`.

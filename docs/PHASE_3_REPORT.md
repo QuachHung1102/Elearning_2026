@@ -278,7 +278,7 @@ section ghi audit với `entityType` = `COURSE`, lesson reorder với `SECTION` 
 
 ## 6. Vấn đề mở — cần chủ sở hữu quyết
 
-1. **`web build` cần API đang chạy, CI sẽ fail ở D5.** Tắt API thì `next build` fail
+1. **`web build` cần API đang chạy, CI sẽ fail ở D5.** *(Đã sửa 2026-09-30, `_PLAN.md` T0.9: `generateStaticParams` trả `[]`, trang chủ `revalidate = 0`, sitemap và trang danh mục render theo yêu cầu; `pnpm build` exit 0 khi API tắt. Phần mô tả dưới đây giữ nguyên làm ghi nhận lúc phát hiện.)* Tắt API thì `next build` fail
    khi prerender `/categories/[slug]` (`generateStaticParams` gọi `/categories`), và
    các trang ISR khác cũng gọi API lúc build. `ci.yml` chạy `corepack pnpm build`
    mà không khởi động API. Có từ Phase 2, chưa sửa vì không kiểm được trên CI khi
@@ -298,3 +298,13 @@ section ghi audit với `entityType` = `COURSE`, lesson reorder với `SECTION` 
    (Postgres mặc định UTC) không gặp. Có từ Phase 1. Hướng sửa: đặt `timezone = 'UTC'`
    cho database/role, hoặc `options=-c TimeZone=UTC` trong `DATABASE_URL`; cần quyết
    có sửa dữ liệu dev đã lệch hay seed lại.
+
+   **Đã sửa ở code (T0.4, 2026-09-30).** Nguyên nhân: `@prisma/adapter-pg` ghi `Date`
+   dạng giờ UTC không kèm offset và đổi nhãn offset đọc về thành `+00:00` mà không quy
+   đổi, nên hai lỗi triệt tiêu khi đọc lại bằng Prisma còn SQL thì thấy giá trị lệch.
+   `PrismaService` và `prisma/seed.ts` nay ép phiên về UTC bằng
+   `options: '-c TimeZone=UTC'` (`src/prisma/pg-session.ts`); `test/timezone.e2e-spec.ts`
+   giữ hồi quy và tự ép role về `Asia/Bangkok` nên fail cả trên server UTC. Dữ liệu dev
+   ghi **trước** bản sửa vẫn lệch −7 giờ. Cách xử lý khuyến nghị: `prisma migrate reset`
+   trên DB dev (xóa dữ liệu dev, seed lại). Không có SQL dịch giờ an toàn: hàng do Prisma
+   ghi thì sớm 7 giờ, còn hàng ghi bằng `now()` phía DB (tiến độ học) vốn đúng.

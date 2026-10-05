@@ -854,7 +854,7 @@ if (count === 0) return; // đã xử lý ở lần trước — trả 200 và d
 
 `status: 'PENDING'` nằm trong `WHERE` nên chính database quyết định ai là người đầu tiên; callback thứ hai nhận `count = 0` và **không chạm** `Purchase`, `Enrollment` hay `enrollmentCount`. Cùng một hàm phục vụ cả callback thật, nút demo và tác vụ reconcile, nên cả ba đều idempotent bằng cùng một dòng code (`PLAN_SUPPLEMENT.md` §3).
 
-Ứng dụng bảo đảm: xác minh HMAC bằng `key2` trước khi chạm database; `amountVnd` phải khớp callback; chuyển trạng thái chỉ đi một chiều `PENDING → {SUCCEEDED, FAILED, EXPIRED, CANCELLED}`; không giữ transaction mở trong lúc gọi mạng sang ZaloPay.
+Ứng dụng bảo đảm: xác minh HMAC bằng `key2` trước khi chạm database; `amountVnd` phải khớp callback; chuyển trạng thái chỉ đi một chiều `PENDING → {SUCCEEDED, FAILED, EXPIRED, CANCELLED}`, với **một** ngoại lệ: `EXPIRED → SUCCEEDED` khi nhà cung cấp xác nhận đã thu tiền (thanh toán đến muộn; điều kiện ghi là `status IN (PENDING, EXPIRED)`, ghi `AuditLog payment.reconciled` với `metadata.late = true`) — tiền đã thu thì phải có quyền học; không giữ transaction mở trong lúc gọi mạng sang ZaloPay.
 
 ### AuditLog
 
@@ -912,7 +912,7 @@ Bảng dưới đây là **bảng hợp nhất duy nhất** của từ vựng `a
 | `enrollment.revoked` | `ENROLLMENT` | `revoke()` thành công | admin, hoặc `null` khi do hoàn tiền | `courseId`, `userId`, `reason`, `trigger` (`admin` \| `refund`) | Thu hồi quyền học |
 | `user.blocked` | `USER` | `PATCH /admin/users/{id}` → `BLOCKED` | admin | `reason`, `revokedSessions` | Khóa tài khoản |
 | `user.unblocked` | `USER` | `PATCH /admin/users/{id}` → `ACTIVE` | admin | — | Mở khóa tài khoản |
-| `user.role_changed` | `USER` | `PATCH /admin/users/{id}/role` | admin | `fromRole`, `toRole`, `releasedCourses` (số khóa học bị thu hồi quyền sở hữu khi rời vai trò giảng viên, 0 nếu không có) | Đổi vai trò người dùng |
+| `user.role_changed` | `USER` | `PATCH /admin/users/{id}/role` | admin | `fromRole`, `toRole`, `releasedCourses` (số khóa học bị thu hồi quyền sở hữu khi rời vai trò giảng viên, 0 nếu không có), `releasedCourseIds` (id các khóa đó, để gán lại nếu hạ nhầm) | Đổi vai trò người dùng |
 | `purchase.paid` | `PURCHASE` | `confirmPayment` chạy nhánh `count === 1` | `null` (hệ thống) | `courseId`, `priceVnd`, `appTransId` | Đơn hàng đã thanh toán |
 | `purchase.refund_requested` | `PURCHASE` | `POST /purchases/{id}/refund-request` | học viên | `reason` | Yêu cầu hoàn tiền |
 | `purchase.refund_approved` | `PURCHASE` | Admin duyệt yêu cầu | admin | `reason` | Duyệt hoàn tiền |
