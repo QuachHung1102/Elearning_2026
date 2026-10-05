@@ -547,7 +547,7 @@ export function VideoPlayer({
             scrubbing.current = false;
           }}
         >
-          <div className="relative h-1.5 w-full rounded-full bg-white/30">
+          <div className="relative h-1.5 w-full rounded-full bg-white/40">
             <div
               className="absolute inset-y-0 left-0 rounded-full bg-secondary"
               style={{ width: `${percent}%` }}
@@ -593,7 +593,7 @@ export function VideoPlayer({
             id={`rate-${lessonId}`}
             value={rate}
             onChange={(event) => changeRate(Number(event.target.value))}
-            className="min-h-11 rounded-md border border-white/30 bg-foreground px-1 text-sm sm:px-2"
+            className="min-h-11 rounded-md border border-white/40 bg-foreground px-1 text-sm sm:px-2"
           >
             {PLAYBACK_RATES.map((option) => (
               <option key={option} value={option}>

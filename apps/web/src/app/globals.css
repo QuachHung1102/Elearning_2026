@@ -21,7 +21,7 @@
   --color-primary-on-subtle: #0f766e;
   --color-secondary: #2dd4bf;
   --color-accent: #d97706;
-  --color-accent-hover: #b45309;
+  --color-accent-hover: #f59e0b;
   --color-accent-foreground: #431407;
   --color-accent-subtle: #fef3c7;
   --color-on-accent-subtle: #431407;
@@ -143,6 +143,13 @@ select {
 }
 
 :focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* A visually hidden file input styled through its label: the label shows the
+   ring the input cannot (WCAG 2.4.7). */
+input.sr-only:focus-visible + label {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }
