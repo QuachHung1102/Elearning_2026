@@ -14,3 +14,4 @@ output/
 .playwright-cli/
 .codex-tmp/
 backups/
+.claude/worktrees/
