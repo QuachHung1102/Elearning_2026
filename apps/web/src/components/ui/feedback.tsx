@@ -102,10 +102,13 @@ export function ErrorState({
   title,
   description,
   actions,
+  heading: Heading = "h1",
 }: {
   title: string;
   description: string;
   actions?: ReactNode;
+  /** `h2` when the page around it already has its own h1. */
+  heading?: "h1" | "h2";
 }) {
   return (
     <section
@@ -117,9 +120,9 @@ export function ErrorState({
         className="size-10 text-destructive"
         strokeWidth={1.75}
       />
-      <h1 id="error-title" tabIndex={-1} className="text-3xl font-semibold">
+      <Heading id="error-title" tabIndex={-1} className="text-3xl font-semibold">
         {title}
-      </h1>
+      </Heading>
       <p className="text-muted-foreground">{description}</p>
       {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
     </section>

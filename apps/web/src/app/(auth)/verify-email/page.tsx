@@ -32,6 +32,7 @@ export default async function VerifyEmailPage({
           <VerifyEmail token={token} />
         ) : (
           <ErrorState
+            heading="h2"
             title="Liên kết không hợp lệ"
             description="Mở lại liên kết trong email, hoặc xin một liên kết mới."
             actions={

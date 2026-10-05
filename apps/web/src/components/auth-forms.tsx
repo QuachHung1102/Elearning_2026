@@ -438,6 +438,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   if (invalid) {
     return (
       <ErrorState
+        heading="h2"
         title="Liên kết đã hết hạn hoặc đã được dùng"
         description="Liên kết chỉ dùng được một lần và có hạn 60 phút."
         actions={
@@ -529,6 +530,7 @@ export function VerifyEmail({ token }: { token: string }) {
   if (state === "invalid") {
     return (
       <ErrorState
+        heading="h2"
         title="Liên kết đã hết hạn hoặc đã được dùng"
         description="Liên kết chỉ dùng được một lần và có hạn 24 giờ."
         actions={<ResendVerificationButton />}
