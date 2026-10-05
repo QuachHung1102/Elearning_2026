@@ -675,7 +675,7 @@ Giá trị âm ở pha 1 phân biệt nhau nên không vi phạm unique. Áp d�
 | `status` | `VideoAssetStatus` | ✓ | default `PENDING` | Chặn publish khi video chưa encode xong |
 | `durationSeconds` | `int` | ✓ | default 0 | |
 | `thumbnailUrl` | `varchar(500)` | | | Ảnh poster của player |
-| `instructorId` | `uuid` | | FK → `users` Restrict, `@@index` | Người đăng ký video. `null` = admin (chủ sở hữu site). Một `INSTRUCTOR` chỉ xem trạng thái (`GET /admin/videos/{id}`) và chỉ gắn vào bài (`PATCH /admin/lessons/{id}`) video của chính mình; admin không bị lọc. Migration `add_video_asset_owner` gán cho hàng cũ chủ của khóa học chứa bài đang dùng video đó |
+| `instructorId` | `uuid` | | FK → `users` Restrict, `@@index` | Người đăng ký video. `null` = admin (chủ sở hữu site). Một `INSTRUCTOR` chỉ xem trạng thái (`GET /admin/videos/{id}`) và chỉ gắn vào bài (`PATCH /admin/lessons/{id}`) video của chính mình; admin không bị lọc. Migration `add_video_asset_owner` gán cho hàng cũ chủ của khóa học chứa bài đang dùng video đó. Hạ vai trò một `INSTRUCTOR` đặt cột này về `null` (id lưu trong audit `user.role_changed`) |
 | `createdAt` / `updatedAt` | `timestamptz(3)` | ✓ | | `updatedAt` cũng là thời điểm hỏi nhà cung cấp gần nhất: `GET /admin/videos/{id}` trả thẳng hàng khi `status = READY` hoặc lần hỏi trước cách chưa tới 10 giây |
 
 Database bảo đảm: cùng một UID Cloudflare không đăng ký được hai lần. Uniqueness phải gồm `provider` vì không gian định danh của driver demo và của Cloudflare là hai không gian khác nhau.
@@ -920,7 +920,7 @@ Bảng dưới đây là **bảng hợp nhất duy nhất** của từ vựng `a
 | `enrollment.revoked` | `ENROLLMENT` | `revoke()` thành công | admin, hoặc `null` khi do hoàn tiền | `courseId`, `userId`, `reason`, `trigger` (`admin` \| `refund`) | Thu hồi quyền học |
 | `user.blocked` | `USER` | `PATCH /admin/users/{id}` → `BLOCKED` | admin | `reason`, `revokedSessions` | Khóa tài khoản |
 | `user.unblocked` | `USER` | `PATCH /admin/users/{id}` → `ACTIVE` | admin | — | Mở khóa tài khoản |
-| `user.role_changed` | `USER` | `PATCH /admin/users/{id}/role` | admin | `fromRole`, `toRole`, `releasedCourses` (số khóa học bị thu hồi quyền sở hữu khi rời vai trò giảng viên, 0 nếu không có), `releasedCourseIds` (id các khóa đó, để gán lại nếu hạ nhầm) | Đổi vai trò người dùng |
+| `user.role_changed` | `USER` | `PATCH /admin/users/{id}/role` | admin | `fromRole`, `toRole`, `releasedCourses` (số khóa học bị thu hồi quyền sở hữu khi rời vai trò giảng viên, 0 nếu không có), `releasedCourseIds` (id các khóa đó, để gán lại nếu hạ nhầm), `releasedVideoAssetIds` (id các video người đó đăng ký, cũng được đặt `instructorId = null`) | Đổi vai trò người dùng |
 | `purchase.paid` | `PURCHASE` | `confirmPayment` chạy nhánh `count === 1` | `null` (hệ thống) | `courseId`, `priceVnd`, `appTransId` | Đơn hàng đã thanh toán |
 | `purchase.refund_requested` | `PURCHASE` | `POST /purchases/{id}/refund-request` | học viên | `reason` | Yêu cầu hoàn tiền |
 | `purchase.refund_approved` | `PURCHASE` | Admin duyệt yêu cầu | admin | `reason` | Duyệt hoàn tiền |

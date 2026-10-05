@@ -73,7 +73,7 @@ export const AUDIT_VOCABULARY = {
   'user.unblocked': { entityType: 'USER', keys: [] },
   'user.role_changed': {
     entityType: 'USER',
-    keys: ['fromRole', 'toRole', 'releasedCourses', 'releasedCourseIds'],
+    keys: ['fromRole', 'toRole', 'releasedCourses', 'releasedCourseIds', 'releasedVideoAssetIds'],
   },
   'purchase.paid': {
     entityType: 'PURCHASE',
