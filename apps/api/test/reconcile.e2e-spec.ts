@@ -1,4 +1,5 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { CheckoutService } from '../src/checkout/checkout.service.js';
 import { DemoZaloPayClient } from '../src/checkout/demo-zalopay.client.js';
 import { ReconcileService } from '../src/checkout/reconcile.service.js';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
@@ -118,6 +119,33 @@ describe('reconcile (e2e)', () => {
     const expired = (await audits('payment.reconciled')).find((row) => row.entityId === unpaid.attempt.id);
     expect(expired).toMatchObject({ actorId: null });
     expect(expired?.metadata).toMatchObject({ fromStatus: 'PENDING', toStatus: 'EXPIRED' });
+  });
+
+  // The provider said "paid" but writing it down failed (seen: an interactive
+  // transaction timeout under load). Expiring it in the same run would leave a
+  // paid order unpaid, since later runs only ask about PENDING attempts.
+  it('does not expire a lapsed attempt whose confirmation failed in the same run, and confirms it next run', async () => {
+    const { purchase, attempt } = await createOrder(prisma, { ageMinutes: 20, expiresInMinutes: -5 });
+    vi.spyOn(demo, 'queryOrder').mockResolvedValue({
+      returnCode: 1,
+      returnMessage: 'ok',
+      zpTransId: 'zp-retry',
+      amountVnd: PRICE,
+    });
+    vi.spyOn(app.get(CheckoutService), 'confirmPayment').mockRejectedValueOnce(
+      new Error('Transaction API error: timeout'),
+    );
+
+    const first = await reconcile.runOnce();
+
+    expect(first).toEqual({ confirmed: 0, failed: 0, expired: 0, cancelled: 0 });
+    expect((await attemptOf(attempt.id)).status).toBe('PENDING');
+
+    const second = await reconcile.runOnce();
+
+    expect(second).toEqual({ confirmed: 1, failed: 0, expired: 0, cancelled: 0 });
+    expect(await attemptOf(attempt.id)).toMatchObject({ status: 'SUCCEEDED', providerTransId: 'zp-retry' });
+    expect((await purchaseOf(purchase.id)).status).toBe('PAID');
   });
 
   it('does not expire an attempt that is still live', async () => {

@@ -690,7 +690,7 @@ Mỗi lượt chạy làm hai việc, theo đúng thứ tự này:
 1. Quét `PaymentAttempt` `status = PENDING` cũ hơn `RECONCILE_MIN_AGE` → gọi `queryOrder`; `returnCode = 1` → dựng payload và gọi `confirmPayment`; `= 2` → `status = FAILED`; `= 3` → để nguyên.
 2. Attempt còn `PENDING` mà `expiresAt < now()` → ghi `EXPIRED`. Một câu `UPDATE` có điều kiện, dùng đúng index `(status, expiresAt)` đã có trong DATA_MODEL.md.
 
-Đặt việc 2 **sau** việc 1 trong cùng một lượt: nếu đảo lại, một attempt vừa được provider báo `1` có thể bị đánh `EXPIRED` trước khi kịp đối soát.
+Đặt việc 2 **sau** việc 1 trong cùng một lượt: nếu đảo lại, một attempt vừa được provider báo `1` có thể bị đánh `EXPIRED` trước khi kịp đối soát. Cùng lý do, attempt mà việc 1 gặp lỗi (gọi `queryOrder` ném ngoại lệ, hoặc `confirmPayment` ném — ví dụ transaction quá 5 s khi DB tải nặng) **không** bị việc 2 đóng trong lượt đó: nó vẫn `PENDING` và được hỏi lại ở lượt sau. Đóng nó ngay thì provider đã thu tiền mà lượt sau (chỉ hỏi `PENDING`) không bao giờ thấy nó nữa. Vì attempt đó vẫn `PENDING`, đơn của nó cũng không bị việc hủy đơn bỏ dở chạm tới.
 
 Vòng lặp chạy trên **mọi** instance. Ở một instance — cấu hình hiện tại — điều đó không có nghĩa gì. Từ hai instance trở lên vẫn an toàn vì `confirmPayment` đã idempotent và việc 2 là một `UPDATE` có điều kiện, nhưng sẽ tốn gấp đôi lượt gọi ZaloPay. Đó là lúc thêm advisory lock của PostgreSQL, không phải bây giờ.
 
