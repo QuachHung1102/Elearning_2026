@@ -1,10 +1,10 @@
 "use client";
 
 export default function GlobalError({
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <html lang="vi">
@@ -21,7 +21,7 @@ export default function GlobalError({
           <p>Tải lại trang giúp bạn trong hầu hết trường hợp.</p>
           <button
             type="button"
-            onClick={reset}
+            onClick={retry}
             style={{
               minHeight: 44,
               padding: "8px 16px",

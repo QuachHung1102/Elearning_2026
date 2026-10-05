@@ -1,8 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { StatusBadge } from "@/components/ui/badge";
-import { adminFetch } from "@/lib/admin";
-import type { AdminCourseDetail } from "@/lib/catalog";
+import { getAdminCourse, staffBase } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -14,21 +13,21 @@ export default async function CourseLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const course = await adminFetch<AdminCourseDetail>(`/admin/courses/${id}`);
+  const [course, base] = await Promise.all([getAdminCourse(id), staffBase()]);
 
   const tabs = [
-    { href: `/admin/courses/${id}`, label: "Thông tin chung" },
-    { href: `/admin/courses/${id}/curriculum`, label: "Chương trình học" },
+    { href: `${base}/courses/${id}`, label: "Thông tin chung" },
+    { href: `${base}/courses/${id}/curriculum`, label: "Chương trình học" },
   ];
 
   return (
     <div className="grid gap-6">
       <header className="grid gap-3">
         <Link
-          href="/admin/courses"
+          href={`${base}/courses`}
           className="text-sm text-muted-foreground hover:text-primary-text"
         >
-          ← Danh sách khóa học
+          {base === "/instructor" ? "← Khóa học của tôi" : "← Danh sách khóa học"}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
           <h1 tabIndex={-1} className="text-3xl font-bold">

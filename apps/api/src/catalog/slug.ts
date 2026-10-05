@@ -1,6 +1,7 @@
 import { normalize } from './search-text.js';
 
-export const SLUG_PATTERN = /^[a-z0-9-]{3,120}$/;
+const MIN_LENGTH = 3;
+export const SLUG_PATTERN = new RegExp(`^[a-z0-9-]{${MIN_LENGTH},120}$`);
 
 /**
  * Slug rules live in UX_PLAN.md §9.4 and reuse the diacritic stripping of
@@ -25,7 +26,13 @@ export async function uniqueSlug(
   isTaken: (slug: string) => Promise<boolean>,
   maxLength = 120,
 ): Promise<string> {
-  const base = slugify(title, maxLength) || 'khoa-hoc';
+  const stem = slugify(title, maxLength);
+  // "C++" slugifies to "c", under the pattern minimum: the course would exist
+  // but `GET /courses/c` would answer 400.
+  const base =
+    stem.length >= MIN_LENGTH
+      ? stem
+      : ['khoa-hoc', stem].filter(Boolean).join('-');
   if (!(await isTaken(base))) return base;
   for (let suffix = 2; suffix < 1_000; suffix += 1) {
     const tail = `-${suffix}`;

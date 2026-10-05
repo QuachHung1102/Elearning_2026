@@ -41,6 +41,9 @@ function fakeDatabase() {
   const enrollments: Row[] = [];
   const auditLogs: Row[] = [];
   const writes: { via: string; op: string }[] = [];
+  // Everything in call order, locks included: the lock-before-write rule is
+  // about order, and a lock is not a write.
+  const order: { via: string; op: string }[] = [];
   let transactions = 0;
   let nextId = 1;
 
@@ -54,13 +57,18 @@ function fakeDatabase() {
         );
 
   function client(via: string) {
-    const write = (op: string) => writes.push({ via, op });
+    const write = (op: string) => {
+      writes.push({ via, op });
+      order.push({ via, op });
+    };
     return {
-      // grant()'s only raw query: the locked course status read.
-      $queryRaw: async (_sql: TemplateStringsArray, id: string) =>
-        courses
+      // The locked course read: grant() wants the status, revoke() the mutex.
+      $queryRaw: async (_sql: TemplateStringsArray, id: string) => {
+        order.push({ via, op: 'course.lock' });
+        return courses
           .filter((row) => row.id === id)
-          .map(({ status }) => ({ status })),
+          .map(({ status }) => ({ status }));
+      },
       user: {
         findUnique: async ({ where }: Row) =>
           users.find((row) => row.id === where.id) ?? null,
@@ -108,6 +116,8 @@ function fakeDatabase() {
               id: `enrollment-${nextId++}`,
               grantedAt: new Date(),
               revokedAt: null,
+              grantedById: null,
+              purchaseId: null,
               ...item,
             });
             count += 1;
@@ -117,7 +127,10 @@ function fakeDatabase() {
         updateMany: async ({ where, data }: Row) => {
           write('enrollment.updateMany');
           const matches = enrollments.filter(
-            (row) => row.id === where.id && row.status === where.status,
+            (row) =>
+              row.id === where.id &&
+              row.status === where.status &&
+              (where.source === undefined || row.source === where.source),
           );
           for (const row of matches) Object.assign(row, data);
           return { count: matches.length };
@@ -148,6 +161,7 @@ function fakeDatabase() {
     enrollments,
     auditLogs,
     writes,
+    order,
     transactions: () => transactions,
   };
 }
@@ -163,6 +177,15 @@ function setup() {
       actorId: ADMIN.id,
       ipAddress: '127.0.0.1',
     });
+  // The payment path: the system grants, and the order is the reason.
+  const buy = (purchaseId = 'purchase-1', courseId = 'published') =>
+    service.grant({
+      userId: STUDENT.id,
+      courseId,
+      source: 'PURCHASE',
+      actorId: null,
+      purchaseId,
+    });
   const revoke = (enrollmentId: string) =>
     service.revoke({
       enrollmentId,
@@ -170,7 +193,7 @@ function setup() {
       reason: 'admin_revoke',
       trigger: 'admin',
     });
-  return { db, service, grant, revoke };
+  return { db, service, grant, buy, revoke };
 }
 
 async function statusOf(promise: Promise<unknown>): Promise<number> {
@@ -296,6 +319,153 @@ describe('EnrollmentService', () => {
     });
   });
 
+  it('grants a purchase as the system: the order is linked, nobody is recorded as granter, the counter moves once', async () => {
+    const { db, buy } = setup();
+
+    const result = await buy();
+
+    expect(result.changed).toBe(true);
+    expect(result.enrollment).toMatchObject({
+      status: 'ACTIVE',
+      source: 'PURCHASE',
+      purchaseId: 'purchase-1',
+      grantedById: null,
+    });
+    expect(db.courses[0].enrollmentCount).toBe(1);
+    expect(db.auditLogs).toEqual([
+      expect.objectContaining({
+        actorId: null,
+        action: 'enrollment.granted',
+        metadata: expect.objectContaining({
+          source: 'PURCHASE',
+          purchaseId: 'purchase-1',
+        }),
+      }),
+    ]);
+  });
+
+  // DATA_MODEL.md §Enrollment: buying after a manual grant moves the access
+  // onto the order, so a refund later knows it may revoke it.
+  it('flips an ACTIVE manual grant to the purchase without a second count, keeping who granted it and when', async () => {
+    vi.useFakeTimers();
+    const { db, grant, buy } = setup();
+    vi.setSystemTime(new Date('2026-09-01T00:00:00.000Z'));
+    const manual = await grant();
+    vi.setSystemTime(new Date('2026-09-05T00:00:00.000Z'));
+
+    const result = await buy();
+
+    expect(result.changed).toBe(true);
+    expect(result.enrollment).toMatchObject({
+      id: manual.enrollment.id,
+      status: 'ACTIVE',
+      source: 'PURCHASE',
+      purchaseId: 'purchase-1',
+      grantedById: ADMIN.id,
+    });
+    expect(result.enrollment.grantedAt).toEqual(
+      new Date('2026-09-01T00:00:00.000Z'),
+    );
+    expect(db.enrollments).toHaveLength(1);
+    expect(db.courses[0].enrollmentCount).toBe(1);
+    expect(db.auditLogs.map((log) => log.action)).toEqual([
+      'enrollment.granted',
+      'enrollment.granted',
+    ]);
+    expect(db.auditLogs[1].metadata).toMatchObject({
+      source: 'PURCHASE',
+      previousSource: 'MANUAL_GRANT',
+    });
+  });
+
+  it('answers a repeated purchase grant, and a manual grant over a purchase, with no write', async () => {
+    const { db, grant, buy } = setup();
+    const first = await buy();
+    const written = db.writes.length;
+
+    const again = await buy();
+    const manual = await grant();
+
+    expect(again).toMatchObject({ changed: false });
+    expect(manual).toMatchObject({ changed: false });
+    // The access keeps resting on the order: a manual grant never downgrades it.
+    expect(manual.enrollment).toMatchObject({
+      id: first.enrollment.id,
+      source: 'PURCHASE',
+      purchaseId: 'purchase-1',
+    });
+    expect(db.writes).toHaveLength(written);
+    expect(db.courses[0].enrollmentCount).toBe(1);
+    expect(db.auditLogs).toHaveLength(1);
+  });
+
+  it('reactivates a revoked row for a new order, and a later manual grant clears the order link', async () => {
+    const { db, grant, buy, revoke } = setup();
+    const manual = await grant();
+    await revoke(manual.enrollment.id);
+
+    const bought = await buy('purchase-2');
+
+    expect(bought.changed).toBe(true);
+    // The old granter stays: it is history, not state.
+    expect(bought.enrollment).toMatchObject({
+      id: manual.enrollment.id,
+      status: 'ACTIVE',
+      revokedAt: null,
+      source: 'PURCHASE',
+      purchaseId: 'purchase-2',
+      grantedById: ADMIN.id,
+    });
+    expect(db.courses[0].enrollmentCount).toBe(1);
+
+    await revoke(manual.enrollment.id);
+    const regranted = await grant();
+
+    expect(regranted.enrollment).toMatchObject({
+      source: 'MANUAL_GRANT',
+      purchaseId: null,
+      grantedById: ADMIN.id,
+    });
+    expect(db.courses[0].enrollmentCount).toBe(1);
+  });
+
+  // Checkout only sells PUBLISHED courses. If the owner unpublishes one a minute
+  // later, the payment is already collected: a 404 here would roll the whole
+  // confirmation back and leave money taken with nothing recorded.
+  it('grants a paid order on a course unpublished after checkout began, but never a manual grant', async () => {
+    const { db, grant, buy } = setup();
+
+    const bought = await buy('purchase-1', 'draft');
+
+    expect(bought.changed).toBe(true);
+    expect(db.courses.find((course) => course.id === 'draft')?.enrollmentCount).toBe(1);
+    expect(await statusOf(grant('draft'))).toBe(404);
+    expect(await statusOf(buy('purchase-2', 'missing'))).toBe(404);
+  });
+
+  // The purchase flip writes an enrollment row while holding the course lock;
+  // a revoke that locked the row first would wait on that lock while the flip
+  // waits on the row: a deadlock. Both take the course first.
+  it('locks the course before it writes the enrollment, in grant and in revoke', async () => {
+    const { db, buy, revoke } = setup();
+
+    const { enrollment } = await buy();
+    await revoke(enrollment.id);
+
+    expect(db.order.filter((step) => step.via === 'tx-1').map((step) => step.op)).toEqual([
+      'course.lock',
+      'enrollment.createMany',
+      'course.update',
+      'auditLog.create',
+    ]);
+    expect(db.order.filter((step) => step.via === 'tx-2').map((step) => step.op)).toEqual([
+      'course.lock',
+      'enrollment.updateMany',
+      'course.update',
+      'auditLog.create',
+    ]);
+  });
+
   it('writes each state change, its counter and its audit row in one transaction', async () => {
     const { db, grant, revoke } = setup();
 
@@ -343,7 +513,7 @@ describe('EnrollmentService', () => {
     expect(await service.hasAccess(STUDENT.id, 'archived')).toBe(false);
   });
 
-  it('refuses to grant a DRAFT or missing course, or a manual grant without an admin', async () => {
+  it('refuses to grant a DRAFT or missing course, a manual grant without an admin, or a purchase without an order', async () => {
     const { db, service, grant } = setup();
 
     expect(await statusOf(grant('draft'))).toBe(404);
@@ -356,6 +526,14 @@ describe('EnrollmentService', () => {
         actorId: null,
       }),
     ).rejects.toThrow(/granting admin/);
+    await expect(
+      service.grant({
+        userId: STUDENT.id,
+        courseId: 'published',
+        source: 'PURCHASE',
+        actorId: null,
+      }),
+    ).rejects.toThrow(/purchaseId/);
     expect(db.enrollments).toEqual([]);
     expect(db.auditLogs).toEqual([]);
   });

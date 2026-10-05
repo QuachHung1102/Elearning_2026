@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { LEARNER_HOME, safeNext } from "./routes";
+import { LEARNER_HOME, homeFor, safeNext } from "./routes";
+
+describe("homeFor", () => {
+  it("sends an instructor to their area and everyone else to the learner home", () => {
+    expect(homeFor("INSTRUCTOR")).toBe("/instructor");
+    expect(homeFor("STUDENT")).toBe(LEARNER_HOME);
+    expect(homeFor("ADMIN")).toBe(LEARNER_HOME);
+  });
+});
 
 describe("safeNext", () => {
   it("keeps a same-origin path with its query and hash", () => {
@@ -7,6 +15,19 @@ describe("safeNext", () => {
       "/courses/react?denied=1#top",
     );
   });
+
+  // `?next=a&next=b` reaches the page as an array, and `.startsWith` on it threw
+  // a TypeError, so /login and /register answered 500 (REVIEW F-16).
+  it("reads the first value when the parameter repeats", () => {
+    expect(safeNext(["/courses/react", "/other"])).toBe("/courses/react");
+  });
+
+  it.each([[["https://evil.com", "/ok"]], [[]]])(
+    "still falls back for a repeated parameter that starts unsafe or empty: %j",
+    (value) => {
+      expect(safeNext(value)).toBe(LEARNER_HOME);
+    },
+  );
 
   it.each([
     undefined,

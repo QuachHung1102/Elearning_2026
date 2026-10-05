@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Đăng nhập" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; passwordChanged?: string }>;
+  searchParams: Promise<{ next?: string | string[]; passwordChanged?: string }>;
 }) {
   const params = await searchParams;
   return (
@@ -21,7 +21,7 @@ export default async function LoginPage({
         </p>
       </div>
       <LoginForm
-        next={safeNext(params.next)}
+        next={params.next ? safeNext(params.next) : undefined}
         passwordChanged={params.passwordChanged === "1"}
       />
     </section>

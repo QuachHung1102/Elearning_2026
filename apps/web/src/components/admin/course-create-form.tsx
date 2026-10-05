@@ -2,14 +2,22 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { StaffBase } from "@/lib/admin";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { Category, CourseDetail } from "@/lib/catalog";
-import { slugify } from "@/lib/slug";
+import { baseSlug } from "@/lib/slug";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Alert } from "@/components/ui/feedback";
 
-export function CourseCreateForm({ categories }: { categories: Category[] }) {
+export function CourseCreateForm({
+  categories,
+  base = "/admin",
+}: {
+  categories: Category[];
+  /** Web area the new course opens in; the API path stays `/admin/*`. */
+  base?: StaffBase;
+}) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +34,7 @@ export function CourseCreateForm({ categories }: { categories: Category[] }) {
           categoryId: String(form.get("categoryId") ?? "") || undefined,
         }),
       });
-      router.push(`/admin/courses/${course.id}`);
+      router.push(`${base}/courses/${course.id}`);
     } catch (caught) {
       setError(
         caught instanceof ApiError && caught.code === "SLUG_TAKEN"
@@ -61,7 +69,7 @@ export function CourseCreateForm({ categories }: { categories: Category[] }) {
       <div className="grid gap-1">
         <p className="text-sm font-semibold">Đường dẫn</p>
         <p className="rounded-md bg-muted px-3 py-2 font-mono text-sm text-muted-foreground-strong">
-          /courses/{slugify(title) || "…"}
+          /courses/{title.trim() ? baseSlug(title) : "…"}
         </p>
         <p className="text-sm text-muted-foreground">
           Sửa được khi khóa học còn là bản nháp. Sau lần xuất bản đầu tiên,

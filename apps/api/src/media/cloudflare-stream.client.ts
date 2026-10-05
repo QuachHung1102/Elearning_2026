@@ -13,7 +13,7 @@ const API = 'https://api.cloudflare.com/client/v4';
 export class CloudflareStreamClient implements StreamClient {
   async getStatus(uid: string): Promise<VideoStatus> {
     const response = await fetch(
-      `${API}/accounts/${config.cloudflareAccountId}/stream/${uid}`,
+      `${API}/accounts/${config.cloudflareAccountId}/stream/${encodeURIComponent(uid)}`,
       {
         headers: {
           authorization: `Bearer ${config.cloudflareStreamApiToken}`,

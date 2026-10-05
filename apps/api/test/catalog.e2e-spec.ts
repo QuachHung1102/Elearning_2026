@@ -9,6 +9,7 @@ import { configureApp } from '../src/app.setup.js';
 import { hashPassword } from '../src/auth/password.js';
 import { EnrollmentService } from '../src/enrollment/enrollment.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { untilBlockedOnLock } from './support.js';
 
 const PASSWORD = 'correct horse battery staple';
 const LONG_DESCRIPTION = 'Mô tả đủ dài để vượt ngưỡng hai trăm ký tự. '.repeat(6);
@@ -297,6 +298,19 @@ describe('Phase 2 catalog (e2e)', () => {
       .expect(404);
     expect(asStudent.body).toEqual(anonymous.body);
     expect(asStudent.body).toEqual(unknownPath.body);
+
+    // Express routes without regard to case, so `/API/V1/ADMIN/...` is the
+    // same surface: it must keep the 404 and the `no-store` (REVIEW F-26).
+    const shouting = await request(app.getHttpServer())
+      .post('/API/V1/ADMIN/courses')
+      .send({ title: 'Thử tạo khóa' })
+      .expect(404);
+    expect(shouting.body).toEqual(anonymous.body);
+    const cased = await request(app.getHttpServer())
+      .get('/API/V1/ADMIN/courses')
+      .set(as(admin))
+      .expect(200);
+    expect(cased.headers['cache-control']).toBe('no-store');
   });
 
   it('lists drafts for an admin and hides lesson content from the admin outline', async () => {
@@ -598,7 +612,8 @@ describe('Phase 2 catalog (e2e)', () => {
           actorId: actor.id,
         })
         .catch((error: HttpException) => error.getStatus());
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // The grant is really waiting on the lock now, not merely given time to.
+      await untilBlockedOnLock(prisma);
     });
 
     expect(await grant).toBe(404);
@@ -1037,6 +1052,101 @@ describe('Phase 2 catalog (e2e)', () => {
       data: { status: 'ACTIVE', revokedAt: null },
     });
     expect(await overview()).toBe(1);
+  });
+
+  // REVIEW F-06 / F-13: positions, id sets and the lesson counter were read
+  // outside the transaction, so two writers picked the same position and the
+  // loser hit the unique index (or the counter drifted).
+  it('takes eight simultaneous new lessons in one section without a collision', async () => {
+    const admin = await signIn('ADMIN');
+    const { courseId, sectionId } = await buildCourse(admin);
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        request(app.getHttpServer())
+          .post(`/api/v1/admin/sections/${sectionId}/lessons`)
+          .set(as(admin))
+          .send({ title: `Bài song song ${index + 1}`, type: 'ARTICLE' }),
+      ),
+    );
+
+    expect(results.map((response) => response.status)).toEqual(
+      Array(8).fill(201),
+    );
+    const course = await request(app.getHttpServer())
+      .get(`/api/v1/admin/courses/${courseId}`)
+      .set(as(admin))
+      .expect(200);
+    const positions = course.body.sections[0].lessons.map(
+      (lesson: { position: number }) => lesson.position,
+    );
+    expect(positions).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(course.body.lessonCount).toBe(9);
+  });
+
+  it('takes eight simultaneous new sections in one course without a collision', async () => {
+    const admin = await signIn('ADMIN');
+    const { courseId } = await buildCourse(admin);
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        request(app.getHttpServer())
+          .post(`/api/v1/admin/courses/${courseId}/sections`)
+          .set(as(admin))
+          .send({ title: `Chương song song ${index + 1}` }),
+      ),
+    );
+
+    expect(results.map((response) => response.status)).toEqual(
+      Array(8).fill(201),
+    );
+    const course = await request(app.getHttpServer())
+      .get(`/api/v1/admin/courses/${courseId}`)
+      .set(as(admin))
+      .expect(200);
+    expect(
+      course.body.sections.map((section: { position: number }) => section.position),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  });
+
+  it('deletes a draft course for good and frees its slug', async () => {
+    const admin = await signIn('ADMIN');
+    const { courseId, slug } = await buildCourse(admin);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/admin/courses/${courseId}`)
+      .set(as(admin))
+      .expect(204);
+    await request(app.getHttpServer())
+      .get(`/api/v1/admin/courses/${courseId}`)
+      .set(as(admin))
+      .expect(404);
+
+    const recreated = await request(app.getHttpServer())
+      .post('/api/v1/admin/courses')
+      .set(as(admin))
+      .send({ title: 'Lập trình JavaScript' })
+      .expect(201);
+    expect(recreated.body.slug).toBe(slug);
+  });
+
+  // REVIEW F-08 / DATA_MODEL.md §Xóa: only a draft may be deleted. A published
+  // course with no students used to go too, freeing a slug that shared links
+  // and the sitemap already point at.
+  it('refuses to delete a published course even when nobody has enrolled', async () => {
+    const admin = await signIn('ADMIN');
+    const { courseId, slug } = await buildCourse(admin);
+    await request(app.getHttpServer())
+      .post(`/api/v1/admin/courses/${courseId}/publish`)
+      .set(as(admin))
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/admin/courses/${courseId}`)
+      .set(as(admin))
+      .expect(409)
+      .expect(({ body }) => expect(body.code).toBe('CONFLICT'));
+    await request(app.getHttpServer()).get(`/api/v1/courses/${slug}`).expect(200);
   });
 
   it('rate limits admin mutations per admin but never admin reads', async () => {

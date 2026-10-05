@@ -23,6 +23,7 @@ export const config = {
     "/account/:path*",
     "/admin/:path*",
     "/checkout/:path*",
+    "/instructor/:path*",
     "/learn/:path*",
     "/my-courses/:path*",
   ],

@@ -5,3 +5,11 @@ allowBuilds:
   esbuild: true
   prisma: true
   unrs-resolver: true
+# Transitive advisories reported by `pnpm audit` (2026-09-30). Same-major bumps
+# only; remove an entry once the parent package ships the patched range itself.
+overrides:
+  multer: ">=2.4.0 <3"
+  qs: ">=6.16.0 <7"
+  fast-uri: ">=3.1.7 <4"
+  mysql2: ">=3.23.1 <4"
+  deepmerge-ts: ">=8.0.0 <9"

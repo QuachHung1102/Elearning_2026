@@ -3,6 +3,7 @@
 import { Paperclip, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import type { StaffBase } from "@/lib/admin";
 import { ApiError, apiFetch } from "@/lib/api";
 import type {
   AdminCourseDetail,
@@ -14,6 +15,7 @@ import type {
 import { formatDuration, formatNumber } from "@/lib/format";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button, buttonClass } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
 import { Alert } from "@/components/ui/feedback";
 import { showToast } from "@/components/ui/toast";
@@ -60,6 +62,7 @@ export function LessonEditor({
   videoAssetId,
   video,
   resources,
+  base = "/admin",
 }: {
   course: AdminCourseDetail;
   lesson: LessonOutline;
@@ -67,6 +70,7 @@ export function LessonEditor({
   videoAssetId: string | null;
   video: VideoAsset | null;
   resources: Resource[];
+  base?: StaffBase;
 }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -243,7 +247,7 @@ export function LessonEditor({
             Lưu bài học
           </Button>
           <a
-            href={`/admin/courses/${course.id}/curriculum`}
+            href={`${base}/courses/${course.id}/curriculum`}
             className={buttonClass("ghost")}
           >
             Về chương trình học
@@ -324,20 +328,24 @@ export function LessonEditor({
                   <span className="text-muted-foreground">
                     {formatNumber(Math.round(resource.sizeBytes / 1024))} KB
                   </span>
-                  <button
-                    type="button"
-                    className={buttonClass("ghost", "sm")}
-                    onClick={async () => {
+                  <ConfirmDialog
+                    title="Xóa tài liệu"
+                    description={`Xóa tài liệu "${resource.filename}" khỏi bài học? Học viên sẽ không tải được nữa.`}
+                    confirmLabel="Xóa tài liệu"
+                    onConfirm={async () => {
                       await apiFetch(`/admin/resources/${resource.id}`, {
                         method: "DELETE",
                       });
                       showToast("Đã xóa tài liệu", "success");
                       router.refresh();
                     }}
-                  >
-                    <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                    <span className="sr-only">Xóa {resource.filename}</span>
-                  </button>
+                    trigger={
+                      <button type="button" className={buttonClass("ghost", "sm")}>
+                        <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                        <span className="sr-only">Xóa {resource.filename}</span>
+                      </button>
+                    }
+                  />
                 </li>
               ))}
             </ul>

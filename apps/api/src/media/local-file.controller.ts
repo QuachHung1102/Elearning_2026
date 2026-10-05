@@ -20,6 +20,7 @@ import { SkipCsrf } from '../auth/csrf.guard.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
 import { config } from '../config.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { attachment } from './content-disposition.js';
 import { LocalDiskStorage } from './local-disk.storage.js';
 import {
   COVER_CONTENT_TYPES,
@@ -304,7 +305,7 @@ export class LocalFileController {
       : null;
     return {
       contentType: resource?.contentType ?? 'application/octet-stream',
-      disposition: `attachment; filename="${(resource?.filename ?? 'tai-lieu').replace(/["\\]/g, '')}"`,
+      disposition: attachment(resource?.filename ?? 'tai-lieu'),
     };
   }
 }

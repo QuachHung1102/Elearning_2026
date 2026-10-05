@@ -3,6 +3,10 @@ import {
   assertDriverValuesAreKnown,
   assertNoDemoDriversInProduction,
 } from './config/drivers.js';
+import {
+  assertNoTestSettingsInProduction,
+  isProductionEnv,
+} from './config/production.js';
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name];
@@ -23,9 +27,14 @@ function integer(
   return value;
 }
 
+// Not a secret: the demo driver signs and verifies its own callbacks with it.
+// `assertNoDemoDriversInProduction` keeps it out of production.
+const DEMO_ZALOPAY_KEY2 = 'demo-zalopay-key2-not-a-secret';
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   assertDriverValuesAreKnown(env);
   assertNoDemoDriversInProduction(env);
+  assertNoTestSettingsInProduction(env);
 
   const jwtSecret = required(env, 'AUTH_JWT_SECRET');
   if (Buffer.byteLength(jwtSecret) < 32) {
@@ -36,11 +45,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   const storageDriver = env.STORAGE_DRIVER ?? 'demo';
   const mailDriver = env.MAIL_DRIVER ?? 'demo';
   const paymentDriver = env.PAYMENT_DRIVER ?? 'demo';
+  // An empty key2 lets anyone compute a valid callback MAC, so the real driver
+  // refuses to boot without every credential (P4-9).
+  const zalopay = (name: string) =>
+    paymentDriver === 'zalopay' ? required(env, name) : (env[name] ?? '');
 
   return Object.freeze({
     databaseUrl: required(env, 'DATABASE_URL'),
     port: integer(env, 'PORT', 3001),
-    nodeEnv: env.NODE_ENV ?? 'development',
+    isProduction: isProductionEnv(env),
+    // One line per finished request (`requestLog`); the tests switch it off.
+    logRequests: env.LOG_REQUESTS !== 'false',
     timezone: env.TZ ?? 'Asia/Ho_Chi_Minh',
     webOrigin: env.WEB_ORIGIN ?? 'http://localhost:3000',
     apiPublicUrl: env.API_PUBLIC_URL ?? 'http://localhost:3001',
@@ -49,6 +64,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     storageDriver,
     mailDriver,
     paymentDriver,
+    // `LocalFileController` (and the raw-body parser in front of it) exists
+    // unless both drivers are real: the route is absent, not merely guarded.
+    servesLocalFiles: !(storageDriver === 'r2' && videoDriver === 'cloudflare'),
     // Relative to the apps/api working directory; served only through a signed,
     // viewer-bound URL, never from a public folder.
     demoVideoFile: env.DEMO_VIDEO_FILE ?? 'assets/demo/sample.mp4',
@@ -72,11 +90,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     smtpUrl: env.SMTP_URL ?? '',
     emailVerifyTtlMinutes: integer(env, 'EMAIL_VERIFY_TTL_MINUTES', 1_440),
     passwordResetTtlMinutes: integer(env, 'PASSWORD_RESET_TTL_MINUTES', 60),
-    zalopayAppId: env.ZALOPAY_APP_ID ?? '',
-    zalopayKey1: env.ZALOPAY_KEY1 ?? '',
-    zalopayKey2: env.ZALOPAY_KEY2 ?? '',
+    zalopayAppId: zalopay('ZALOPAY_APP_ID'),
+    zalopayKey1: zalopay('ZALOPAY_KEY1'),
+    zalopayKey2: zalopay('ZALOPAY_KEY2') || DEMO_ZALOPAY_KEY2,
     zalopayEndpoint: env.ZALOPAY_ENDPOINT ?? 'https://sb-openapi.zalopay.vn/v2',
-    zalopayCallbackUrl: env.ZALOPAY_CALLBACK_URL ?? '',
+    zalopayCallbackUrl: zalopay('ZALOPAY_CALLBACK_URL'),
     checkoutQrTtlMinutes: integer(env, 'CHECKOUT_QR_TTL_MINUTES', 15),
     reconcileIntervalSeconds: integer(env, 'RECONCILE_INTERVAL', 60),
     reconcileMinAgeSeconds: integer(env, 'RECONCILE_MIN_AGE', 120),

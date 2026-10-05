@@ -13,8 +13,12 @@ import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from './auth.constants.js';
 
 const SKIP_CSRF = 'skipCsrf';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-/** Prefixes whose whole surface answers 404 to anyone who is not an admin. */
-const HIDDEN_PREFIX = /^\/api\/v1\/(admin|dev)\//;
+/**
+ * Prefixes whose whole surface answers 404 to anyone who is not an admin.
+ * Case-insensitive because Express routing is: `/API/V1/ADMIN/x` reaches the
+ * same handlers.
+ */
+const HIDDEN_PREFIX = /^\/api\/v1\/(admin|dev)\//i;
 
 export const SkipCsrf = () => SetMetadata(SKIP_CSRF, true);
 

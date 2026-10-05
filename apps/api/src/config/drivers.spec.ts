@@ -14,6 +14,18 @@ describe('driver configuration', () => {
     ).toThrow(/cloudfare/);
   });
 
+  it('rejects demo drivers when only Railway says production (N5.2, REVIEW F-28)', () => {
+    expect(() =>
+      assertNoDemoDriversInProduction({ RAILWAY_ENVIRONMENT_NAME: 'production' }),
+    ).toThrow(/VIDEO_DRIVER/);
+  });
+
+  it('lets a Railway staging environment keep its demo drivers', () => {
+    expect(() =>
+      assertNoDemoDriversInProduction({ RAILWAY_ENVIRONMENT_NAME: 'staging' }),
+    ).not.toThrow();
+  });
+
   it.each(['', 'DEMO', 'demo ', 'true', undefined])(
     'rejects VIDEO_DRIVER=%j in production',
     (value) => {

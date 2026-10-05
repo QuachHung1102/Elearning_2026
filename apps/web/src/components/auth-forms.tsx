@@ -1,6 +1,7 @@
 "use client";
 
-import { LEARNER_HOME } from "@/lib/routes";
+import { LEARNER_HOME, homeFor } from "@/lib/routes";
+import type { User } from "@/lib/session";
 import { MailCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,7 +57,8 @@ export function LoginForm({
   next,
   passwordChanged = false,
 }: {
-  next: string;
+  /** Absent: land on the signed-in role's home (`homeFor`). */
+  next?: string;
   passwordChanged?: boolean;
 }) {
   const [email, setEmail] = useState("");
@@ -88,13 +90,13 @@ export function LoginForm({
 
     setBusy(true);
     try {
-      await apiFetch("/auth/login", {
+      const { user } = await apiFetch<{ user: User }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
       // A full load, not a client navigation: the header, the badges and
       // every other island cached the previous viewer (`lib/viewer.ts`).
-      window.location.replace(next);
+      window.location.replace(next ?? homeFor(user.role));
     } catch (error) {
       if (error instanceof ApiError && error.code === "RATE_LIMITED") {
         setRemaining(error.retryAfterSeconds ?? 60);
@@ -153,7 +155,7 @@ export function LoginForm({
         Chưa có tài khoản?{" "}
         <Link
           className="inline-flex min-h-11 items-center font-semibold text-primary-text hover:underline"
-          href={`/register?next=${encodeURIComponent(next)}`}
+          href={`/register?next=${encodeURIComponent(next ?? LEARNER_HOME)}`}
         >
           Đăng ký
         </Link>

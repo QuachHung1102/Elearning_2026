@@ -12,6 +12,7 @@ import type {
 } from "@/lib/catalog";
 import { LEVEL_LABEL } from "@/lib/format";
 import { Button, buttonClass } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
 import { Alert } from "@/components/ui/feedback";
 import { showToast } from "@/components/ui/toast";
@@ -94,12 +95,17 @@ type SignedUpload = {
   maxBytes: number;
 };
 
+export type InstructorOption = { id: string; displayName: string; email: string };
+
 export function CourseForm({
   course,
   categories,
+  instructors,
 }: {
   course: AdminCourseDetail;
   categories: Category[];
+  /** Only an admin gets the owner picker; an instructor sees the owner read-only. */
+  instructors?: InstructorOption[];
 }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -107,7 +113,7 @@ export function CourseForm({
   const [coverKey, setCoverKey] = useState<string | null>(null);
   const [issues, setIssues] = useState<PublishIssue[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"save" | "publish" | "archive" | null>(null);
+  const [busy, setBusy] = useState<"save" | "publish" | null>(null);
 
   const locked = course.publishedAt !== null;
 
@@ -169,6 +175,10 @@ export function CourseForm({
           compareAtPriceVnd: number("compareAtPriceVnd"),
           level: String(form.get("level") ?? "ALL_LEVELS") as CourseLevel,
           categoryId: String(form.get("categoryId") ?? "") || undefined,
+          // Owner: only sent by an admin; the API drops it for an instructor anyway.
+          ...(instructors
+            ? { instructorId: String(form.get("instructorId") ?? "") || null }
+            : {}),
           learningOutcomes: list("learningOutcomes"),
           requirements: list("requirements"),
           targetAudience: list("targetAudience"),
@@ -190,11 +200,8 @@ export function CourseForm({
     }
   }
 
-  async function transition(
-    action: "publish" | "unpublish" | "archive",
-    label: string,
-  ) {
-    setBusy(action === "archive" ? "archive" : "publish");
+  async function transition(action: "publish" | "unpublish", label: string) {
+    setBusy("publish");
     setError(null);
     setIssues([]);
     try {
@@ -329,6 +336,37 @@ export function CourseForm({
               ))}
             </select>
           </Field>
+          {instructors ? (
+            <Field
+              id="instructorId"
+              label="Giảng viên phụ trách"
+              hint="Người soạn và quản lý khóa này. Chọn Chủ site nếu không có giảng viên."
+            >
+              <select
+                id="instructorId"
+                name="instructorId"
+                className="control"
+                defaultValue={course.instructorId ?? ""}
+              >
+                <option value="">Chủ site</option>
+                {instructors.map((instructor) => (
+                  <option key={instructor.id} value={instructor.id}>
+                    {instructor.displayName} ({instructor.email})
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : (
+            <Field id="instructorName" label="Giảng viên phụ trách">
+              <input
+                id="instructorName"
+                className="control"
+                value={course.instructorName ?? "Chủ site"}
+                readOnly
+                disabled
+              />
+            </Field>
+          )}
           <Field id="categoryId" label="Danh mục">
             <select
               id="categoryId"
@@ -435,21 +473,31 @@ export function CourseForm({
               <Button
                 variant="outline"
                 onClick={() => transition("unpublish", "Đã bỏ lưu trữ")}
-                loading={busy === "archive"}
+                loading={busy === "publish"}
               >
                 Bỏ lưu trữ
               </Button>
             )}
             {/* Only a published course can be archived; a draft is deleted instead. */}
             {course.status === "PUBLISHED" && (
-              <Button
-                variant="ghost"
-                onClick={() => transition("archive", "Đã lưu trữ khóa học")}
-                loading={busy === "archive"}
-              >
-                <X aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                Lưu trữ
-              </Button>
+              <ConfirmDialog
+                title="Lưu trữ khóa học"
+                description="Khóa học biến mất khỏi catalog và không nhận học viên mới. Người đã có quyền học vẫn học bình thường, và bạn có thể bỏ lưu trữ sau."
+                confirmLabel="Lưu trữ khóa học"
+                onConfirm={async () => {
+                  await apiFetch(`/admin/courses/${course.id}/archive`, {
+                    method: "POST",
+                  });
+                  showToast("Đã lưu trữ khóa học", "success");
+                  router.refresh();
+                }}
+                trigger={
+                  <Button variant="ghost">
+                    <X aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                    Lưu trữ
+                  </Button>
+                }
+              />
             )}
           </div>
           <p className="text-sm text-muted-foreground">

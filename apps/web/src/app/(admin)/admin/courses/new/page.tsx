@@ -1,14 +1,15 @@
 import { CourseCreateForm } from "@/components/admin/course-create-form";
-import { adminFetch } from "@/lib/admin";
+import { adminFetch, staffBase } from "@/lib/admin";
 import type { Category } from "@/lib/catalog";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tạo khóa học" };
 
 export default async function NewCoursePage() {
-  const categories = await adminFetch<{ items: Category[] }>(
-    "/admin/categories",
-  );
+  const [categories, base] = await Promise.all([
+    adminFetch<{ items: Category[] }>("/admin/categories"),
+    staffBase(),
+  ]);
   return (
     <div className="grid gap-6">
       <header className="grid gap-1">
@@ -19,7 +20,7 @@ export default async function NewCoursePage() {
           Chỉ cần tiêu đề. Phần còn lại bổ sung sau khi có bản nháp.
         </p>
       </header>
-      <CourseCreateForm categories={categories.items} />
+      <CourseCreateForm categories={categories.items} base={base} />
     </div>
   );
 }

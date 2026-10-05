@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CHECKOUT_ENABLED } from "@/lib/orders";
 
 const items = [
   ["Hồ sơ", "/account"],
+  ...(CHECKOUT_ENABLED ? ([["Đơn hàng", "/account/orders"]] as const) : []),
   ["Đổi mật khẩu", "/account/password"],
   ["Phiên đăng nhập", "/account/sessions"],
 ] as const;
@@ -21,7 +23,12 @@ export function AccountNav() {
         <Link
           key={href}
           href={href}
-          aria-current={pathname === href ? "page" : undefined}
+          // A detail page (`/account/orders/[id]`) still belongs to its tab.
+          aria-current={
+            pathname === href || (href !== "/account" && pathname.startsWith(`${href}/`))
+              ? "page"
+              : undefined
+          }
           className="min-h-11 shrink-0 border-b-2 border-transparent px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary-text aria-[current=page]:border-primary aria-[current=page]:text-primary-text"
         >
           {label}

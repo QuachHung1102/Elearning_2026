@@ -7,6 +7,7 @@ import { ProgressBar } from "@/components/learning/progress-bar";
 import { OfflineBanner, SyncChip } from "@/components/learning/sync-status";
 import { Alert } from "@/components/ui/feedback";
 import { progressText, type CourseProgress } from "@/lib/learning";
+import { getSession } from "@/lib/session";
 import { getLearnContext } from "./context";
 
 function CourseProgressSummary({
@@ -55,11 +56,16 @@ export default async function PlayerLayout({
   const { shell, mode } = await getLearnContext(courseSlug);
   const { course, progress, completedLessonIds } = shell;
   const tracked = mode === "ENROLLED";
+  // Same cached session read the context already made.
+  const instructor = (await getSession())?.role === "INSTRUCTOR";
   const back =
     mode === "PREVIEW"
       ? { href: `/courses/${course.slug}`, label: course.title }
       : mode === "ADMIN"
-        ? { href: `/admin/courses/${course.id}`, label: course.title }
+        ? {
+            href: `${instructor ? "/instructor" : "/admin"}/courses/${course.id}`,
+            label: course.title,
+          }
         : { href: "/my-courses", label: "Khóa học của tôi" };
 
   return (
@@ -112,7 +118,7 @@ export default async function PlayerLayout({
           {mode === "ADMIN" && (
             <Alert
               variant="warning"
-              title="Bạn đang xem trước với quyền quản trị. Tiến độ học không được ghi lại."
+              title={`Bạn đang xem trước với quyền ${instructor ? "giảng viên" : "quản trị"}. Tiến độ học không được ghi lại.`}
             />
           )}
           {course.status === "ARCHIVED" && (

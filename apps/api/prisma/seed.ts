@@ -2,17 +2,21 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, UserRole, UserStatus } from '../src/generated/prisma/client.js';
 import { hashPassword } from '../src/auth/password.js';
+import { isProductionEnv } from '../src/config/production.js';
+import { PG_SESSION_OPTIONS } from '../src/prisma/pg-session.js';
 import { seedCatalog } from './seed-catalog.js';
 import { seedLearning } from './seed-learning.js';
 
-if (process.env.NODE_ENV === 'production') {
+if (isProductionEnv(process.env)) {
   throw new Error('Refusing to seed a production database');
 }
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required');
 
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString, ...PG_SESSION_OPTIONS }),
+});
 const verifiedAt = new Date('2026-09-01T00:00:00.000Z');
 
 const users = [
@@ -42,7 +46,8 @@ const users = [
     password: 'Demo!Student123',
     displayName: 'Học viên ba',
     role: UserRole.STUDENT,
-    emailVerifiedAt: null,
+    // No enrollment: the demo buyer, and checkout needs a verified email.
+    emailVerifiedAt: verifiedAt,
   },
   {
     email: 'instructor@elearning.local',

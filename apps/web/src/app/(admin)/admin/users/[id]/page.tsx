@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { BlockUserDialog } from "@/components/admin/block-user-dialog";
 import { ManualGrantDialog } from "@/components/admin/manual-grant-dialog";
 import { RevokeEnrollmentDialog } from "@/components/admin/revoke-enrollment-dialog";
+import { RoleDialog } from "@/components/admin/role-dialog";
 import { StatTile } from "@/components/admin/shell";
-import { StatusBadge } from "@/components/ui/badge";
+import { RoleBadge, StatusBadge } from "@/components/ui/badge";
 import {
   adminFetch,
   grantableCourses,
@@ -13,6 +14,7 @@ import {
   type AdminUserDetail,
 } from "@/lib/admin";
 import { formatDate } from "@/lib/format";
+import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Hồ sơ người dùng" };
@@ -25,9 +27,10 @@ export default async function AdminUserPage({
   const { id } = await params;
   // The API answers a malformed id with 400; to a reader it is simply absent.
   if (!UUID_V4.test(id)) notFound();
-  const [{ user, enrollments }, courses] = await Promise.all([
+  const [{ user, enrollments }, courses, viewer] = await Promise.all([
     adminFetch<AdminUserDetail>(`/admin/users/${id}`),
     grantableCourses(),
+    getSession(),
   ]);
 
   return (
@@ -48,6 +51,7 @@ export default async function AdminUserPage({
               >
                 {user.displayName}
               </h1>
+              <RoleBadge role={user.role} />
               <StatusBadge status={user.status} />
             </div>
             <p className="text-muted-foreground [overflow-wrap:anywhere]">
@@ -59,6 +63,7 @@ export default async function AdminUserPage({
           </div>
           <div className="flex flex-wrap gap-3">
             {courses && <ManualGrantDialog user={user} courses={courses} />}
+            {user.id !== viewer?.id && <RoleDialog user={user} />}
             <BlockUserDialog user={user} />
           </div>
         </div>

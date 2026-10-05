@@ -177,7 +177,7 @@ describe('LocalFileController read path', () => {
     );
     expect(response.headers['Content-Type']).toBe('application/pdf');
     expect(response.headers['Content-Disposition']).toBe(
-      'attachment; filename="bai-tap.pdf"',
+      `attachment; filename="bai-tap.pdf"; filename*=UTF-8''bai-tap.pdf`,
     );
     await storage.delete(RESOURCE_KEY);
   });

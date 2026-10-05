@@ -4,6 +4,7 @@ import {
   type AuditActorContext,
 } from '../audit/audit.service.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
+import { isSlugConflict } from '../common/prisma-errors.js';
 import {
   paginated,
   resolvePage,
@@ -46,6 +47,14 @@ import type {
 } from './course.dto.js';
 
 type Tx = Prisma.TransactionClient;
+
+/**
+ * How many times a writer picks a new slug after losing one to another writer.
+ * Each round of N writers with one title lets one of them through, so the last
+ * of N needs N rounds: this is the most simultaneous writers of one title that
+ * all succeed.
+ */
+const SLUG_ATTEMPTS = 20;
 
 export const CATALOG_PAGE_SIZE = 12;
 
@@ -173,36 +182,41 @@ export class CatalogService {
   }
 
   async createCategory(input: CreateCategoryDto, actor: AuditActorContext) {
-    const slug = await this.resolveSlug(input.slug, input.name, 80, (value) =>
-      this.categorySlugTaken(value),
+    return this.writeWithSlug(
+      () =>
+        this.resolveSlug(input.slug, input.name, 80, (value) =>
+          this.categorySlugTaken(value),
+        ),
+      async (slug) => {
+        const last = await this.prisma.category.findFirst({
+          orderBy: { position: 'desc' },
+          select: { position: true },
+        });
+        return this.prisma.$transaction(async (tx) => {
+          const category = await tx.category.create({
+            data: {
+              slug,
+              name: input.name,
+              description: input.description ?? null,
+              icon: input.icon ?? null,
+              position: (last?.position ?? 0) + 1,
+            },
+            include: { _count: { select: { courses: true } } },
+          });
+          await this.audit.record(
+            {
+              ...actor,
+              action: 'category.created',
+              entityType: 'CATEGORY',
+              entityId: category.id,
+              metadata: { slug: category.slug },
+            },
+            tx,
+          );
+          return this.toCategory(category);
+        });
+      },
     );
-    const last = await this.prisma.category.findFirst({
-      orderBy: { position: 'desc' },
-      select: { position: true },
-    });
-    return this.prisma.$transaction(async (tx) => {
-      const category = await tx.category.create({
-        data: {
-          slug,
-          name: input.name,
-          description: input.description ?? null,
-          icon: input.icon ?? null,
-          position: (last?.position ?? 0) + 1,
-        },
-        include: { _count: { select: { courses: true } } },
-      });
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'category.created',
-          entityType: 'CATEGORY',
-          entityId: category.id,
-          metadata: { slug: category.slug },
-        },
-        tx,
-      );
-      return this.toCategory(category);
-    });
   }
 
   async updateCategory(
@@ -327,7 +341,8 @@ export class CatalogService {
       this.prisma.course.findMany({
         where,
         select: { ...CARD_SELECT, status: true, updatedAt: true, instructorId: true },
-        orderBy: { [field]: direction },
+        // Courses that tie on the key keep one order, or a page boundary repeats one and skips another.
+        orderBy: [{ [field]: direction }, { id: 'asc' }],
         skip: page.skip,
         take: page.take,
       }),
@@ -379,38 +394,43 @@ export class CatalogService {
     actor: AuditActorContext,
     ownerId: string | null = null,
   ) {
-    const slug = await this.resolveSlug(input.slug, input.title, 120, (value) =>
-      this.courseSlugTaken(value),
+    return this.writeWithSlug(
+      () =>
+        this.resolveSlug(input.slug, input.title, 120, (value) =>
+          this.courseSlugTaken(value),
+        ),
+      async (slug) => {
+        if (input.categoryId) await this.mustFindCategory(input.categoryId);
+        return this.prisma.$transaction(async (tx) => {
+          const course = await tx.course.create({
+            data: {
+              slug,
+              title: input.title,
+              description: '',
+              searchText: buildSearchText(input.title),
+              priceVnd: 0,
+              categoryId: input.categoryId ?? null,
+              instructorId: ownerId,
+              learningOutcomes: [],
+              requirements: [],
+              targetAudience: [],
+            },
+            include: this.detailInclude,
+          });
+          await this.audit.record(
+            {
+              ...actor,
+              action: 'course.created',
+              entityType: 'COURSE',
+              entityId: course.id,
+              metadata: { slug: course.slug },
+            },
+            tx,
+          );
+          return this.toCourseDetail(course);
+        });
+      },
     );
-    if (input.categoryId) await this.mustFindCategory(input.categoryId);
-    return this.prisma.$transaction(async (tx) => {
-      const course = await tx.course.create({
-        data: {
-          slug,
-          title: input.title,
-          description: '',
-          searchText: buildSearchText(input.title),
-          priceVnd: 0,
-          categoryId: input.categoryId ?? null,
-          instructorId: ownerId,
-          learningOutcomes: [],
-          requirements: [],
-          targetAudience: [],
-        },
-        include: this.detailInclude,
-      });
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'course.created',
-          entityType: 'COURSE',
-          entityId: course.id,
-          metadata: { slug: course.slug },
-        },
-        tx,
-      );
-      return this.toCourseDetail(course);
-    });
   }
 
   async updateCourse(
@@ -447,45 +467,62 @@ export class CatalogService {
         'coverImageKey must belong to this course',
       );
     }
-    if (input.instructorId) {
-      const teacher = await this.prisma.user.findUnique({
-        where: { id: input.instructorId },
-        select: { role: true },
-      });
-      if (teacher?.role !== UserRole.INSTRUCTOR) {
+    return this.prisma.$transaction(async (tx) => {
+      // The new owner's role is read under a share lock here, not before the
+      // transaction: a demotion racing this waits for it (and then releases the
+      // course) or commits first (and this refuses), so a course is never left
+      // with an owner who is no longer an instructor.
+      if (input.instructorId) {
+        const [teacher] = await tx.$queryRaw<{ role: string }[]>`
+          SELECT role FROM users WHERE id = ${input.instructorId}::uuid FOR SHARE`;
+        if (teacher?.role !== UserRole.INSTRUCTOR) {
+          throw appError(
+            HttpStatus.BAD_REQUEST,
+            ERROR_CODE.VALIDATION_FAILED,
+            'instructorId must reference an instructor',
+          );
+        }
+      }
+      // Locked and read here, not taken from the snapshot above: a PATCH that
+      // leaves the price out must not put back the one it saw before another
+      // edit landed, and the price check needs the values as they are now.
+      const [stored] = await tx.$queryRaw<
+        {
+          title: string;
+          subtitle: string | null;
+          price_vnd: number;
+          compare_at_price_vnd: number | null;
+        }[]
+      >`SELECT title, subtitle, price_vnd, compare_at_price_vnd
+        FROM courses WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
+      if (!stored) notFound();
+      const title = input.title ?? stored.title;
+      const subtitle =
+        input.subtitle === undefined ? stored.subtitle : input.subtitle || null;
+      const priceVnd = input.priceVnd ?? stored.price_vnd;
+      const compareAtPriceVnd =
+        input.compareAtPriceVnd === undefined
+          ? stored.compare_at_price_vnd
+          : (input.compareAtPriceVnd ?? null);
+      if (compareAtPriceVnd !== null && compareAtPriceVnd <= priceVnd) {
         throw appError(
           HttpStatus.BAD_REQUEST,
           ERROR_CODE.VALIDATION_FAILED,
-          'instructorId must reference an instructor',
+          'compareAtPriceVnd must be greater than priceVnd',
         );
       }
-    }
-
-    const title = input.title ?? course.title;
-    const subtitle =
-      input.subtitle === undefined ? course.subtitle : input.subtitle || null;
-    const priceVnd = input.priceVnd ?? course.priceVnd;
-    const compareAtPriceVnd =
-      input.compareAtPriceVnd === undefined
-        ? course.compareAtPriceVnd
-        : (input.compareAtPriceVnd ?? null);
-    if (compareAtPriceVnd !== null && compareAtPriceVnd <= priceVnd) {
-      throw appError(
-        HttpStatus.BAD_REQUEST,
-        ERROR_CODE.VALIDATION_FAILED,
-        'compareAtPriceVnd must be greater than priceVnd',
-      );
-    }
-
-    return this.prisma.$transaction(async (tx) => {
       const updated = await tx.course.update({
         where: { id },
         data: {
-          title,
-          subtitle,
-          priceVnd,
-          compareAtPriceVnd,
-          searchText: buildSearchText(title, subtitle),
+          ...(input.title === undefined ? {} : { title }),
+          ...(input.subtitle === undefined ? {} : { subtitle }),
+          ...(input.priceVnd === undefined ? {} : { priceVnd }),
+          ...(input.compareAtPriceVnd === undefined
+            ? {}
+            : { compareAtPriceVnd }),
+          ...(input.title === undefined && input.subtitle === undefined
+            ? {}
+            : { searchText: buildSearchText(title, subtitle) }),
           ...(input.slug === undefined ? {} : { slug: input.slug }),
           ...(input.description === undefined
             ? {}
@@ -566,36 +603,49 @@ export class CatalogService {
         }),
     );
 
-    const issues: PublishIssue[] = publishIssues({
-      coverImageKey: course.coverImageKey,
-      description: course.description,
-      priceVnd: course.priceVnd,
-      categoryId: course.categoryId,
-      learningOutcomes: course.learningOutcomes,
-      sections: course.sections.map((section) => ({
-        id: section.id,
-        lessons: section.lessons.map((lesson) => ({
-          id: lesson.id,
-          type: lesson.type,
-          content: lesson.content,
-          isPreview: lesson.isPreview,
-          videoAssetId: lesson.videoAssetId,
-          videoReady: lesson.videoAssetId
-            ? (readiness.get(lesson.videoAssetId) ?? false)
-            : false,
+    const checklist = (source: NonNullable<typeof course>): PublishIssue[] =>
+      publishIssues({
+        coverImageKey: source.coverImageKey,
+        description: source.description,
+        priceVnd: source.priceVnd,
+        categoryId: source.categoryId,
+        learningOutcomes: source.learningOutcomes,
+        sections: source.sections.map((section) => ({
+          id: section.id,
+          lessons: section.lessons.map((lesson) => ({
+            id: lesson.id,
+            type: lesson.type,
+            content: lesson.content,
+            isPreview: lesson.isPreview,
+            videoAssetId: lesson.videoAssetId,
+            videoReady: lesson.videoAssetId
+              ? (readiness.get(lesson.videoAssetId) ?? false)
+              : false,
+          })),
         })),
-      })),
-    });
-    if (issues.length > 0) {
-      throw appError(
+      });
+    const notPublishable = (issues: PublishIssue[]) =>
+      appError(
         HttpStatus.UNPROCESSABLE_ENTITY,
         ERROR_CODE.COURSE_NOT_PUBLISHABLE,
         'Course is not ready to publish',
         { issues },
       );
-    }
+    const issues = checklist(course);
+    if (issues.length > 0) throw notPublishable(issues);
 
     return this.prisma.$transaction(async (tx) => {
+      // Checked again under the course lock: an edit that landed after the read
+      // above must not let an unpublishable course out. `readiness` is what was
+      // fetched before, so a video attached since counts as not ready.
+      await this.lockCourse(tx, id);
+      const fresh = await tx.course.findUniqueOrThrow({
+        where: { id },
+        include: this.adminDetailInclude(),
+      });
+      const current = checklist(fresh);
+      if (current.length > 0) throw notPublishable(current);
+
       // Only DRAFT or ARCHIVED → PUBLISHED; conditional like archiveCourse so
       // a repeat or concurrent publish records nothing.
       const { count } = await tx.course.updateMany({
@@ -737,6 +787,28 @@ export class CatalogService {
   async deleteCourse(id: string, actor: AuditActorContext): Promise<void> {
     const course = await this.mustFindCourse(id);
     await this.prisma.$transaction(async (tx) => {
+      // Only a draft is deleted for good (DATA_MODEL.md §Xóa): a published
+      // course's slug is already in shared links and the sitemap, and one that
+      // ever had students is retired by archiving. Locked, so a publish or a
+      // grant racing this delete either waits for it or is seen by it.
+      const [row] = await tx.$queryRaw<{ status: CourseStatus }[]>`
+        SELECT status FROM courses WHERE id = ${id}::uuid FOR NO KEY UPDATE`;
+      if (!row) notFound();
+      if (row.status !== CourseStatus.DRAFT) {
+        // Say why: any enrollment row, a revoked one included, is students.
+        const enrolled = await tx.enrollment.count({ where: { courseId: id } });
+        throw enrolled > 0
+          ? appError(
+              HttpStatus.CONFLICT,
+              ERROR_CODE.COURSE_HAS_ENROLLMENTS,
+              'Course still has students',
+            )
+          : appError(
+              HttpStatus.CONFLICT,
+              ERROR_CODE.CONFLICT,
+              'Only a draft course can be deleted; archive it instead',
+            );
+      }
       try {
         await tx.course.delete({ where: { id } });
       } catch (error) {
@@ -776,12 +848,13 @@ export class CatalogService {
     actor: AuditActorContext,
   ) {
     await this.mustFindCourse(courseId);
-    const last = await this.prisma.section.findFirst({
-      where: { courseId },
-      orderBy: { position: 'desc' },
-      select: { position: true },
-    });
     return this.prisma.$transaction(async (tx) => {
+      await this.lockCourse(tx, courseId);
+      const last = await tx.section.findFirst({
+        where: { courseId },
+        orderBy: { position: 'desc' },
+        select: { position: true },
+      });
       const section = await tx.section.create({
         data: { courseId, title, position: (last?.position ?? 0) + 1 },
         include: { lessons: { orderBy: { position: 'asc' } } },
@@ -824,15 +897,18 @@ export class CatalogService {
 
   async deleteSection(id: string, actor: AuditActorContext): Promise<void> {
     const section = await this.mustFindSection(id);
-    const lessons = await this.prisma.lesson.count({ where: { sectionId: id } });
-    if (lessons > 0) {
-      throw appError(
-        HttpStatus.CONFLICT,
-        ERROR_CODE.SECTION_NOT_EMPTY,
-        'Section still has lessons',
-      );
-    }
     await this.prisma.$transaction(async (tx) => {
+      // Counted under the course lock: a lesson created a moment ago is seen,
+      // instead of being cascaded away with the section.
+      await this.lockCourse(tx, section.courseId);
+      const lessons = await tx.lesson.count({ where: { sectionId: id } });
+      if (lessons > 0) {
+        throw appError(
+          HttpStatus.CONFLICT,
+          ERROR_CODE.SECTION_NOT_EMPTY,
+          'Section still has lessons',
+        );
+      }
       await tx.section.delete({ where: { id } });
       await this.recompute(tx, section.courseId);
       await this.audit.record(
@@ -854,15 +930,16 @@ export class CatalogService {
     actor: AuditActorContext,
   ): Promise<void> {
     await this.mustFindCourse(courseId);
-    const current = await this.prisma.section.findMany({
-      where: { courseId },
-      select: { id: true },
-    });
-    this.assertSameSet(
-      current.map((row) => row.id),
-      sectionIds,
-    );
     await this.prisma.$transaction(async (tx) => {
+      await this.lockCourse(tx, courseId);
+      const current = await tx.section.findMany({
+        where: { courseId },
+        select: { id: true },
+      });
+      this.assertSameSet(
+        current.map((row) => row.id),
+        sectionIds,
+      );
       for (const phase of reorderSteps(sectionIds)) {
         for (const update of phase) {
           await tx.section.update({
@@ -891,12 +968,13 @@ export class CatalogService {
     actor: AuditActorContext,
   ) {
     const section = await this.mustFindSection(sectionId);
-    const last = await this.prisma.lesson.findFirst({
-      where: { sectionId },
-      orderBy: { position: 'desc' },
-      select: { position: true },
-    });
     return this.prisma.$transaction(async (tx) => {
+      await this.lockCourse(tx, section.courseId);
+      const last = await tx.lesson.findFirst({
+        where: { sectionId },
+        orderBy: { position: 'desc' },
+        select: { position: true },
+      });
       const lesson = await tx.lesson.create({
         data: {
           sectionId,
@@ -1098,15 +1176,16 @@ export class CatalogService {
     actor: AuditActorContext,
   ): Promise<void> {
     const section = await this.mustFindSection(sectionId);
-    const current = await this.prisma.lesson.findMany({
-      where: { sectionId },
-      select: { id: true },
-    });
-    this.assertSameSet(
-      current.map((row) => row.id),
-      lessonIds,
-    );
     await this.prisma.$transaction(async (tx) => {
+      await this.lockCourse(tx, section.courseId);
+      const current = await tx.lesson.findMany({
+        where: { sectionId },
+        select: { id: true },
+      });
+      this.assertSameSet(
+        current.map((row) => row.id),
+        lessonIds,
+      );
       for (const phase of reorderSteps(lessonIds)) {
         for (const update of phase) {
           await tx.lesson.update({
@@ -1216,20 +1295,30 @@ export class CatalogService {
    * just one more caller, not the only one.
    */
   private async recompute(tx: Tx, courseId: string): Promise<void> {
-    const lessons = await tx.lesson.findMany({
+    await this.lockCourse(tx, courseId);
+    const { _count, _sum } = await tx.lesson.aggregate({
       where: { section: { courseId } },
-      select: { durationSeconds: true },
+      _count: true,
+      _sum: { durationSeconds: true },
     });
     await tx.course.update({
       where: { id: courseId },
       data: {
-        lessonCount: lessons.length,
-        totalDurationSeconds: lessons.reduce(
-          (total, lesson) => total + lesson.durationSeconds,
-          0,
-        ),
+        lessonCount: _count,
+        totalDurationSeconds: _sum.durationSeconds ?? 0,
       },
     });
+  }
+
+  /**
+   * Every write to a course's curriculum takes this first, so positions, id
+   * sets and the lesson counters are read and written by one writer at a time.
+   * The same lock `EnrollmentService.grant` and `updateCourse` use; always
+   * taken before any child row, so writers cannot deadlock on each other.
+   */
+  private async lockCourse(tx: Tx, courseId: string): Promise<void> {
+    await tx.$queryRaw`
+      SELECT 1 FROM courses WHERE id = ${courseId}::uuid FOR NO KEY UPDATE`;
   }
 
   storageProvider(): StorageProvider {
@@ -1251,12 +1340,28 @@ export class CatalogService {
     return [primary, { id: 'asc' }];
   }
 
+  /**
+   * A lesson's outline, never its text: the page shows six fields of it and
+   * this used to read every column, the whole article included (REVIEW F-31).
+   */
   private readonly detailInclude = {
     category: true,
     instructor: { select: { displayName: true } },
     sections: {
       orderBy: { position: 'asc' },
-      include: { lessons: { orderBy: { position: 'asc' } } },
+      include: {
+        lessons: {
+          orderBy: { position: 'asc' },
+          select: {
+            id: true,
+            title: true,
+            position: true,
+            type: true,
+            durationSeconds: true,
+            isPreview: true,
+          },
+        },
+      },
     },
   } satisfies Prisma.CourseInclude;
 
@@ -1275,6 +1380,33 @@ export class CatalogService {
         },
       },
     } satisfies Prisma.CourseInclude;
+  }
+
+  /**
+   * Picks a slug and writes with it. Two writers with one title read the same
+   * "free" slug and only one insert survives (REVIEW F-06): the loser picks
+   * again. A slug the caller chose is refused by `pick` itself once it is taken,
+   * with `SLUG_TAKEN`, and so are the attempts that run out.
+   */
+  private async writeWithSlug<T>(
+    pick: () => Promise<string>,
+    write: (slug: string) => Promise<T>,
+  ): Promise<T> {
+    for (let attempt = 1; ; attempt += 1) {
+      const slug = await pick();
+      try {
+        return await write(slug);
+      } catch (error) {
+        if (!isSlugConflict(error)) throw error;
+        if (attempt >= SLUG_ATTEMPTS) {
+          throw appError(
+            HttpStatus.CONFLICT,
+            ERROR_CODE.SLUG_TAKEN,
+            'Slug is already taken',
+          );
+        }
+      }
+    }
   }
 
   private async resolveSlug(

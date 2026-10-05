@@ -14,16 +14,20 @@ import {
   InstructorCard,
   Prose,
 } from "@/components/catalog/sections";
-import { publicFetch, type CourseDetail, type Paginated, type CourseCard } from "@/lib/catalog";
+import { publicFetch, type CourseDetail } from "@/lib/catalog";
+import { OPEN_GRAPH_DEFAULTS, SITE_URL } from "@/lib/site";
+import { courseJsonLd, jsonLdScript } from "@/lib/structured-data";
 
 export const revalidate = 300;
 
-/** Prerenders the published catalog; anything else is rendered on demand. */
-export async function generateStaticParams() {
-  const courses = await publicFetch<Paginated<CourseCard>>(
-    "/courses?pageSize=100",
-  );
-  return courses.items.map((course) => ({ slug: course.slug }));
+/**
+ * Nothing is prerendered, so `next build` needs no API. An empty list keeps
+ * `dynamicParams` on: each course renders on its first visit, then revalidates
+ * every 300 s (ISR). Listing the catalog here would bake an empty one into
+ * the build whenever the API is unreachable.
+ */
+export function generateStaticParams() {
+  return [];
 }
 
 export async function generateMetadata({
@@ -33,13 +37,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const course = await publicFetch<CourseDetail>(`/courses/${slug}`);
+  const path = `/courses/${course.slug}`;
   return {
     title: course.title,
     description: course.subtitle ?? undefined,
+    alternates: { canonical: path },
     openGraph: {
+      ...OPEN_GRAPH_DEFAULTS,
       title: course.title,
       description: course.subtitle ?? undefined,
       type: "website",
+      url: path,
+      // Without a cover the page inherits the site's own card.
+      ...(course.coverUrl ? { images: [course.coverUrl] } : {}),
     },
   };
 }
@@ -54,6 +64,13 @@ export default async function CoursePage({
 
   return (
     <article className="page-shell grid gap-12 py-10 lg:py-14">
+      <script
+        type="application/ld+json"
+        // Escaped by `jsonLdScript`: a title cannot close the block.
+        dangerouslySetInnerHTML={{
+          __html: jsonLdScript(courseJsonLd(course, SITE_URL)),
+        }}
+      />
       <nav aria-label="Đường dẫn" className="text-sm text-muted-foreground">
         <ol className="flex list-none flex-wrap items-center gap-1 p-0">
           <li>
@@ -134,13 +151,14 @@ export default async function CoursePage({
             <EnrollCta
               courseId={course.id}
               slug={course.slug}
+              priceVnd={course.priceVnd}
               archived={false}
             />
             <p className="text-sm text-muted-foreground">
               Bài học thử mở cho mọi tài khoản đã đăng nhập, không cần trả phí.
             </p>
           </div>
-          <InstructorCard />
+          <InstructorCard name={course.instructorName ?? undefined} />
         </aside>
       </div>
     </article>

@@ -43,8 +43,11 @@ export function formatDateTime(value: string | Date): string {
 
 /** `12 phút`, `1 giờ 30 phút`. Zero units are dropped, never printed as `0 giờ`. */
 export function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.round((seconds % 3600) / 60);
+  // Round the total once: rounding the remainder after splitting off hours
+  // turned 7199 s into "1 giờ 60 phút".
+  const totalMinutes = Math.round(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   if (hours === 0 && minutes === 0) return "dưới 1 phút";
   return [hours > 0 ? `${hours} giờ` : "", minutes > 0 ? `${minutes} phút` : ""]
     .filter(Boolean)
@@ -69,6 +72,12 @@ export const LEVEL_LABEL = {
   ALL_LEVELS: "Mọi trình độ",
 } as const;
 
+export const ROLE_LABEL = {
+  STUDENT: "Học viên",
+  INSTRUCTOR: "Giảng viên",
+  ADMIN: "Quản trị viên",
+} as const;
+
 export const STATUS_LABEL = {
   DRAFT: "Bản nháp",
   PUBLISHED: "Đã xuất bản",
@@ -80,6 +89,7 @@ export const STATUS_LABEL = {
   READY: "Sẵn sàng",
   ERRORED: "Lỗi",
   PAID: "Đã thanh toán",
+  SUCCEEDED: "Thành công",
   REFUND_REQUESTED: "Đang chờ hoàn tiền",
   REFUNDED: "Đã hoàn tiền",
   CANCELLED: "Đã hủy",

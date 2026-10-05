@@ -7,10 +7,10 @@ import { RequestId } from "@/components/ui/request-id";
 
 export default function ErrorPage({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string; requestId?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   const requestId = error.requestId ?? error.digest;
 
@@ -21,7 +21,7 @@ export default function ErrorPage({
         description="Thử lại giúp bạn trong hầu hết trường hợp."
         actions={
           <>
-            <Button onClick={reset}>Thử lại</Button>
+            <Button onClick={retry}>Thử lại</Button>
             <Link href="/" className={buttonClass("outline")}>
               Về trang chủ
             </Link>

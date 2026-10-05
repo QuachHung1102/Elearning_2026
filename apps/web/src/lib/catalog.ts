@@ -37,6 +37,8 @@ export type CourseCard = {
   ratingCount: number;
   demoStats: boolean;
   category: Category | null;
+  /** `null` for a site-owner course; shown with `SITE_OWNER` as the fallback. */
+  instructorName: string | null;
 };
 
 export type LessonOutline = {
@@ -68,6 +70,7 @@ export type CourseDetail = CourseCard & {
 export type AdminCourseRow = CourseCard & {
   status: CourseStatus;
   updatedAt: string;
+  instructorId: string | null;
 };
 
 export type VideoAssetStatus = "PENDING" | "PROCESSING" | "READY" | "ERRORED";
@@ -75,6 +78,7 @@ export type VideoAssetStatus = "PENDING" | "PROCESSING" | "READY" | "ERRORED";
 export type AdminCourseDetail = CourseDetail & {
   status: CourseStatus;
   archivedAt: string | null;
+  instructorId: string | null;
   videoAssets: {
     lessonId: string;
     provider: string;

@@ -64,13 +64,13 @@ export default async function AdminAuditLogsPage({
       adminFetch<Paginated<AuditLogRow>>(
         `/admin/audit-logs${auditApiQuery(filters, firstValue(params.page))}`,
       ),
-      // ponytail: every actor today is an admin (or the system); learners join
-      // with refund requests in phase 4, and 100 admins is far past a
+      // ponytail: actors are admins and instructors (or the system); learners
+      // join with refund requests in phase 4, and 100 staff is far past a
       // one-owner site. Swap for an email search box when either changes.
       // Optional extra: if it fails the select keeps "Tất cả" and the applied
       // actor, and the log itself still shows (UX_PLAN.md §6.3).
       adminFetch<Paginated<AdminUserRow>>(
-        "/admin/users?role=ADMIN&sort=email:asc&pageSize=100",
+        "/admin/users?role=ADMIN,INSTRUCTOR&sort=email:asc&pageSize=100",
       ).catch((error: unknown) => {
         unstable_rethrow(error);
         console.error(error);

@@ -1,7 +1,6 @@
 import { LessonEditor } from "@/components/admin/lesson-editor";
-import { adminFetch } from "@/lib/admin";
+import { adminFetch, getAdminCourse, staffBase } from "@/lib/admin";
 import type {
-  AdminCourseDetail,
   LessonOutline,
   Resource,
   VideoAssetStatus,
@@ -31,9 +30,10 @@ export default async function LessonPage({
   params: Promise<{ id: string; lessonId: string }>;
 }) {
   const { id, lessonId } = await params;
-  const [course, lesson] = await Promise.all([
-    adminFetch<AdminCourseDetail>(`/admin/courses/${id}`),
+  const [course, lesson, base] = await Promise.all([
+    getAdminCourse(id),
     adminFetch<AdminLesson>(`/admin/lessons/${lessonId}`),
+    staffBase(),
   ]);
 
   return (
@@ -46,6 +46,7 @@ export default async function LessonPage({
         videoAssetId={lesson.videoAssetId}
         video={lesson.videoAsset}
         resources={lesson.resources}
+        base={base}
       />
     </div>
   );

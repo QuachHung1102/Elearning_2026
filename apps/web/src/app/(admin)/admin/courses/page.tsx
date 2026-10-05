@@ -4,7 +4,7 @@ import { Pagination } from "@/components/catalog/pagination";
 import { StatusBadge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
-import { adminFetch } from "@/lib/admin";
+import { adminFetch, staffBase } from "@/lib/admin";
 import {
   firstValue,
   toQuery,
@@ -25,6 +25,8 @@ export default async function AdminCoursesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const base = await staffBase();
+  const mine = base === "/instructor";
   const courses = await adminFetch<Paginated<AdminCourseRow>>(
     `/admin/courses${toQuery(params, KEYS)}`,
   );
@@ -34,9 +36,9 @@ export default async function AdminCoursesPage({
     <div className="grid gap-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <h1 tabIndex={-1} className="text-3xl font-bold">
-          Khóa học
+          {mine ? "Khóa học của tôi" : "Khóa học"}
         </h1>
-        <Link href="/admin/courses/new" className={buttonClass("primary")}>
+        <Link href={`${base}/courses/new`} className={buttonClass("primary")}>
           <Plus aria-hidden="true" className="size-5" strokeWidth={1.75} />
           Tạo khóa học
         </Link>
@@ -48,7 +50,7 @@ export default async function AdminCoursesPage({
       <form
         key={`${status.join(",")}:${firstValue(params.q) ?? ""}`}
         method="get"
-        action="/admin/courses"
+        action={`${base}/courses`}
         className="flex flex-wrap gap-3"
       >
         <label className="sr-only" htmlFor="admin-q">
@@ -84,10 +86,10 @@ export default async function AdminCoursesPage({
 
       {courses.items.length === 0 ? (
         <EmptyState
-          title="Chưa có khóa học nào"
+          title={mine ? "Bạn chưa có khóa học nào" : "Chưa có khóa học nào"}
           description="Tạo bản nháp đầu tiên rồi bổ sung nội dung trước khi xuất bản."
           action={
-            <Link href="/admin/courses/new" className={buttonClass("primary")}>
+            <Link href={`${base}/courses/new`} className={buttonClass("primary")}>
               Tạo khóa học
             </Link>
           }
@@ -113,7 +115,7 @@ export default async function AdminCoursesPage({
                     <td className="p-3">
                       <Link
                         className="font-medium underline-offset-2 hover:underline"
-                        href={`/admin/courses/${course.id}`}
+                        href={`${base}/courses/${course.id}`}
                       >
                         {course.title}
                       </Link>
@@ -134,7 +136,7 @@ export default async function AdminCoursesPage({
               <li key={course.id} className="panel grid gap-2 p-4">
                 <Link
                   className="font-semibold"
-                  href={`/admin/courses/${course.id}`}
+                  href={`${base}/courses/${course.id}`}
                 >
                   {course.title}
                 </Link>
@@ -147,7 +149,7 @@ export default async function AdminCoursesPage({
             ))}
           </ul>
           <Pagination
-            basePath="/admin/courses"
+            basePath={`${base}/courses`}
             query={params}
             page={courses.page}
             totalPages={courses.totalPages}

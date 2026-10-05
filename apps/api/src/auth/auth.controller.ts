@@ -253,6 +253,7 @@ export class UsersController {
   }
 
   @Get('sessions')
+  @Header('Cache-Control', 'no-store')
   @UseGuards(SessionAuthGuard)
   async sessions(@Req() request: AuthenticatedRequest) {
     return {

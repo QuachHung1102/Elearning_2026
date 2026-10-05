@@ -8,12 +8,32 @@ import {
   type User,
 } from '../generated/prisma/client.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
+import { logEvent } from '../common/logger.js';
+import { RateLimitedError } from '../common/rate-limited.error.js';
+import { RateLimiter } from '../common/rate-limiter.js';
 import { config } from '../config.js';
-import { escapeHtml, MAILER, type Mailer } from '../mail/mailer.js';
+import {
+  escapeHtml,
+  MAILER,
+  sendQuietly,
+  type Mailer,
+} from '../mail/mailer.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SESSION_DURATION_SECONDS } from './auth.constants.js';
 import { AuthTokenService } from './auth-token.service.js';
-import { hashPassword, verifyPassword } from './password.js';
+import { hashPassword, needsRehash, verifyPassword } from './password.js';
+
+/**
+ * REVIEW F-11: the attempts one account may see in a quarter of an hour, from
+ * anywhere. Every attempt counts, the right password too, and a login that
+ * succeeds starts the count over. The price is that someone who knows an address
+ * can keep its owner out for a while, which the per-address limit already makes
+ * slow and which beats letting a password be guessed from many addresses.
+ */
+const LOGIN_ATTEMPTS = { limit: 10, windowSeconds: 900 } as const;
+
+/** A user as Prisma returns it here: the password hash stays in the database (API_CONTRACT.md §6.2). */
+type SafeUser = Omit<User, 'passwordHash'>;
 
 export type AuthUser = Pick<
   User,
@@ -32,6 +52,9 @@ type JwtClaims = { sub?: unknown; sid?: unknown };
 
 @Injectable()
 export class AuthService {
+  // ponytail: per-process, like the route guard's counters; see `RateLimiter`.
+  private readonly loginAttempts = new RateLimiter();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
@@ -46,7 +69,7 @@ export class AuthService {
   }): Promise<AuthResult> {
     const email = this.normalizeEmail(input.email);
     const passwordHash = await hashPassword(input.password);
-    let user: User;
+    let user: SafeUser;
 
     try {
       user = await this.prisma.user.create({
@@ -76,8 +99,19 @@ export class AuthService {
   }
 
   async login(input: { email: string; password: string }): Promise<AuthResult> {
+    // Before anything is looked up: an address nobody registered is limited the
+    // same way, so the limit says nothing about who has an account.
+    const email = this.normalizeEmail(input.email);
+    const retryAfter = this.loginAttempts.hit(
+      email,
+      LOGIN_ATTEMPTS.limit,
+      LOGIN_ATTEMPTS.windowSeconds,
+    );
+    if (retryAfter !== null) throw new RateLimitedError(retryAfter);
+
     const user = await this.prisma.user.findUnique({
-      where: { email: this.normalizeEmail(input.email) },
+      where: { email },
+      omit: { passwordHash: false },
     });
 
     let passwordMatches = false;
@@ -95,6 +129,10 @@ export class AuthService {
       );
     }
 
+    this.loginAttempts.reset(email);
+    if (needsRehash(user.passwordHash)) {
+      await this.upgradeHash(user.id, user.passwordHash, input.password);
+    }
     return this.issueSession(user);
   }
 
@@ -224,7 +262,10 @@ export class AuthService {
     currentPassword: string,
     newPassword: string,
   ): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      omit: { passwordHash: false },
+    });
     if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) {
       throw appError(
         HttpStatus.UNAUTHORIZED,
@@ -278,7 +319,7 @@ export class AuthService {
     });
   }
 
-  private async issueSession(user: User): Promise<AuthResult> {
+  private async issueSession(user: SafeUser): Promise<AuthResult> {
     const expiresAt = new Date(Date.now() + SESSION_DURATION_SECONDS * 1_000);
     const session = await this.prisma.session.create({
       data: { userId: user.id, expiresAt },
@@ -289,6 +330,30 @@ export class AuthService {
     );
 
     return { token, user: this.toAuthUser(user) };
+  }
+
+  /**
+   * The password was just proven right, so it is at hand to store again at
+   * today's strength. Conditional on the hash still being the one that was
+   * checked: a password changed in the meantime must not be replaced by the old
+   * one. Failing to upgrade never fails the login.
+   */
+  private async upgradeHash(
+    userId: string,
+    checkedHash: string,
+    password: string,
+  ): Promise<void> {
+    try {
+      await this.prisma.user.updateMany({
+        where: { id: userId, passwordHash: checkedHash },
+        data: { passwordHash: await hashPassword(password) },
+      });
+    } catch (error) {
+      logEvent(
+        { evt: 'auth.rehash_failed', userId, error: String(error) },
+        'error',
+      );
+    }
   }
 
   private normalizeEmail(email: string): string {
@@ -325,19 +390,11 @@ export class AuthService {
     return `<!doctype html><html lang="vi"><body><p>Xin chào ${escapeHtml(displayName)},</p><p>${escapeHtml(message)}</p><p><a href="${escapeHtml(link)}">${escapeHtml(action)}</a></p><p>Nếu không phải bạn thì bỏ qua email này.</p><p>E-learning</p></body></html>`;
   }
 
-  private async safeSend(
-    message: Parameters<Mailer['send']>[0],
-  ): Promise<void> {
-    try {
-      await this.mailer.send(message);
-    } catch (error) {
-      process.stderr.write(
-        `${JSON.stringify({ evt: 'mail.send_failed', tag: message.tag, error: String(error) })}\n`,
-      );
-    }
+  private safeSend(message: Parameters<Mailer['send']>[0]): Promise<void> {
+    return sendQuietly(this.mailer, message);
   }
 
-  private toAuthUser(user: User): AuthUser {
+  private toAuthUser(user: SafeUser): AuthUser {
     return {
       id: user.id,
       email: user.email,

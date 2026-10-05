@@ -31,6 +31,7 @@ export const AUDIT_ACTION_LABEL = {
   "enrollment.revoked": "Thu hồi quyền học",
   "user.blocked": "Khóa tài khoản",
   "user.unblocked": "Mở khóa tài khoản",
+  "user.role_changed": "Đổi vai trò người dùng",
   "purchase.paid": "Đơn hàng đã thanh toán",
   "purchase.refund_requested": "Yêu cầu hoàn tiền",
   "purchase.refund_approved": "Duyệt hoàn tiền",

@@ -11,5 +11,7 @@ import { ProgressService } from './progress.service.js';
   imports: [PrismaModule, AuthModule, EnrollmentModule, CatalogModule, MediaModule],
   controllers: [LearningController],
   providers: [ProgressService],
+  // Checkout reads a learner's progress for the refund rule.
+  exports: [ProgressService],
 })
 export class LearningModule {}

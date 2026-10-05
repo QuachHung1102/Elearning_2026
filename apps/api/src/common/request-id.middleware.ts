@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
+import { requestContext } from './request-context.js';
 
 const VALID_REQUEST_ID = /^[A-Za-z0-9_-]{8,64}$/;
 
@@ -16,5 +17,6 @@ export function requestIdMiddleware(
 
   (request as RequestWithId).requestId = requestId;
   response.setHeader('X-Request-Id', requestId);
-  next();
+  // Everything downstream, however deep, logs under this id.
+  requestContext.run({ requestId }, next);
 }

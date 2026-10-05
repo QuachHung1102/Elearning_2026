@@ -6,7 +6,7 @@ export type User = {
   id: string;
   email: string;
   displayName: string;
-  role: "STUDENT" | "ADMIN";
+  role: "STUDENT" | "INSTRUCTOR" | "ADMIN";
   status: "ACTIVE" | "BLOCKED";
   emailVerifiedAt: string | null;
   createdAt: string;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { User } from "@/lib/session";
 import { LEARNER_HOME } from "@/lib/routes";
+import { CHECKOUT_ENABLED } from "@/lib/orders";
 import { LogoutButton } from "./logout-button";
 import { whoAmI } from "@/lib/viewer";
 import { buttonClass } from "./ui/button";
@@ -73,6 +74,14 @@ export function UserMenu({ variant }: { variant: "desktop" | "mobile" }) {
         >
           Hồ sơ
         </Link>
+        {CHECKOUT_ENABLED && (
+          <Link
+            className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
+            href="/account/orders"
+          >
+            Đơn hàng
+          </Link>
+        )}
         <Link
           className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
           href="/account/password"
@@ -85,6 +94,14 @@ export function UserMenu({ variant }: { variant: "desktop" | "mobile" }) {
         >
           Phiên đăng nhập
         </Link>
+        {user.role === "INSTRUCTOR" && (
+          <Link
+            className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
+            href="/instructor"
+          >
+            Giảng viên
+          </Link>
+        )}
         {user.role === "ADMIN" && (
           <Link
             className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"

@@ -12,11 +12,13 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
+import type { StaffBase } from "@/lib/admin";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { AdminCourseDetail, LessonType } from "@/lib/catalog";
 import { formatDuration, formatNumber } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClass } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { showToast } from "@/components/ui/toast";
@@ -36,7 +38,13 @@ type Draft =
   | { kind: "section"; id?: string; title: string }
   | { kind: "lesson"; sectionId: string; title: string };
 
-export function CurriculumEditor({ course }: { course: AdminCourseDetail }) {
+export function CurriculumEditor({
+  course,
+  base = "/admin",
+}: {
+  course: AdminCourseDetail;
+  base?: StaffBase;
+}) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -193,23 +201,28 @@ export function CurriculumEditor({ course }: { course: AdminCourseDetail }) {
                     <Pencil aria-hidden="true" className="size-4" strokeWidth={1.75} />
                     Sửa
                   </button>
-                  <button
-                    type="button"
-                    className={buttonClass("ghost")}
-                    disabled={busy}
-                    onClick={() =>
-                      run(
-                        () =>
-                          apiFetch(`/admin/sections/${section.id}`, {
-                            method: "DELETE",
-                          }),
-                        "Đã xóa chương",
-                      )
+                  <ConfirmDialog
+                    title="Xóa chương"
+                    description={`Xóa chương "${section.title}"? Chương phải không còn bài học nào. Không hoàn tác được.`}
+                    confirmLabel="Xóa chương"
+                    onConfirm={async () => {
+                      await apiFetch(`/admin/sections/${section.id}`, {
+                        method: "DELETE",
+                      });
+                      showToast("Đã xóa chương", "success");
+                      startTransition(() => router.refresh());
+                    }}
+                    trigger={
+                      <button
+                        type="button"
+                        className={buttonClass("ghost")}
+                        disabled={busy}
+                      >
+                        <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                        Xóa
+                      </button>
                     }
-                  >
-                    <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                    Xóa
-                  </button>
+                  />
                 </div>
 
                 <ol className="grid list-none gap-1 p-0">
@@ -248,7 +261,7 @@ export function CurriculumEditor({ course }: { course: AdminCourseDetail }) {
                         <FileText aria-hidden="true" className="size-5 text-muted-foreground" strokeWidth={1.75} />
                       )}
                       <Link
-                        href={`/admin/courses/${course.id}/lessons/${lesson.id}`}
+                        href={`${base}/courses/${course.id}/lessons/${lesson.id}`}
                         className="flex min-h-11 min-w-0 flex-1 items-center underline-offset-2 hover:underline"
                       >
                         {lesson.title}
@@ -259,23 +272,28 @@ export function CurriculumEditor({ course }: { course: AdminCourseDetail }) {
                           ? "Bài đọc"
                           : formatDuration(lesson.durationSeconds)}
                       </span>
-                      <button
-                        type="button"
-                        className={buttonClass("ghost")}
-                        disabled={busy}
-                        onClick={() =>
-                          run(
-                            () =>
-                              apiFetch(`/admin/lessons/${lesson.id}`, {
-                                method: "DELETE",
-                              }),
-                            "Đã xóa bài học",
-                          )
+                      <ConfirmDialog
+                        title="Xóa bài học"
+                        description={`Xóa bài "${lesson.title}"? Nội dung, tài liệu đính kèm và tiến độ học của bài này sẽ mất. Không hoàn tác được.`}
+                        confirmLabel="Xóa bài học"
+                        onConfirm={async () => {
+                          await apiFetch(`/admin/lessons/${lesson.id}`, {
+                            method: "DELETE",
+                          });
+                          showToast("Đã xóa bài học", "success");
+                          startTransition(() => router.refresh());
+                        }}
+                        trigger={
+                          <button
+                            type="button"
+                            className={buttonClass("ghost")}
+                            disabled={busy}
+                          >
+                            <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                            <span className="sr-only">Xóa bài {lesson.title}</span>
+                          </button>
                         }
-                      >
-                        <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                        <span className="sr-only">Xóa bài {lesson.title}</span>
-                      </button>
+                      />
                     </li>
                   ))}
                 </ol>

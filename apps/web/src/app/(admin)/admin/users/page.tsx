@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Pagination } from "@/components/catalog/pagination";
-import { StatusBadge } from "@/components/ui/badge";
+import { RoleBadge, StatusBadge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { adminFetch, type AdminUserRow } from "@/lib/admin";
@@ -10,12 +10,13 @@ import {
   valueList,
   type Paginated,
 } from "@/lib/catalog";
-import { formatDate, formatNumber, STATUS_LABEL } from "@/lib/format";
+import { formatDate, formatNumber, ROLE_LABEL, STATUS_LABEL } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Người dùng" };
 
-const KEYS = ["q", "status", "page"] as const;
+const KEYS = ["q", "status", "role", "page"] as const;
+const ROLES = Object.keys(ROLE_LABEL) as (keyof typeof ROLE_LABEL)[];
 
 export default async function AdminUsersPage({
   searchParams,
@@ -30,11 +31,12 @@ export default async function AdminUsersPage({
     valueList(params.status).find(
       (value) => value === "ACTIVE" || value === "BLOCKED",
     ) ?? "";
-  const query = { q, status, page: firstValue(params.page) };
+  const role = ROLES.find((value) => value === firstValue(params.role)) ?? "";
+  const query = { q, status, role, page: firstValue(params.page) };
   const users = await adminFetch<Paginated<AdminUserRow>>(
     `/admin/users${toQuery(query, KEYS)}`,
   );
-  const filtered = q !== "" || status !== "";
+  const filtered = q !== "" || status !== "" || role !== "";
 
   return (
     <div className="grid gap-6">
@@ -46,7 +48,7 @@ export default async function AdminUsersPage({
           lọc" reuses this form, and React ignores a new `defaultValue` on a
           mounted <select>, so it would keep and resubmit the old status. */}
       <form
-        key={`${status}:${q}`}
+        key={`${status}:${role}:${q}`}
         method="get"
         action="/admin/users"
         role="search"
@@ -80,6 +82,24 @@ export default async function AdminUsersPage({
             <option value="BLOCKED">{STATUS_LABEL.BLOCKED}</option>
           </select>
         </div>
+        <div className="grid gap-1">
+          <label className="text-sm font-medium" htmlFor="users-role">
+            Vai trò
+          </label>
+          <select
+            id="users-role"
+            name="role"
+            defaultValue={role}
+            className="control"
+          >
+            <option value="">Mọi vai trò</option>
+            {ROLES.map((value) => (
+              <option key={value} value={value}>
+                {ROLE_LABEL[value]}
+              </option>
+            ))}
+          </select>
+        </div>
         <button type="submit" className={buttonClass("outline", "lg")}>
           Lọc
         </button>
@@ -93,7 +113,7 @@ export default async function AdminUsersPage({
             description={`Danh sách chỉ có ${formatNumber(users.totalPages)} trang.`}
             action={
               <Link
-                href={`/admin/users${toQuery({ q, status }, KEYS)}`}
+                href={`/admin/users${toQuery({ q, status, role }, KEYS)}`}
                 className={buttonClass("outline")}
               >
                 Về trang 1
@@ -128,6 +148,7 @@ export default async function AdminUsersPage({
                 <tr>
                   <th className="px-4 py-3 font-semibold">Người dùng</th>
                   <th className="px-4 py-3 font-semibold">Email</th>
+                  <th className="px-4 py-3 font-semibold">Vai trò</th>
                   <th className="hidden px-4 py-3 font-semibold lg:table-cell">
                     Quyền học
                   </th>
@@ -152,6 +173,9 @@ export default async function AdminUsersPage({
                     </td>
                     <td className="px-4 py-2 [overflow-wrap:anywhere]">
                       {user.email}
+                    </td>
+                    <td className="px-4 py-2">
+                      <RoleBadge role={user.role} />
                     </td>
                     <td className="hidden px-4 py-2 tabular-nums lg:table-cell">
                       {formatNumber(user.enrollmentCount)} khóa
@@ -187,6 +211,10 @@ export default async function AdminUsersPage({
                     <dd className="min-w-0 [overflow-wrap:anywhere]">
                       {user.displayName}
                     </dd>
+                  </div>
+                  <div className="flex gap-1">
+                    <dt className="text-muted-foreground">Vai trò:</dt>
+                    <dd>{ROLE_LABEL[user.role]}</dd>
                   </div>
                   <div className="flex gap-1">
                     <dt className="text-muted-foreground">Quyền học:</dt>

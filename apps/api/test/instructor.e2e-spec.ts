@@ -4,6 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
+import { AdminUserController } from '../src/admin/admin-user.controller.js';
 import { hashPassword } from '../src/auth/password.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
@@ -343,7 +344,12 @@ describe('Instructor role (e2e)', () => {
       where: { action: 'user.role_changed' },
       orderBy: { createdAt: 'asc' },
     });
-    expect(log.metadata).toEqual({ fromRole: 'STUDENT', toRole: 'INSTRUCTOR', releasedCourses: 0 });
+    expect(log.metadata).toEqual({
+      fromRole: 'STUDENT',
+      toRole: 'INSTRUCTOR',
+      releasedCourses: 0,
+      releasedCourseIds: [],
+    });
 
     const ownedCourse = await api().post('/api/v1/admin/courses').set(as(su))
       .send({ title: 'Khóa học sẽ bị thu hồi' }).expect(201);
@@ -359,14 +365,43 @@ describe('Instructor role (e2e)', () => {
       where: { action: 'user.role_changed' },
       orderBy: { createdAt: 'desc' },
     });
-    expect(demoteLog.metadata).toEqual({ fromRole: 'INSTRUCTOR', toRole: 'STUDENT', releasedCourses: 1 });
+    // The ids stay in the audit row: releasing a course leaves no owner to read them from.
+    expect(demoteLog.metadata).toEqual({
+      fromRole: 'INSTRUCTOR',
+      toRole: 'STUDENT',
+      releasedCourses: 1,
+      releasedCourseIds: [ownedCourse.body.id],
+    });
 
     await api().patch(`/api/v1/admin/users/${admin.id}/role`).set(as(sa))
       .send({ role: 'STUDENT' }).expect(409);
     await api().patch(`/api/v1/admin/users/${user.id}/role`).set(as(sa))
       .send({ role: 'OWNER' }).expect(400);
+    // Admin accounts come from the seed only (DATA_MODEL.md §User): the API
+    // must not mint one, even for an admin asking.
+    await api().patch(`/api/v1/admin/users/${user.id}/role`).set(as(sa))
+      .send({ role: 'ADMIN' }).expect(400);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).role).toBe('STUDENT');
     await api().patch(`/api/v1/admin/users/${admin.id}/role`).set(as(su))
       .send({ role: 'ADMIN' }).expect(404);
+  });
+
+  // REVIEW F-29: two admins demoting each other both passed their checks and
+  // left the site with none. The acting admin is re-checked under a lock on
+  // every admin row, so a demoted actor's request is refused.
+  it('never leaves the site without an admin', async () => {
+    const x = await createUser('ADMIN');
+    const y = await createUser('ADMIN');
+    // x was demoted by a concurrent request a moment ago; this is y's request.
+    await prisma.user.update({ where: { id: x.id }, data: { role: 'STUDENT' } });
+
+    await expect(
+      app
+        .get(AdminUserController)
+        .updateRole(y.id, { role: 'STUDENT' }, { actorId: x.id, ipAddress: null }),
+    ).rejects.toMatchObject({ status: 404 });
+
+    expect(await prisma.user.count({ where: { role: 'ADMIN' } })).toBe(1);
   });
 
   it('exposes the instructor display name on public course payloads', async () => {

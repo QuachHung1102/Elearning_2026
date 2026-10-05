@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Đăng ký" };
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string | string[] }>;
 }) {
   const { next } = await searchParams;
   const destination = safeNext(next);
