@@ -349,10 +349,14 @@ describe('Instructor role (e2e)', () => {
       toRole: 'INSTRUCTOR',
       releasedCourses: 0,
       releasedCourseIds: [],
+      releasedVideoAssetIds: [],
     });
 
     const ownedCourse = await api().post('/api/v1/admin/courses').set(as(su))
       .send({ title: 'Khóa học sẽ bị thu hồi' }).expect(201);
+    const ownedVideo = await prisma.videoAsset.create({
+      data: { externalId: `vid-${randomUUID()}`, instructorId: user.id },
+    });
 
     await api().patch(`/api/v1/admin/users/${user.id}/role`).set(as(sa))
       .send({ role: 'STUDENT' }).expect(200);
@@ -360,6 +364,9 @@ describe('Instructor role (e2e)', () => {
 
     expect(
       (await prisma.course.findUniqueOrThrow({ where: { id: ownedCourse.body.id } })).instructorId,
+    ).toBeNull();
+    expect(
+      (await prisma.videoAsset.findUniqueOrThrow({ where: { id: ownedVideo.id } })).instructorId,
     ).toBeNull();
     const demoteLog = await prisma.auditLog.findFirstOrThrow({
       where: { action: 'user.role_changed' },
@@ -371,6 +378,7 @@ describe('Instructor role (e2e)', () => {
       toRole: 'STUDENT',
       releasedCourses: 1,
       releasedCourseIds: [ownedCourse.body.id],
+      releasedVideoAssetIds: [ownedVideo.id],
     });
 
     await api().patch(`/api/v1/admin/users/${admin.id}/role`).set(as(sa))

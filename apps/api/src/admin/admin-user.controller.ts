@@ -308,6 +308,7 @@ export class AdminUserController {
       // The ids go into the audit row: once released there is no owner left to
       // read them from, and an accidental demotion is undone by reassigning them.
       let releasedCourseIds: string[] = [];
+      let releasedVideoAssetIds: string[] = [];
       if (current.role === UserRole.INSTRUCTOR && input.role !== UserRole.INSTRUCTOR) {
         const owned = await tx.course.findMany({
           where: { instructorId: id },
@@ -318,6 +319,15 @@ export class AdminUserController {
           data: { instructorId: null },
         });
         releasedCourseIds = owned.map((course) => course.id);
+        // Locked last (users → courses → video_assets). No explicit lock: no
+        // path locks a video asset and then a course or user row, and the
+        // UPDATE's own row locks are enough.
+        const videos = await tx.videoAsset.updateManyAndReturn({
+          where: { instructorId: id },
+          data: { instructorId: null },
+          select: { id: true },
+        });
+        releasedVideoAssetIds = videos.map((video) => video.id);
       }
       await this.audit.record(
         {
@@ -330,6 +340,7 @@ export class AdminUserController {
             toRole: input.role,
             releasedCourses: releasedCourseIds.length,
             releasedCourseIds,
+            releasedVideoAssetIds,
           },
         },
         tx,
