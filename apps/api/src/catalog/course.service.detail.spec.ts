@@ -1,4 +1,4 @@
-import { CatalogService } from './catalog.service.js';
+import { CourseService } from './course.service.js';
 
 /**
  * REVIEW F-31: the public course page needs each lesson's outline, and used to
@@ -17,7 +17,7 @@ describe('the course detail query', () => {
 
   it('reads the outline of a lesson and never its text, for the public page', async () => {
     const findFirst = vi.fn().mockResolvedValue(null);
-    const service = new CatalogService({ course: { findFirst } } as never, {} as never, {} as never, {} as never);
+    const service = new CourseService({ course: { findFirst } } as never, {} as never, {} as never, {} as never);
 
     await service.getCourseBySlug('khoa-hoc').catch(() => undefined);
 
@@ -28,7 +28,7 @@ describe('the course detail query', () => {
 
   it('and for the learner shell', async () => {
     const findUnique = vi.fn().mockResolvedValue(null);
-    const service = new CatalogService({ course: { findUnique } } as never, {} as never, {} as never, {} as never);
+    const service = new CourseService({ course: { findUnique } } as never, {} as never, {} as never, {} as never);
 
     await service.getCourseDetailForLearner('id').catch(() => undefined);
 

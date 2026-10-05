@@ -4,57 +4,48 @@ import {
   type AuditActorContext,
 } from '../audit/audit.service.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
-import { isSlugConflict } from '../common/prisma-errors.js';
 import {
   paginated,
   resolvePage,
   type Paginated,
 } from '../common/pagination.js';
-import { config } from '../config.js';
 import { Prisma, UserRole } from '../generated/prisma/client.js';
 import {
   CourseLevel,
   CourseStatus,
   EnrollmentStatus,
-  LessonType,
-  StorageProvider,
 } from '../generated/prisma/enums.js';
 import {
   isCoverKeyFor,
-  isResourceKeyFor,
   OBJECT_STORAGE,
   type ObjectStorage,
 } from '../media/object-storage.js';
 import { STREAM_CLIENT, type StreamClient } from '../media/stream.client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
+  lockCourse,
+  mustFindCategory,
+  mustFindCourse,
+  notFound,
+  resolveSlug,
+  storageProvider,
+  toCategory,
+  toSectionOutline,
+  writeWithSlug,
+  type CategoryDto,
+  type LessonRow,
+} from './catalog.shared.js';
+import {
   publishIssues,
   type PublishIssue,
 } from './publish-validation.js';
-import { isSameSet, reorderSteps } from './reorder.js';
 import { buildSearchText, normalize } from './search-text.js';
-import { uniqueSlug } from './slug.js';
 import type {
   AdminCourseListQuery,
   CourseListQuery,
-  CreateCategoryDto,
   CreateCourseDto,
-  CreateLessonDto,
-  CreateResourceDto,
-  UpdateCategoryDto,
   UpdateCourseDto,
-  UpdateLessonDto,
 } from './course.dto.js';
-
-type Tx = Prisma.TransactionClient;
-
-/**
- * How many times a writer picks a new slug after losing one to another writer.
- * Each round of N writers with one title lets one of them through, so the last
- * of N needs N rounds: this is the most simultaneous writers of one title that
- * all succeed.
- */
-const SLUG_ATTEMPTS = 20;
 
 export const CATALOG_PAGE_SIZE = 12;
 
@@ -78,12 +69,8 @@ export const CARD_SELECT = {
   instructor: { select: { displayName: true } },
 } satisfies Prisma.CourseSelect;
 
-function notFound(): never {
-  throw appError(HttpStatus.NOT_FOUND, ERROR_CODE.NOT_FOUND, 'Not Found');
-}
-
 @Injectable()
-export class CatalogService {
+export class CourseService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -92,27 +79,6 @@ export class CatalogService {
   ) {}
 
   // ── Public catalog ───────────────────────────────────────────────
-
-  async listCategories() {
-    const categories = await this.prisma.category.findMany({
-      orderBy: { position: 'asc' },
-      include: {
-        _count: { select: { courses: { where: { status: 'PUBLISHED' } } } },
-      },
-    });
-    return { items: categories.map((category) => this.toCategory(category)) };
-  }
-
-  async getCategoryBySlug(slug: string) {
-    const category = await this.prisma.category.findUnique({
-      where: { slug },
-      include: {
-        _count: { select: { courses: { where: { status: 'PUBLISHED' } } } },
-      },
-    });
-    if (!category) notFound();
-    return this.toCategory(category);
-  }
 
   async listCourses(query: CourseListQuery): Promise<Paginated<CourseCard>> {
     const page = resolvePage(query, CATALOG_PAGE_SIZE);
@@ -169,156 +135,6 @@ export class CatalogService {
     });
     if (!course) notFound();
     return { ...this.toCourseDetail(course), status: course.status };
-  }
-
-  // ── Admin: categories ────────────────────────────────────────────
-
-  async listCategoriesForAdmin() {
-    const categories = await this.prisma.category.findMany({
-      orderBy: { position: 'asc' },
-      include: { _count: { select: { courses: true } } },
-    });
-    return { items: categories.map((category) => this.toCategory(category)) };
-  }
-
-  async createCategory(input: CreateCategoryDto, actor: AuditActorContext) {
-    return this.writeWithSlug(
-      () =>
-        this.resolveSlug(input.slug, input.name, 80, (value) =>
-          this.categorySlugTaken(value),
-        ),
-      async (slug) => {
-        const last = await this.prisma.category.findFirst({
-          orderBy: { position: 'desc' },
-          select: { position: true },
-        });
-        return this.prisma.$transaction(async (tx) => {
-          const category = await tx.category.create({
-            data: {
-              slug,
-              name: input.name,
-              description: input.description ?? null,
-              icon: input.icon ?? null,
-              position: (last?.position ?? 0) + 1,
-            },
-            include: { _count: { select: { courses: true } } },
-          });
-          await this.audit.record(
-            {
-              ...actor,
-              action: 'category.created',
-              entityType: 'CATEGORY',
-              entityId: category.id,
-              metadata: { slug: category.slug },
-            },
-            tx,
-          );
-          return this.toCategory(category);
-        });
-      },
-    );
-  }
-
-  async updateCategory(
-    id: string,
-    input: UpdateCategoryDto,
-    actor: AuditActorContext,
-  ) {
-    await this.mustFindCategory(id);
-    if (input.slug && (await this.categorySlugTaken(input.slug, id))) {
-      throw appError(
-        HttpStatus.CONFLICT,
-        ERROR_CODE.SLUG_TAKEN,
-        'Slug is already taken',
-      );
-    }
-    return this.prisma.$transaction(async (tx) => {
-      const category = await tx.category.update({
-        where: { id },
-        data: {
-          ...(input.name === undefined ? {} : { name: input.name }),
-          ...(input.slug === undefined ? {} : { slug: input.slug }),
-          ...(input.description === undefined
-            ? {}
-            : { description: input.description || null }),
-          ...(input.icon === undefined ? {} : { icon: input.icon || null }),
-        },
-        include: { _count: { select: { courses: true } } },
-      });
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'category.updated',
-          entityType: 'CATEGORY',
-          entityId: id,
-          metadata: { slug: category.slug },
-        },
-        tx,
-      );
-      return this.toCategory(category);
-    });
-  }
-
-  async deleteCategory(id: string, actor: AuditActorContext): Promise<void> {
-    const category = await this.mustFindCategory(id);
-    const courses = await this.prisma.course.count({
-      where: { categoryId: id },
-    });
-    if (courses > 0) {
-      throw appError(
-        HttpStatus.CONFLICT,
-        ERROR_CODE.CATEGORY_NOT_EMPTY,
-        'Category still has courses',
-      );
-    }
-    await this.prisma.$transaction(async (tx) => {
-      await tx.category.delete({ where: { id } });
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'category.deleted',
-          entityType: 'CATEGORY',
-          entityId: id,
-          metadata: { slug: category.slug },
-        },
-        tx,
-      );
-    });
-  }
-
-  async reorderCategories(
-    categoryIds: string[],
-    actor: AuditActorContext,
-  ): Promise<void> {
-    const current = await this.prisma.category.findMany({
-      orderBy: { position: 'asc' },
-      select: { id: true },
-    });
-    this.assertSameSet(
-      current.map((row) => row.id),
-      categoryIds,
-    );
-    // Category.position is not unique, but normalising through the same
-    // two-phase routine keeps one reorder implementation in the codebase.
-    await this.prisma.$transaction(async (tx) => {
-      for (const phase of reorderSteps(categoryIds)) {
-        for (const update of phase) {
-          await tx.category.update({
-            where: { id: update.id },
-            data: { position: update.position },
-          });
-        }
-      }
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'category.reordered',
-          entityType: 'CATEGORY',
-          metadata: { categoryIds },
-        },
-        tx,
-      );
-    });
   }
 
   // ── Admin: courses ───────────────────────────────────────────────
@@ -394,13 +210,13 @@ export class CatalogService {
     actor: AuditActorContext,
     ownerId: string | null = null,
   ) {
-    return this.writeWithSlug(
+    return writeWithSlug(
       () =>
-        this.resolveSlug(input.slug, input.title, 120, (value) =>
+        resolveSlug(input.slug, input.title, 120, (value) =>
           this.courseSlugTaken(value),
         ),
       async (slug) => {
-        if (input.categoryId) await this.mustFindCategory(input.categoryId);
+        if (input.categoryId) await mustFindCategory(this.prisma, input.categoryId);
         return this.prisma.$transaction(async (tx) => {
           const course = await tx.course.create({
             data: {
@@ -438,7 +254,7 @@ export class CatalogService {
     input: UpdateCourseDto,
     actor: AuditActorContext,
   ) {
-    const course = await this.mustFindCourse(id);
+    const course = await mustFindCourse(this.prisma, id);
 
     if (input.slug !== undefined && input.slug !== course.slug) {
       // Slug locks on `publishedAt`, not on `status`: unpublishing does not
@@ -459,7 +275,7 @@ export class CatalogService {
         );
       }
     }
-    if (input.categoryId) await this.mustFindCategory(input.categoryId);
+    if (input.categoryId) await mustFindCategory(this.prisma, input.categoryId);
     if (input.coverImageKey && !isCoverKeyFor(id, input.coverImageKey)) {
       throw appError(
         HttpStatus.BAD_REQUEST,
@@ -551,7 +367,7 @@ export class CatalogService {
             : {
                 coverImageKey: input.coverImageKey || null,
                 coverImageStorage: input.coverImageKey
-                  ? this.storageProvider()
+                  ? storageProvider()
                   : null,
               }),
         },
@@ -638,7 +454,7 @@ export class CatalogService {
       // Checked again under the course lock: an edit that landed after the read
       // above must not let an unpublishable course out. `readiness` is what was
       // fetched before, so a video attached since counts as not ready.
-      await this.lockCourse(tx, id);
+      await lockCourse(tx, id);
       const fresh = await tx.course.findUniqueOrThrow({
         where: { id },
         include: this.adminDetailInclude(),
@@ -746,7 +562,7 @@ export class CatalogService {
   }
 
   async archiveCourse(id: string, actor: AuditActorContext) {
-    await this.mustFindCourse(id);
+    await mustFindCourse(this.prisma, id);
     return this.prisma.$transaction(async (tx) => {
       // DATA_MODEL.md §Chuyển trạng thái: only PUBLISHED → ARCHIVED. A DRAFT
       // was never sold (delete it instead), and re-archiving would rewrite
@@ -785,7 +601,7 @@ export class CatalogService {
   }
 
   async deleteCourse(id: string, actor: AuditActorContext): Promise<void> {
-    const course = await this.mustFindCourse(id);
+    const course = await mustFindCourse(this.prisma, id);
     await this.prisma.$transaction(async (tx) => {
       // Only a draft is deleted for good (DATA_MODEL.md §Xóa): a published
       // course's slug is already in shared links and the sitemap, and one that
@@ -840,496 +656,7 @@ export class CatalogService {
     });
   }
 
-  // ── Admin: curriculum ────────────────────────────────────────────
-
-  async createSection(
-    courseId: string,
-    title: string,
-    actor: AuditActorContext,
-  ) {
-    await this.mustFindCourse(courseId);
-    return this.prisma.$transaction(async (tx) => {
-      await this.lockCourse(tx, courseId);
-      const last = await tx.section.findFirst({
-        where: { courseId },
-        orderBy: { position: 'desc' },
-        select: { position: true },
-      });
-      const section = await tx.section.create({
-        data: { courseId, title, position: (last?.position ?? 0) + 1 },
-        include: { lessons: { orderBy: { position: 'asc' } } },
-      });
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'section.created',
-          entityType: 'SECTION',
-          entityId: section.id,
-          metadata: { courseId, title },
-        },
-        tx,
-      );
-      return this.toSectionOutline(section);
-    });
-  }
-
-  async updateSection(id: string, title: string, actor: AuditActorContext) {
-    const current = await this.mustFindSection(id);
-    return this.prisma.$transaction(async (tx) => {
-      const section = await tx.section.update({
-        where: { id },
-        data: { title },
-        include: { lessons: { orderBy: { position: 'asc' } } },
-      });
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'section.updated',
-          entityType: 'SECTION',
-          entityId: id,
-          metadata: { courseId: current.courseId, title },
-        },
-        tx,
-      );
-      return this.toSectionOutline(section);
-    });
-  }
-
-  async deleteSection(id: string, actor: AuditActorContext): Promise<void> {
-    const section = await this.mustFindSection(id);
-    await this.prisma.$transaction(async (tx) => {
-      // Counted under the course lock: a lesson created a moment ago is seen,
-      // instead of being cascaded away with the section.
-      await this.lockCourse(tx, section.courseId);
-      const lessons = await tx.lesson.count({ where: { sectionId: id } });
-      if (lessons > 0) {
-        throw appError(
-          HttpStatus.CONFLICT,
-          ERROR_CODE.SECTION_NOT_EMPTY,
-          'Section still has lessons',
-        );
-      }
-      await tx.section.delete({ where: { id } });
-      await this.recompute(tx, section.courseId);
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'section.deleted',
-          entityType: 'SECTION',
-          entityId: id,
-          metadata: { courseId: section.courseId, title: section.title },
-        },
-        tx,
-      );
-    });
-  }
-
-  async reorderSections(
-    courseId: string,
-    sectionIds: string[],
-    actor: AuditActorContext,
-  ): Promise<void> {
-    await this.mustFindCourse(courseId);
-    await this.prisma.$transaction(async (tx) => {
-      await this.lockCourse(tx, courseId);
-      const current = await tx.section.findMany({
-        where: { courseId },
-        select: { id: true },
-      });
-      this.assertSameSet(
-        current.map((row) => row.id),
-        sectionIds,
-      );
-      for (const phase of reorderSteps(sectionIds)) {
-        for (const update of phase) {
-          await tx.section.update({
-            where: { id: update.id },
-            data: { position: update.position },
-          });
-        }
-      }
-      await this.recompute(tx, courseId);
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'section.reordered',
-          entityType: 'COURSE',
-          entityId: courseId,
-          metadata: { sectionIds },
-        },
-        tx,
-      );
-    });
-  }
-
-  async createLesson(
-    sectionId: string,
-    input: CreateLessonDto,
-    actor: AuditActorContext,
-  ) {
-    const section = await this.mustFindSection(sectionId);
-    return this.prisma.$transaction(async (tx) => {
-      await this.lockCourse(tx, section.courseId);
-      const last = await tx.lesson.findFirst({
-        where: { sectionId },
-        orderBy: { position: 'desc' },
-        select: { position: true },
-      });
-      const lesson = await tx.lesson.create({
-        data: {
-          sectionId,
-          title: input.title,
-          type: input.type,
-          position: (last?.position ?? 0) + 1,
-        },
-      });
-      await this.recompute(tx, section.courseId);
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'lesson.created',
-          entityType: 'LESSON',
-          entityId: lesson.id,
-          metadata: { courseId: section.courseId, title: lesson.title },
-        },
-        tx,
-      );
-      return this.toLessonOutline(lesson);
-    });
-  }
-
-  /**
-   * The editor at /admin/courses/[id]/lessons/[lessonId] needs the current
-   * content to put in the textarea, and  is
-   * deliberately outline-only. API_CONTRACT.md §5.2 routes admin *preview*
-   * through /learn/*, which is a different job from loading a form.
-   */
-  async getLessonForAdmin(id: string) {
-    const lesson = await this.prisma.lesson.findUnique({
-      where: { id },
-      include: {
-        videoAsset: true,
-        resources: { orderBy: { position: 'asc' } },
-        section: { select: { courseId: true, title: true } },
-      },
-    });
-    if (!lesson) notFound();
-    return {
-      ...this.toLessonOutline(lesson),
-      courseId: lesson.section.courseId,
-      sectionTitle: lesson.section.title,
-      content: lesson.content,
-      videoAssetId: lesson.videoAssetId,
-      videoAsset: lesson.videoAsset
-        ? {
-            id: lesson.videoAsset.id,
-            provider: lesson.videoAsset.provider,
-            externalId: lesson.videoAsset.externalId,
-            status: lesson.videoAsset.status,
-            durationSeconds: lesson.videoAsset.durationSeconds,
-          }
-        : null,
-      resources: lesson.resources.map((resource) => this.toResource(resource)),
-    };
-  }
-
-  async updateLesson(
-    id: string,
-    input: UpdateLessonDto,
-    actor: AuditActorContext,
-    /** `null` for an admin; an instructor attaches only videos they registered. */
-    ownerId: string | null,
-  ) {
-    const lesson = await this.mustFindLesson(id);
-    const type = input.type ?? lesson.type;
-
-    let videoAssetId =
-      input.videoAssetId === undefined
-        ? lesson.videoAssetId
-        : (input.videoAssetId ?? null);
-    if (type === LessonType.ARTICLE) videoAssetId = null;
-
-    if (videoAssetId && videoAssetId !== lesson.videoAssetId) {
-      const asset = await this.prisma.videoAsset.findUnique({
-        where: { id: videoAssetId },
-        include: { lesson: { select: { id: true } } },
-      });
-      if (!asset || (ownerId !== null && asset.instructorId !== ownerId)) {
-        notFound();
-      }
-      if (asset.lesson && asset.lesson.id !== id) {
-        throw appError(
-          HttpStatus.CONFLICT,
-          ERROR_CODE.VIDEO_ALREADY_ATTACHED,
-          'Video is already attached to another lesson',
-        );
-      }
-    }
-
-    const durationSeconds =
-      type === LessonType.ARTICLE
-        ? 0
-        : videoAssetId
-          ? ((
-              await this.prisma.videoAsset.findUnique({
-                where: { id: videoAssetId },
-                select: { durationSeconds: true },
-              })
-            )?.durationSeconds ?? 0)
-          : 0;
-
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.lesson.update({
-        where: { id },
-        data: {
-          ...(input.title === undefined ? {} : { title: input.title }),
-          ...(input.isPreview === undefined
-            ? {}
-            : { isPreview: input.isPreview }),
-          ...(input.content === undefined ? {} : { content: input.content }),
-          type,
-          videoAssetId,
-          durationSeconds,
-        },
-      });
-      await this.recompute(tx, lesson.section.courseId);
-
-      const changedFields = [
-        input.title !== undefined && input.title !== lesson.title && 'title',
-        type !== lesson.type && 'type',
-        input.content !== undefined &&
-          input.content !== lesson.content &&
-          'content',
-        input.isPreview !== undefined &&
-          input.isPreview !== lesson.isPreview &&
-          'isPreview',
-        videoAssetId !== lesson.videoAssetId && 'videoAssetId',
-      ].filter(Boolean);
-      const metadata = {
-        courseId: lesson.section.courseId,
-        title: updated.title,
-        changedFields,
-      };
-      // One row per request: a video change is the more specific event, so it
-      // replaces `lesson.updated` rather than being written alongside it.
-      if (videoAssetId !== lesson.videoAssetId) {
-        await this.audit.record(
-          {
-            ...actor,
-            action: videoAssetId ? 'video.attached' : 'video.detached',
-            entityType: 'LESSON',
-            entityId: id,
-            metadata: {
-              ...metadata,
-              videoAssetId: videoAssetId ?? lesson.videoAssetId,
-            },
-          },
-          tx,
-        );
-      } else {
-        await this.audit.record(
-          {
-            ...actor,
-            action: 'lesson.updated',
-            entityType: 'LESSON',
-            entityId: id,
-            metadata,
-          },
-          tx,
-        );
-      }
-
-      return {
-        ...this.toLessonOutline(updated),
-        content: updated.content,
-        videoAssetId: updated.videoAssetId,
-      };
-    });
-  }
-
-  async deleteLesson(id: string, actor: AuditActorContext): Promise<void> {
-    const lesson = await this.mustFindLesson(id);
-    await this.prisma.$transaction(async (tx) => {
-      // Counted inside the transaction: the rows cascade with the lesson, and
-      // the audit row is the only trace of how much progress went with it.
-      const deletedProgressRows = await tx.lessonProgress.count({
-        where: { lessonId: id },
-      });
-      await tx.lesson.delete({ where: { id } });
-      await this.recompute(tx, lesson.section.courseId);
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'lesson.deleted',
-          entityType: 'LESSON',
-          entityId: id,
-          metadata: {
-            courseId: lesson.section.courseId,
-            title: lesson.title,
-            deletedProgressRows,
-          },
-        },
-        tx,
-      );
-    });
-  }
-
-  async reorderLessons(
-    sectionId: string,
-    lessonIds: string[],
-    actor: AuditActorContext,
-  ): Promise<void> {
-    const section = await this.mustFindSection(sectionId);
-    await this.prisma.$transaction(async (tx) => {
-      await this.lockCourse(tx, section.courseId);
-      const current = await tx.lesson.findMany({
-        where: { sectionId },
-        select: { id: true },
-      });
-      this.assertSameSet(
-        current.map((row) => row.id),
-        lessonIds,
-      );
-      for (const phase of reorderSteps(lessonIds)) {
-        for (const update of phase) {
-          await tx.lesson.update({
-            where: { id: update.id },
-            data: { position: update.position },
-          });
-        }
-      }
-      await this.recompute(tx, section.courseId);
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'lesson.reordered',
-          entityType: 'SECTION',
-          entityId: sectionId,
-          metadata: { lessonIds },
-        },
-        tx,
-      );
-    });
-  }
-
-  // ── Admin: lesson resources ──────────────────────────────────────
-
-  async addResource(
-    lessonId: string,
-    input: CreateResourceDto,
-    actor: AuditActorContext,
-  ) {
-    await this.mustFindLesson(lessonId);
-    if (!isResourceKeyFor(lessonId, input.objectKey)) {
-      throw appError(
-        HttpStatus.BAD_REQUEST,
-        ERROR_CODE.VALIDATION_FAILED,
-        'objectKey must belong to this lesson',
-      );
-    }
-    const last = await this.prisma.lessonResource.findFirst({
-      where: { lessonId },
-      orderBy: { position: 'desc' },
-      select: { position: true },
-    });
-    return this.prisma.$transaction(async (tx) => {
-      const resource = await tx.lessonResource.create({
-        data: {
-          lessonId,
-          storage: this.storageProvider(),
-          objectKey: input.objectKey,
-          filename: input.filename,
-          contentType: input.contentType,
-          sizeBytes: input.sizeBytes,
-          position: (last?.position ?? 0) + 1,
-        },
-      });
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'resource.created',
-          entityType: 'RESOURCE',
-          entityId: resource.id,
-          metadata: { lessonId, filename: resource.filename },
-        },
-        tx,
-      );
-      return this.toResource(resource);
-    });
-  }
-
-  async listResources(lessonId: string) {
-    await this.mustFindLesson(lessonId);
-    const resources = await this.prisma.lessonResource.findMany({
-      where: { lessonId },
-      orderBy: { position: 'asc' },
-    });
-    return { items: resources.map((resource) => this.toResource(resource)) };
-  }
-
-  async deleteResource(id: string, actor: AuditActorContext): Promise<void> {
-    const resource = await this.prisma.lessonResource.findUnique({
-      where: { id },
-    });
-    if (!resource) notFound();
-    await this.prisma.$transaction(async (tx) => {
-      await tx.lessonResource.delete({ where: { id } });
-      await this.audit.record(
-        {
-          ...actor,
-          action: 'resource.deleted',
-          entityType: 'RESOURCE',
-          entityId: id,
-          metadata: {
-            lessonId: resource.lessonId,
-            filename: resource.filename,
-          },
-        },
-        tx,
-      );
-    });
-    await this.storage.delete(resource.objectKey);
-  }
-
   // ── Shared ───────────────────────────────────────────────────────
-
-  /**
-   * The single writer of the two denormalised curriculum counters. Called in
-   * the same transaction as every mutation that touches a lesson — publish is
-   * just one more caller, not the only one.
-   */
-  private async recompute(tx: Tx, courseId: string): Promise<void> {
-    await this.lockCourse(tx, courseId);
-    const { _count, _sum } = await tx.lesson.aggregate({
-      where: { section: { courseId } },
-      _count: true,
-      _sum: { durationSeconds: true },
-    });
-    await tx.course.update({
-      where: { id: courseId },
-      data: {
-        lessonCount: _count,
-        totalDurationSeconds: _sum.durationSeconds ?? 0,
-      },
-    });
-  }
-
-  /**
-   * Every write to a course's curriculum takes this first, so positions, id
-   * sets and the lesson counters are read and written by one writer at a time.
-   * The same lock `EnrollmentService.grant` and `updateCourse` use; always
-   * taken before any child row, so writers cannot deadlock on each other.
-   */
-  private async lockCourse(tx: Tx, courseId: string): Promise<void> {
-    await tx.$queryRaw`
-      SELECT 1 FROM courses WHERE id = ${courseId}::uuid FOR NO KEY UPDATE`;
-  }
-
-  storageProvider(): StorageProvider {
-    return config.storageDriver === 'r2'
-      ? StorageProvider.CLOUDFLARE_R2
-      : StorageProvider.DEMO;
-  }
 
   private courseOrder(sort?: string): Prisma.CourseOrderByWithRelationInput[] {
     const [field, direction] = (sort ?? 'enrollmentCount:desc').split(':') as [
@@ -1386,58 +713,6 @@ export class CatalogService {
     } satisfies Prisma.CourseInclude;
   }
 
-  /**
-   * Picks a slug and writes with it. Two writers with one title read the same
-   * "free" slug and only one insert survives (REVIEW F-06): the loser picks
-   * again. A slug the caller chose is refused by `pick` itself once it is taken,
-   * with `SLUG_TAKEN`, and so are the attempts that run out.
-   */
-  private async writeWithSlug<T>(
-    pick: () => Promise<string>,
-    write: (slug: string) => Promise<T>,
-  ): Promise<T> {
-    for (let attempt = 1; ; attempt += 1) {
-      const slug = await pick();
-      try {
-        return await write(slug);
-      } catch (error) {
-        if (!isSlugConflict(error)) throw error;
-        if (attempt >= SLUG_ATTEMPTS) {
-          throw appError(
-            HttpStatus.CONFLICT,
-            ERROR_CODE.SLUG_TAKEN,
-            'Slug is already taken',
-          );
-        }
-      }
-    }
-  }
-
-  private async resolveSlug(
-    explicit: string | undefined,
-    source: string,
-    maxLength: number,
-    isTaken: (slug: string) => Promise<boolean>,
-  ): Promise<string> {
-    if (!explicit) return uniqueSlug(source, isTaken, maxLength);
-    if (await isTaken(explicit)) {
-      throw appError(
-        HttpStatus.CONFLICT,
-        ERROR_CODE.SLUG_TAKEN,
-        'Slug is already taken',
-      );
-    }
-    return explicit;
-  }
-
-  private async categorySlugTaken(slug: string, exceptId?: string) {
-    const row = await this.prisma.category.findUnique({
-      where: { slug },
-      select: { id: true },
-    });
-    return Boolean(row) && row!.id !== exceptId;
-  }
-
   private async courseSlugTaken(slug: string, exceptId?: string) {
     const row = await this.prisma.course.findUnique({
       where: { slug },
@@ -1446,64 +721,7 @@ export class CatalogService {
     return Boolean(row) && row!.id !== exceptId;
   }
 
-  private assertSameSet(current: string[], ordered: string[]): void {
-    if (!isSameSet(current, ordered)) {
-      throw appError(
-        HttpStatus.BAD_REQUEST,
-        ERROR_CODE.ORDER_MISMATCH,
-        'The submitted order does not match the current items',
-      );
-    }
-  }
-
-  private async mustFindCategory(id: string) {
-    const category = await this.prisma.category.findUnique({ where: { id } });
-    if (!category) notFound();
-    return category;
-  }
-
-  private async mustFindCourse(id: string) {
-    const course = await this.prisma.course.findUnique({ where: { id } });
-    if (!course) notFound();
-    return course;
-  }
-
-  private async mustFindSection(id: string) {
-    const section = await this.prisma.section.findUnique({ where: { id } });
-    if (!section) notFound();
-    return section;
-  }
-
-  private async mustFindLesson(id: string) {
-    const lesson = await this.prisma.lesson.findUnique({
-      where: { id },
-      include: { section: { select: { courseId: true } } },
-    });
-    if (!lesson) notFound();
-    return lesson;
-  }
-
   // ── Response shapes ──────────────────────────────────────────────
-
-  private toCategory(category: {
-    id: string;
-    slug: string;
-    name: string;
-    description: string | null;
-    icon: string | null;
-    position: number;
-    _count?: { courses: number };
-  }) {
-    return {
-      id: category.id,
-      slug: category.slug,
-      name: category.name,
-      description: category.description,
-      icon: category.icon,
-      position: category.position,
-      courseCount: category._count?.courses ?? 0,
-    };
-  }
 
   toCourseCard(course: CourseCardRow): CourseCard {
     return {
@@ -1525,9 +743,7 @@ export class CatalogService {
         course.ratingAverage === null ? null : Number(course.ratingAverage),
       ratingCount: course.ratingCount,
       demoStats: course.demoStats,
-      category: course.category
-        ? this.toCategory({ ...course.category })
-        : null,
+      category: course.category ? toCategory({ ...course.category }) : null,
       instructorName: course.instructor?.displayName ?? null,
     };
   }
@@ -1541,63 +757,10 @@ export class CatalogService {
       targetAudience: course.targetAudience,
       publishedAt: course.publishedAt,
       updatedAt: course.updatedAt,
-      sections: course.sections.map((section) =>
-        this.toSectionOutline(section),
-      ),
-    };
-  }
-
-  private toSectionOutline(section: {
-    id: string;
-    title: string;
-    position: number;
-    lessons: LessonRow[];
-  }) {
-    return {
-      id: section.id,
-      title: section.title,
-      position: section.position,
-      lessons: section.lessons.map((lesson) => this.toLessonOutline(lesson)),
-    };
-  }
-
-  /** Never carries `content` or `videoAssetId` — that is the guest boundary. */
-  private toLessonOutline(lesson: LessonRow) {
-    return {
-      id: lesson.id,
-      title: lesson.title,
-      position: lesson.position,
-      type: lesson.type,
-      durationSeconds: lesson.durationSeconds,
-      isPreview: lesson.isPreview,
-    };
-  }
-
-  private toResource(resource: {
-    id: string;
-    filename: string;
-    contentType: string;
-    sizeBytes: number;
-    position: number;
-  }) {
-    return {
-      id: resource.id,
-      filename: resource.filename,
-      contentType: resource.contentType,
-      sizeBytes: resource.sizeBytes,
-      position: resource.position,
+      sections: course.sections.map((section) => toSectionOutline(section)),
     };
   }
 }
-
-type LessonRow = {
-  id: string;
-  title: string;
-  position: number;
-  type: LessonType;
-  durationSeconds: number;
-  isPreview: boolean;
-};
 
 type CourseCardRow = {
   id: string;
@@ -1659,14 +822,4 @@ export type CourseCard = {
   demoStats: boolean;
   category: CategoryDto | null;
   instructorName: string | null;
-};
-
-export type CategoryDto = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  icon: string | null;
-  position: number;
-  courseCount: number;
 };

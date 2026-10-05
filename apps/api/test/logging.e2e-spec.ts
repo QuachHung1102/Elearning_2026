@@ -1,6 +1,6 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
-import { CatalogService } from '../src/catalog/catalog.service.js';
+import { CourseService } from '../src/catalog/course.service.js';
 import { CheckoutService } from '../src/checkout/checkout.service.js';
 import { DemoZaloPayClient } from '../src/checkout/demo-zalopay.client.js';
 import {
@@ -97,7 +97,7 @@ describe('logging (e2e)', () => {
   });
 
   it('logs an internal error where its request id leads to the cause', async () => {
-    vi.spyOn(app.get(CatalogService), 'listCourses').mockRejectedValueOnce(new Error('the database is on fire'));
+    vi.spyOn(app.get(CourseService), 'listCourses').mockRejectedValueOnce(new Error('the database is on fire'));
 
     const response = await request(app.getHttpServer()).get('/api/v1/courses').expect(500);
 
