@@ -55,3 +55,22 @@ jobs:
           corepack pnpm --filter api exec prisma db seed
           corepack pnpm --filter api exec prisma db seed
           test "$(psql "$DATABASE_URL" -tAc "SELECT count(*) FROM users WHERE email = 'admin@elearning.local'")" -eq 1
+      # Same command as locally. Playwright builds and starts the API (3201) and
+      # the web (3200, checkout on) itself, then migrates and reseeds this database.
+      - name: Browser e2e (Playwright)
+        env:
+          PGPASSWORD: elearning_test
+          E2E_DATABASE_URL: postgresql://elearning_test:elearning_test@localhost:5432/elearning_e2e
+        run: |
+          createdb -h localhost -U elearning_test elearning_e2e
+          corepack pnpm --filter web exec playwright install --with-deps chromium
+          corepack pnpm e2e:web
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
