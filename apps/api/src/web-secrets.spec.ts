@@ -34,6 +34,12 @@ describe('the web app holds no server secret', () => {
     ).toEqual([]);
   });
 
+  // T4.17: the web server holds INTERNAL_API_SECRET legitimately; the prefix
+  // would inline it into the client bundle.
+  it('never makes the internal API secret public', () => {
+    expect(offenders(/NEXT_PUBLIC_INTERNAL/i)).toEqual([]);
+  });
+
   it('is scanning the real web sources, not an empty folder', () => {
     expect(sources(join(WEB, 'src')).length).toBeGreaterThan(50);
   });

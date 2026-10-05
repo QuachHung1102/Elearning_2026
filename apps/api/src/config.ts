@@ -30,6 +30,20 @@ function integer(
 // Not a secret: the demo driver signs and verifies its own callbacks with it.
 // `assertNoDemoDriversInProduction` keeps it out of production.
 const DEMO_ZALOPAY_KEY2 = 'demo-zalopay-key2-not-a-secret';
+// Not a secret either: outside production a forged visitor IP costs nothing.
+const DEV_INTERNAL_API_SECRET = 'dev-internal-api-secret-not-a-secret';
+
+/** Shared with the web server so it can name the visitor behind its fetches (`clientIp`). */
+function internalApiSecret(env: NodeJS.ProcessEnv): string {
+  if (!isProductionEnv(env)) {
+    return env.INTERNAL_API_SECRET || DEV_INTERNAL_API_SECRET;
+  }
+  const secret = required(env, 'INTERNAL_API_SECRET');
+  if (Buffer.byteLength(secret) < 32) {
+    throw new Error('INTERNAL_API_SECRET must contain at least 32 bytes');
+  }
+  return secret;
+}
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   assertDriverValuesAreKnown(env);
@@ -99,6 +113,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     reconcileIntervalSeconds: integer(env, 'RECONCILE_INTERVAL', 60),
     reconcileMinAgeSeconds: integer(env, 'RECONCILE_MIN_AGE', 120),
     railwayEnvironmentId: env.RAILWAY_ENVIRONMENT_ID ?? '',
+    internalApiSecret: internalApiSecret(env),
   });
 }
 
