@@ -1,5 +1,6 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
+import { config } from '../src/config.js';
 import {
   as,
   bootApp,
@@ -90,6 +91,33 @@ describe('rate limits (e2e)', () => {
       }
       refused(await read(`/courses/${course.slug}`, '198.51.100.20'));
       expect((await read(`/courses/${course.slug}`, '198.51.100.21')).status).toBe(200);
+    });
+  });
+
+  // T4.17: the Next server fetches for every visitor from one address; it names
+  // the visitor, and only its secret makes that name count. No X-Real-IP here,
+  // so anything untrusted falls back to the socket (one shared bucket).
+  describe('a visitor IP forwarded by the web server', () => {
+    const forwarded = (ip: string, secret?: string) => {
+      const call = request(app.getHttpServer()).get('/api/v1/courses').set('X-Visitor-Ip', ip);
+      return secret === undefined ? call : call.set('X-Internal-Api-Secret', secret);
+    };
+    const listed = (response: request.Response) => expect(response.status).toBe(200);
+
+    it('gives each visitor its own bucket when the secret matches', async () => {
+      for (let read_ = 0; read_ < 120; read_ += 1) {
+        listed(await forwarded('203.0.113.50', config.internalApiSecret));
+      }
+      refused(await forwarded('203.0.113.50', config.internalApiSecret));
+      listed(await forwarded('203.0.113.51', config.internalApiSecret));
+    });
+
+    it('ignores the visitor IP without the secret or with a wrong one', async () => {
+      for (let read_ = 0; read_ < 120; read_ += 1) {
+        listed(await forwarded(`198.18.0.${read_}`));
+      }
+      refused(await forwarded('198.18.1.1'));
+      refused(await forwarded('198.18.1.2', `${config.internalApiSecret}x`));
     });
   });
 });

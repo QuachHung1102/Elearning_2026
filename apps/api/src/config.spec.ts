@@ -41,10 +41,44 @@ describe('loadConfig', () => {
       ZALOPAY_KEY1: 'key-one',
       ZALOPAY_KEY2: 'key-two',
       ZALOPAY_CALLBACK_URL: 'https://example.com/api/v1/payments/zalopay/callback',
+      INTERNAL_API_SECRET: 'c'.repeat(32),
     };
 
     expect(() => loadConfig(production)).not.toThrow();
     expect(() => loadConfig({ ...production, PASSWORD_HASH_COST: 'test' })).toThrow(/PASSWORD_HASH_COST/);
+  });
+
+  // T4.17: the Next server vouches for the visitor IP with this secret.
+  describe('internalApiSecret', () => {
+    const production = {
+      ...valid,
+      NODE_ENV: 'production',
+      VIDEO_DRIVER: 'cloudflare',
+      STORAGE_DRIVER: 'r2',
+      MAIL_DRIVER: 'smtp',
+      PAYMENT_DRIVER: 'zalopay',
+      ZALOPAY_APP_ID: '2553',
+      ZALOPAY_KEY1: 'key-one',
+      ZALOPAY_KEY2: 'key-two',
+      ZALOPAY_CALLBACK_URL: 'https://example.com/api/v1/payments/zalopay/callback',
+    };
+
+    it('has a fixed default outside production', () => {
+      expect(loadConfig(valid).internalApiSecret).toBe('dev-internal-api-secret-not-a-secret');
+    });
+
+    it('is required in production', () => {
+      expect(() => loadConfig(production)).toThrow(/INTERNAL_API_SECRET/);
+    });
+
+    it('must be at least 32 bytes in production', () => {
+      expect(() => loadConfig({ ...production, INTERNAL_API_SECRET: 'short' })).toThrow(
+        /INTERNAL_API_SECRET/,
+      );
+      expect(
+        loadConfig({ ...production, INTERNAL_API_SECRET: 'b'.repeat(32) }).internalApiSecret,
+      ).toBe('b'.repeat(32));
+    });
   });
 
   // REVIEW F-28: one answer to "is this production?" for the cookie flag, HSTS and the seed.
@@ -59,6 +93,7 @@ describe('loadConfig', () => {
       ZALOPAY_KEY1: 'key-one',
       ZALOPAY_KEY2: 'key-two',
       ZALOPAY_CALLBACK_URL: 'https://example.com/api/v1/payments/zalopay/callback',
+      INTERNAL_API_SECRET: 'c'.repeat(32),
     };
 
     it('is off in development', () => {

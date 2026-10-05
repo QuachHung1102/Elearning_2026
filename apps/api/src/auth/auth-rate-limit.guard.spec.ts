@@ -10,7 +10,7 @@ describe('AuthRateLimitGuard', () => {
       getHandler: () => AuthRateLimitGuard,
       getClass: () => AuthRateLimitGuard,
       switchToHttp: () => ({
-        getRequest: () => ({ ip: '127.0.0.1', path: '/auth/login' }),
+        getRequest: () => ({ ip: '127.0.0.1', path: '/auth/login', get: () => undefined }),
         getResponse: () => ({ setHeader }),
       }),
     } as unknown as ExecutionContext;
@@ -46,7 +46,7 @@ describe('AuthRateLimitGuard', () => {
         getHandler: () => AuthRateLimitGuard,
         getClass: () => AuthRateLimitGuard,
         switchToHttp: () => ({
-          getRequest: () => ({ ip, path: '/auth/login', method: 'POST' }),
+          getRequest: () => ({ ip, path: '/auth/login', method: 'POST', get: () => undefined }),
           getResponse: () => ({ setHeader: vi.fn() }),
         }),
       }) as unknown as ExecutionContext;
