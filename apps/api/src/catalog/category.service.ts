@@ -64,11 +64,17 @@ export class CategoryService {
         resolveSlug(input.slug, input.name, 80, (value) =>
           this.categorySlugTaken(value),
         ),
-      async (slug) => {
-        const position = await nextPosition(
-          this.prisma.category.findFirst(LAST_POSITION),
-        );
-        return this.prisma.$transaction(async (tx) => {
+      async (slug) =>
+        this.prisma.$transaction(async (tx) => {
+          // Categories have no parent row to lock, and `position` has no
+          // unique index to catch a duplicate: two creates would both read
+          // the same last position. A transaction-scoped advisory lock queues
+          // category creates only, released at commit or rollback.
+          await tx.$executeRaw`
+            SELECT pg_advisory_xact_lock(hashtext('categories.position'))`;
+          const position = await nextPosition(
+            tx.category.findFirst(LAST_POSITION),
+          );
           const category = await tx.category.create({
             data: {
               slug,
@@ -90,8 +96,7 @@ export class CategoryService {
             tx,
           );
           return toCategory(category);
-        });
-      },
+        }),
     );
   }
 
