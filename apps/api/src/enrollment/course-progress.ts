@@ -1,9 +1,40 @@
+import { Prisma } from '../generated/prisma/client.js';
+
 /** `CourseProgress` (API_CONTRACT.md §4). */
 export type CourseProgress = {
   completedLessons: number;
   totalLessons: number;
   percent: number;
 };
+
+export function courseProgress(
+  completedLessons: number,
+  totalLessons: number,
+): CourseProgress {
+  return {
+    completedLessons,
+    totalLessons,
+    percent: totalLessons
+      ? Math.round((100 * completedLessons) / totalLessons)
+      : 0,
+  };
+}
+
+/**
+ * The SQL twin of `summarizeProgress` for a list: a `LATERAL` subquery over
+ * enrollment alias `e` yielding `total`, `completed` and `last_activity_at`
+ * (null when not started). Only lessons still in the curriculum count.
+ */
+export const PROGRESS_STATS = Prisma.sql`
+  CROSS JOIN LATERAL (
+    SELECT count(*)::int AS total,
+           count(p.completed_at)::int AS completed,
+           max(p.updated_at) AS last_activity_at
+    FROM sections s
+    JOIN lessons l ON l.section_id = s.id
+    LEFT JOIN lesson_progress p ON p.lesson_id = l.id AND p.user_id = e.user_id
+    WHERE s.course_id = e.course_id
+  ) stats`;
 
 export type ProgressRow = {
   lessonId: string;
@@ -36,15 +67,8 @@ export function summarizeProgress(
     if (row.completedAt) completedLessons += 1;
     if (!latest || row.updatedAt > latest.updatedAt) latest = row;
   }
-  const totalLessons = lessonIds.length;
   return {
-    progress: {
-      completedLessons,
-      totalLessons,
-      percent: totalLessons
-        ? Math.round((100 * completedLessons) / totalLessons)
-        : 0,
-    },
+    progress: courseProgress(completedLessons, lessonIds.length),
     resumeLessonId: latest?.lessonId ?? lessonIds[0] ?? null,
     lastActivityAt: latest?.updatedAt ?? null,
   };
