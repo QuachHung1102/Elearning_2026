@@ -34,7 +34,7 @@ export function OrderSummary({
         {href ? (
           <Link
             href={href}
-            className="font-semibold [overflow-wrap:anywhere] hover:text-primary-text"
+            className="inline-flex min-h-11 items-center font-semibold [overflow-wrap:anywhere] hover:text-primary-text"
           >
             {title}
           </Link>

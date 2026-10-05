@@ -25,7 +25,7 @@ export default async function CourseLayout({
       <header className="grid gap-3">
         <Link
           href={`${base}/courses`}
-          className="text-sm text-muted-foreground hover:text-primary-text"
+          className="inline-flex min-h-11 w-fit items-center text-sm text-muted-foreground hover:text-primary-text"
         >
           {base === "/instructor" ? "← Khóa học của tôi" : "← Danh sách khóa học"}
         </Link>

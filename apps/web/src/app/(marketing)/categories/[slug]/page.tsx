@@ -72,6 +72,8 @@ export default async function CategoryPage({
           query={search}
         />
       </div>
+      {/* The cards are h3: without this level the outline skips h2 (WCAG 1.3.1). */}
+      <h2 className="sr-only">Danh sách khóa học</h2>
       <CourseGrid courses={courses.items} />
       <Pagination
         basePath={`/categories/${slug}`}

@@ -22,6 +22,11 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
     setEditing(category);
     setError(null);
     dialog.current?.showModal();
+    // The re-keyed form remounts after showModal and takes the focused field
+    // with it, leaving focus on <body> (WCAG 2.4.3): focus the new one.
+    requestAnimationFrame(() =>
+      dialog.current?.querySelector<HTMLElement>("input")?.focus(),
+    );
   }
 
   async function run(action: () => Promise<unknown>, done: string) {

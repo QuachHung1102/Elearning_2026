@@ -33,13 +33,13 @@ export default async function CheckoutPage({
       <nav aria-label="Đường dẫn" className="text-sm text-muted-foreground">
         <ol className="flex list-none flex-wrap items-center gap-1 p-0">
           <li>
-            <Link className="hover:text-primary-text" href="/courses">
+            <Link className="inline-flex min-h-11 items-center hover:text-primary-text" href="/courses">
               Khóa học
             </Link>
           </li>
           <ChevronRight aria-hidden="true" className="size-4" strokeWidth={1.75} />
           <li>
-            <Link className="hover:text-primary-text" href={`/courses/${course.slug}`}>
+            <Link className="inline-flex min-h-11 items-center hover:text-primary-text" href={`/courses/${course.slug}`}>
               {course.title}
             </Link>
           </li>

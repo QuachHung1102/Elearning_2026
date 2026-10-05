@@ -114,7 +114,7 @@ export default async function AdminCoursesPage({
                   <tr key={course.id} className="border-b border-border">
                     <td className="p-3">
                       <Link
-                        className="font-medium underline-offset-2 hover:underline"
+                        className="inline-flex min-h-11 items-center font-medium underline-offset-2 hover:underline"
                         href={`${base}/courses/${course.id}`}
                       >
                         {course.title}
@@ -135,7 +135,7 @@ export default async function AdminCoursesPage({
             {courses.items.map((course) => (
               <li key={course.id} className="panel grid gap-2 p-4">
                 <Link
-                  className="font-semibold"
+                  className="inline-flex min-h-11 items-center font-semibold"
                   href={`${base}/courses/${course.id}`}
                 >
                   {course.title}

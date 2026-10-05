@@ -74,7 +74,7 @@ export default async function CoursePage({
       <nav aria-label="Đường dẫn" className="text-sm text-muted-foreground">
         <ol className="flex list-none flex-wrap items-center gap-1 p-0">
           <li>
-            <Link className="hover:text-primary-text" href="/courses">
+            <Link className="inline-flex min-h-11 items-center hover:text-primary-text" href="/courses">
               Khóa học
             </Link>
           </li>
@@ -87,7 +87,7 @@ export default async function CoursePage({
               />
               <li>
                 <Link
-                  className="hover:text-primary-text"
+                  className="inline-flex min-h-11 items-center hover:text-primary-text"
                   href={`/categories/${course.category.slug}`}
                 >
                   {course.category.name}

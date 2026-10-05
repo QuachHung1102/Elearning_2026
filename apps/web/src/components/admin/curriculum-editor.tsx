@@ -44,6 +44,11 @@ export function CurriculumEditor({
     setDraft(next);
     setError(null);
     dialog.current?.showModal();
+    // The re-keyed form remounts after showModal and takes the focused field
+    // with it, leaving focus on <body> (WCAG 2.4.3): focus the new one.
+    requestAnimationFrame(() =>
+      dialog.current?.querySelector<HTMLElement>("input")?.focus(),
+    );
   }
 
   async function run(action: () => Promise<unknown>, done: string) {
@@ -251,7 +256,7 @@ export function CurriculumEditor({
                       )}
                       <Link
                         href={`${base}/courses/${course.id}/lessons/${lesson.id}`}
-                        className="flex min-h-11 min-w-0 flex-1 items-center underline-offset-2 hover:underline"
+                        className="flex min-h-11 min-w-0 flex-1 basis-40 items-center underline-offset-2 hover:underline"
                       >
                         {lesson.title}
                       </Link>
