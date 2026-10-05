@@ -15,3 +15,5 @@ output/
 .codex-tmp/
 backups/
 .claude/worktrees/
+test-results/
+playwright-report/
