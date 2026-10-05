@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { API_ORIGIN } from "./site";
 
 export type Category = {
   id: string;
@@ -109,11 +110,6 @@ export type PublishIssue = {
   reason: string;
   lessonId?: string;
 };
-
-const API_ORIGIN = (process.env.API_ORIGIN ?? "http://localhost:3001").replace(
-  /\/$/,
-  "",
-);
 
 /**
  * Cookie-free fetch for the public catalog. Reading cookies would opt the whole

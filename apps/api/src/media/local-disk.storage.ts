@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { rm } from 'node:fs/promises';
-import { join, resolve, sep } from 'node:path';
+import { resolve, sep } from 'node:path';
 import { config } from '../config.js';
 import {
   downloadMessage,
@@ -50,13 +50,5 @@ export class LocalDiskStorage implements ObjectStorage {
   absolutePath(key: string): string | null {
     const absolute = resolve(this.root, key);
     return absolute.startsWith(this.root + sep) ? absolute : null;
-  }
-
-  get storageRoot(): string {
-    return this.root;
-  }
-
-  directoryOf(key: string): string {
-    return join(this.root, key, '..');
   }
 }

@@ -57,9 +57,6 @@ export const AUDIT_ENTITY_LABEL = {
   VIDEO_ASSET: "Video",
 } as const;
 
-export type AuditAction = keyof typeof AUDIT_ACTION_LABEL;
-export type AuditEntityType = keyof typeof AUDIT_ENTITY_LABEL;
-
 /** `AuditLogRow` (API_CONTRACT.md §4). */
 export type AuditLogRow = {
   id: string;

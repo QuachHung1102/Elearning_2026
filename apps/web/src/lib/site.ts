@@ -12,3 +12,8 @@ export const OPEN_GRAPH_DEFAULTS = {
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
 ).replace(/\/$/, "");
+
+/** The API as the Next server reaches it (rewrites and server-side fetches). */
+export const API_ORIGIN = (
+  process.env.API_ORIGIN ?? "http://localhost:3001"
+).replace(/\/$/, "");

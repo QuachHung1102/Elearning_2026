@@ -6,7 +6,8 @@ import { MailCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError, apiFetch, errorMessage } from "@/lib/api";
+import { passwordError } from "@/lib/password";
 import { t } from "@/messages/vi";
 import { Button, buttonClass } from "./ui/button";
 import {
@@ -32,10 +33,6 @@ const resetFields = {
   password: { id: "reset-password", label: "Mật khẩu mới" },
   confirm: { id: "reset-confirm", label: "Xác nhận mật khẩu" },
 };
-
-function apiMessage(error: unknown): string {
-  return error instanceof ApiError ? t(error.code) : t("NETWORK_ERROR");
-}
 
 export function DemoNotice() {
   if (process.env.NODE_ENV === "production") return null;
@@ -101,7 +98,7 @@ export function LoginForm({
       if (error instanceof ApiError && error.code === "RATE_LIMITED") {
         setRemaining(error.retryAfterSeconds ?? 60);
       }
-      setMessage(apiMessage(error));
+      setMessage(errorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -189,10 +186,8 @@ export function RegisterForm({ next }: { next: string }) {
     if (!values.email) nextErrors.email = "Nhập email của bạn.";
     else if (!emailPattern.test(values.email))
       nextErrors.email = "Email không hợp lệ.";
-    if (values.password.length < 8)
-      nextErrors.password = "Mật khẩu cần ít nhất 8 ký tự.";
-    else if (values.password.length > 128)
-      nextErrors.password = "Mật khẩu không được quá 128 ký tự.";
+    const passwordProblem = passwordError(values.password);
+    if (passwordProblem) nextErrors.password = passwordProblem;
     if (values.confirm !== values.password)
       nextErrors.confirm = "Hai mật khẩu chưa khớp.";
     setErrors(nextErrors);
@@ -219,7 +214,7 @@ export function RegisterForm({ next }: { next: string }) {
       if (error instanceof ApiError && error.code === "EMAIL_TAKEN") {
         setErrors({ email: t(error.code) });
       } else {
-        setMessage(apiMessage(error));
+        setMessage(errorMessage(error));
       }
     } finally {
       setBusy(false);
@@ -337,7 +332,7 @@ export function ForgotPasswordForm() {
       });
       setSent(true);
     } catch (caught) {
-      setMessage(apiMessage(caught));
+      setMessage(errorMessage(caught));
     } finally {
       setBusy(false);
     }
@@ -401,10 +396,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
-    if (password.length < 8)
-      nextErrors.password = "Mật khẩu cần ít nhất 8 ký tự.";
-    else if (password.length > 128)
-      nextErrors.password = "Mật khẩu không được quá 128 ký tự.";
+    const passwordProblem = passwordError(password);
+    if (passwordProblem) nextErrors.password = passwordProblem;
     if (confirm !== password) nextErrors.confirm = "Hai mật khẩu chưa khớp.";
     setErrors(nextErrors);
     setMessage("");
@@ -422,7 +415,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     } catch (error) {
       if (error instanceof ApiError && error.code === "TOKEN_INVALID")
         setInvalid(true);
-      else setMessage(apiMessage(error));
+      else setMessage(errorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -503,7 +496,7 @@ export function VerifyEmail({ token }: { token: string }) {
         if (error instanceof ApiError && error.code === "TOKEN_INVALID")
           setState("invalid");
         else {
-          setMessage(apiMessage(error));
+          setMessage(errorMessage(error));
           setState("error");
         }
       });
@@ -578,7 +571,7 @@ export function ResendVerificationButton() {
               router.push("/login");
               return;
             }
-            setMessage(apiMessage(error));
+            setMessage(errorMessage(error));
           } finally {
             setBusy(false);
           }
