@@ -28,6 +28,7 @@ import {
   PLAYBACK_RATES,
   SAVE_INTERVAL_MS,
   commandForKey,
+  playbackEngine,
   rateLabel,
   reachedCompletion,
   resumeAt,
@@ -166,6 +167,43 @@ export function VideoPlayer({
     },
     [apply, lessonId],
   );
+
+  // `playback` is only set in the browser, so `document` is there.
+  const engine =
+    playback &&
+    playbackEngine(
+      playback.kind,
+      document.createElement("video").canPlayType("application/vnd.apple.mpegurl"),
+    );
+
+  // HLS where the element cannot play it: hls.js, loaded only then, feeds the
+  // element of this attempt and is torn down with it.
+  useEffect(() => {
+    const element = video.current;
+    if (engine !== "hls.js" || !playback || !element) return;
+    let hls: import("hls.js").default | undefined;
+    let active = true;
+    void import("hls.js").then(({ default: Hls }) => {
+      if (!active) return;
+      if (!Hls.isSupported()) {
+        setFailure("error");
+        return;
+      }
+      hls = new Hls();
+      // A fatal hls.js error takes the element's own error path: one silent
+      // retry with a fresh URL, then the error state.
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) element.dispatchEvent(new Event("error"));
+      });
+      hls.loadSource(playback.playbackUrl);
+      hls.attachMedia(element);
+    });
+    return () => {
+      active = false;
+      hls?.destroy();
+    };
+    // `failure` unmounts the element: the instance must not outlive it.
+  }, [attempt, engine, failure, playback]);
 
   // Once per lesson: a server refresh after a save must not reload the video.
   useEffect(() => {
@@ -395,7 +433,7 @@ export function VideoPlayer({
           <video
             key={attempt}
             ref={video}
-            src={playback.playbackUrl}
+            src={engine === "native" ? playback.playbackUrl : undefined}
             muted={muted}
             preload="metadata"
             playsInline
@@ -663,16 +701,6 @@ async function requestToken(
       `/lessons/${lessonId}/playback-token`,
       { method: "POST" },
     );
-    if (
-      token.kind === "hls" &&
-      !document
-        .createElement("video")
-        .canPlayType("application/vnd.apple.mpegurl")
-    ) {
-      // ponytail: no hls.js yet — the demo driver serves MP4 and Safari plays
-      // HLS natively. Load hls.js dynamically when Chrome needs it.
-      return "error";
-    }
     return token;
   } catch (caught) {
     const status = caught instanceof ApiError ? caught.status : 0;
