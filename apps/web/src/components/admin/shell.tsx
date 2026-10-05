@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Logo } from "@/components/site-shell";
 import { LogoutButton } from "@/components/logout-button";
-import { Skeleton } from "@/components/ui/feedback";
 import { formatNumber } from "@/lib/format";
 import { AdminNav, type StaffArea } from "./admin-nav";
 
@@ -46,17 +45,6 @@ export function StatTile({
         {typeof value === "number" ? formatNumber(value) : value}
       </p>
       {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
-    </div>
-  );
-}
-
-export function TableSkeleton({ rows = 5 }: { rows?: number }) {
-  return (
-    <div className="grid gap-3" aria-busy="true">
-      <span className="sr-only">Đang tải…</span>
-      {Array.from({ length: rows }, (_, index) => (
-        <Skeleton key={index} className="h-14 w-full" />
-      ))}
     </div>
   );
 }

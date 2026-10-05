@@ -13,7 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import type { StaffBase } from "@/lib/admin";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch, errorMessage } from "@/lib/api";
 import type { AdminCourseDetail, LessonType } from "@/lib/catalog";
 import { formatDuration, formatNumber } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -22,17 +22,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { showToast } from "@/components/ui/toast";
-
-const ERROR_MESSAGE: Record<string, string> = {
-  SECTION_NOT_EMPTY: "Chương vẫn còn bài học. Xóa hết bài trước khi xóa chương.",
-  ORDER_MISMATCH: "Danh sách đã thay đổi. Tải lại trang rồi thử lại.",
-};
-
-function messageOf(error: unknown): string {
-  return error instanceof ApiError
-    ? (ERROR_MESSAGE[error.code] ?? "Không lưu được. Thử lại sau ít phút.")
-    : "Không lưu được. Thử lại sau ít phút.";
-}
 
 type Draft =
   | { kind: "section"; id?: string; title: string }
@@ -65,7 +54,7 @@ export function CurriculumEditor({
       showToast(done, "success");
       startTransition(() => router.refresh());
     } catch (caught) {
-      setError(messageOf(caught));
+      setError(errorMessage(caught));
     }
   }
 

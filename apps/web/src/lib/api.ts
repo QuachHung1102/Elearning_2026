@@ -1,4 +1,6 @@
 import { notFound, redirect } from "next/navigation";
+import { t } from "../messages/vi";
+import { API_ORIGIN } from "./site";
 
 type ErrorBody = {
   code?: string;
@@ -13,7 +15,7 @@ let sessionRedirectPending = false;
 function apiUrl(path: string): string {
   const normalized = path.startsWith("/api/v1") ? path : `/api/v1${path}`;
   if (typeof window !== "undefined") return normalized;
-  return `${(process.env.API_ORIGIN ?? "http://localhost:3001").replace(/\/$/, "")}${normalized}`;
+  return `${API_ORIGIN}${normalized}`;
 }
 
 function csrfCookie(): string | undefined {
@@ -46,6 +48,11 @@ export class ApiError extends Error {
     super(code);
     this.name = "ApiError";
   }
+}
+
+/** User-facing text for a failed `apiFetch`: the shared `t()` wording. */
+export function errorMessage(error: unknown): string {
+  return t(error instanceof ApiError ? error.code : "NETWORK_ERROR");
 }
 
 export async function apiFetch<T = unknown>(

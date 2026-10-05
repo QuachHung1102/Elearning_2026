@@ -3,7 +3,7 @@
 import { Check, CircleAlert, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError, apiFetch, errorMessage } from "@/lib/api";
 import type {
   AdminCourseDetail,
   Category,
@@ -189,11 +189,11 @@ export function CourseForm({
       router.refresh();
     } catch (caught) {
       setError(
-        caught instanceof ApiError && caught.code === "SLUG_TAKEN"
-          ? "Đường dẫn này đã có khóa học khác dùng."
-          : caught instanceof ApiError && caught.code === "CONFLICT"
-            ? "Đường dẫn đã khóa sau lần xuất bản đầu tiên."
-            : "Không lưu được. Kiểm tra lại thông tin đã nhập.",
+        // PATCH answers a bare CONFLICT only for the locked slug; t() has no
+        // wording for CONFLICT on its own.
+        caught instanceof ApiError && caught.code === "CONFLICT"
+          ? contextMessages.SLUG_LOCKED
+          : errorMessage(caught),
       );
     } finally {
       setBusy(null);
@@ -216,7 +216,7 @@ export function CourseForm({
         caught.code === "COURSE_NOT_PUBLISHABLE"
       ) {
         setIssues((caught.details?.issues as PublishIssue[]) ?? []);
-        setError("Khóa học chưa đủ điều kiện xuất bản.");
+        setError(errorMessage(caught));
       } else if (
         caught instanceof ApiError &&
         caught.code === "COURSE_HAS_ENROLLMENTS"
@@ -224,7 +224,7 @@ export function CourseForm({
         // t() carries the delete wording; this is the unpublish case.
         setError(contextMessages.COURSE_HAS_ENROLLMENTS_UNPUBLISH);
       } else {
-        setError("Không đổi được trạng thái. Thử lại sau ít phút.");
+        setError(errorMessage(caught));
       }
     } finally {
       setBusy(null);

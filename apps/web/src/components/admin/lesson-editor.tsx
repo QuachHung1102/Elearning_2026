@@ -4,7 +4,7 @@ import { Paperclip, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { StaffBase } from "@/lib/admin";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch, errorMessage } from "@/lib/api";
 import type {
   AdminCourseDetail,
   LessonOutline,
@@ -42,18 +42,6 @@ type SignedUpload = {
   objectKey: string;
   maxBytes: number;
 };
-
-function messageOf(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.code === "EXTERNAL_ID_TAKEN")
-      return "Video này đã được đăng ký cho một bài khác.";
-    if (error.code === "VIDEO_ALREADY_ATTACHED")
-      return "Video đang gắn ở bài học khác. Tạo bản ghi video mới nếu muốn dùng lại.";
-    if (error.code === "UNSUPPORTED_MEDIA_TYPE")
-      return "Định dạng tệp không được phép.";
-  }
-  return "Không lưu được. Thử lại sau ít phút.";
-}
 
 export function LessonEditor({
   course,
@@ -96,7 +84,7 @@ export function LessonEditor({
       showToast("Đã lưu bài học", "success");
       router.refresh();
     } catch (caught) {
-      setError(messageOf(caught));
+      setError(errorMessage(caught));
     } finally {
       setBusy(null);
     }
@@ -118,7 +106,7 @@ export function LessonEditor({
       showToast("Đã gắn video vào bài học", "success");
       router.refresh();
     } catch (caught) {
-      setError(messageOf(caught));
+      setError(errorMessage(caught));
     } finally {
       setBusy(null);
     }
@@ -175,7 +163,7 @@ export function LessonEditor({
       showToast("Đã thêm tài liệu", "success");
       router.refresh();
     } catch (caught) {
-      setError(messageOf(caught));
+      setError(errorMessage(caught));
     } finally {
       setBusy(null);
       if (fileInput.current) fileInput.current.value = "";

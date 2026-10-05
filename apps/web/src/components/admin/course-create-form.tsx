@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { StaffBase } from "@/lib/admin";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch, errorMessage } from "@/lib/api";
 import type { Category, CourseDetail } from "@/lib/catalog";
 import { baseSlug } from "@/lib/slug";
 import { Button } from "@/components/ui/button";
@@ -36,11 +36,7 @@ export function CourseCreateForm({
       });
       router.push(`${base}/courses/${course.id}`);
     } catch (caught) {
-      setError(
-        caught instanceof ApiError && caught.code === "SLUG_TAKEN"
-          ? "Đã có khóa học dùng đường dẫn này."
-          : "Không tạo được khóa học. Thử lại sau ít phút.",
-      );
+      setError(errorMessage(caught));
       setSaving(false);
     }
   }

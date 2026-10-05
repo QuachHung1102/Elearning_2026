@@ -3,27 +3,13 @@
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch, errorMessage } from "@/lib/api";
 import type { Category } from "@/lib/catalog";
 import { formatNumber } from "@/lib/format";
 import { Button, buttonClass } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { showToast } from "@/components/ui/toast";
-
-const ERROR_MESSAGE: Record<string, string> = {
-  SLUG_TAKEN: "Đường dẫn này đã có danh mục khác dùng.",
-  CATEGORY_NOT_EMPTY:
-    "Danh mục vẫn còn khóa học. Chuyển các khóa sang danh mục khác trước khi xóa.",
-  VALIDATION_FAILED: "Kiểm tra lại thông tin đã nhập.",
-};
-
-function messageOf(error: unknown): string {
-  if (error instanceof ApiError) {
-    return ERROR_MESSAGE[error.code] ?? "Không lưu được. Thử lại sau ít phút.";
-  }
-  return "Không lưu được. Thử lại sau ít phút.";
-}
 
 export function CategoryManager({ categories }: { categories: Category[] }) {
   const router = useRouter();
@@ -46,7 +32,7 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
       showToast(done, "success");
       startTransition(() => router.refresh());
     } catch (caught) {
-      setError(messageOf(caught));
+      setError(errorMessage(caught));
     }
   }
 

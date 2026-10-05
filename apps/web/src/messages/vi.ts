@@ -34,6 +34,8 @@ export const messages = {
 export const contextMessages = {
   COURSE_HAS_ENROLLMENTS_UNPUBLISH:
     "Không gỡ về bản nháp được: khóa học đang có học viên.",
+  /** Course PATCH: a bare CONFLICT there means the published slug is locked. */
+  SLUG_LOCKED: "Đường dẫn đã khóa sau lần xuất bản đầu tiên.",
 } as const;
 
 export type MessageCode = keyof typeof messages;

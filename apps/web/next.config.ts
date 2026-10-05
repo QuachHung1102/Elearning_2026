@@ -1,10 +1,6 @@
 import type { NextConfig } from "next";
 import { securityHeaders } from "./src/lib/security-headers";
-
-const apiOrigin = (process.env.API_ORIGIN ?? "http://localhost:3001").replace(
-  /\/$/,
-  "",
-);
+import { API_ORIGIN } from "./src/lib/site";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -24,7 +20,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: `${apiOrigin}/api/:path*`,
+        destination: `${API_ORIGIN}/api/:path*`,
       },
     ];
   },

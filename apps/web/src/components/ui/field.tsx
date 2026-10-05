@@ -1,7 +1,15 @@
 "use client";
 
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
-import { useState, type InputHTMLAttributes, type ReactNode } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from "react";
+
+const CONTROLS = new Set(["input", "select", "textarea"]);
 
 export function Field({
   id,
@@ -18,6 +26,23 @@ export function Field({
   hint?: string;
   children: ReactNode;
 }) {
+  const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+  // Wire a bare input/select/textarea child to the message below it. A wrapper
+  // (PasswordInput's) wires its own control.
+  const control =
+    describedBy &&
+    isValidElement<{ "aria-describedby"?: string }>(children) &&
+    CONTROLS.has(children.type as string)
+      ? cloneElement(children, {
+          "aria-describedby": [
+            ...new Set([
+              ...(children.props["aria-describedby"]?.split(" ") ?? []),
+              describedBy,
+            ]),
+          ].join(" "),
+          ...(error && { "aria-invalid": true }),
+        })
+      : children;
   return (
     <div className="grid gap-2">
       <label className="text-sm font-semibold" htmlFor={id}>
@@ -32,7 +57,7 @@ export function Field({
           </>
         )}
       </label>
-      {children}
+      {control}
       {error ? (
         <p
           id={`${id}-error`}

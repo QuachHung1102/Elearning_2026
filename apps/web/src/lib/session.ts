@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { ApiError } from "./api";
+import { API_ORIGIN } from "./site";
 
 export type User = {
   id: string;
@@ -26,15 +27,12 @@ export async function serverFetch(
   const cookie = (await cookies()).toString();
   const headers = new Headers(init.headers);
   if (cookie) headers.set("cookie", cookie);
-  return fetch(
-    `${(process.env.API_ORIGIN ?? "http://localhost:3001").replace(/\/$/, "")}/api/v1${path}`,
-    {
-      ...init,
-      headers,
-      cache: "no-store",
-      signal: AbortSignal.timeout(10_000),
-    },
-  );
+  return fetch(`${API_ORIGIN}/api/v1${path}`, {
+    ...init,
+    headers,
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
 }
 
 export const getSession = cache(async (): Promise<User | null> => {
