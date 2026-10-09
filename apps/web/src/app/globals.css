@@ -196,34 +196,39 @@ input.sr-only:focus-visible + label {
   color: var(--color-card-foreground);
 }
 
-.control {
-  width: 100%;
-  min-height: calc(var(--spacing) * 12);
-  border: 1px solid var(--color-input);
-  border-radius: var(--radius-md);
-  background: var(--color-card);
-  color: var(--color-card-foreground);
-  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
-  transition: border-color var(--duration-fast) var(--ease-standard);
-}
+/* In the components layer, so a control's own utilities win: unlayered, its
+   min-height and width beat `min-h-40` on a textarea, `w-auto` and `min-h-11`
+   on the catalog sort, and the password field's `pr-12`. */
+@layer components {
+  .control {
+    width: 100%;
+    min-height: calc(var(--spacing) * 12);
+    border: 1px solid var(--color-input);
+    border-radius: var(--radius-md);
+    background: var(--color-card);
+    color: var(--color-card-foreground);
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+    transition: border-color var(--duration-fast) var(--ease-standard);
+  }
 
-.control::placeholder {
-  color: var(--color-muted-foreground);
-  opacity: 1;
-}
+  .control::placeholder {
+    color: var(--color-muted-foreground);
+    opacity: 1;
+  }
 
-.control:hover:not(:disabled) {
-  border-color: var(--color-primary);
-}
+  .control:hover:not(:disabled) {
+    border-color: var(--color-primary);
+  }
 
-.control[aria-invalid="true"] {
-  border-color: var(--color-destructive);
-}
+  .control[aria-invalid="true"] {
+    border-color: var(--color-destructive);
+  }
 
-.control:disabled {
-  cursor: not-allowed;
-  background: var(--color-muted);
-  color: var(--color-muted-foreground-strong);
+  .control:disabled {
+    cursor: not-allowed;
+    background: var(--color-muted);
+    color: var(--color-muted-foreground-strong);
+  }
 }
 
 .skeleton {

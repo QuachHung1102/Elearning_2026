@@ -27,7 +27,7 @@ export function OrderSummary({
       className="grid gap-4 rounded-xl border border-border bg-card p-6"
     >
       <h2 id="order-summary-title" className="text-xl font-semibold">
-        {variant === "checkout" ? "Đơn hàng của bạn" : "Biên nhận"}
+        {variant === "checkout" ? "Khóa học đăng ký" : "Biên nhận"}
       </h2>
       <div className="grid gap-1">
         <p className="text-sm text-muted-foreground">Khóa học</p>
@@ -54,7 +54,7 @@ export function OrderSummary({
       )}
       <div className="flex items-baseline justify-between gap-4 border-t border-border pt-4">
         <span className="font-semibold">
-          {variant === "checkout" ? "Tổng thanh toán" : "Số tiền"}
+          {variant === "checkout" ? "Tổng cộng" : "Số tiền"}
         </span>
         <span className="text-2xl font-bold">
           {priceVnd === null ? (
@@ -64,6 +64,17 @@ export function OrderSummary({
           )}
         </span>
       </div>
+      {variant === "checkout" && (
+        <div className="grid justify-items-start gap-1 text-sm">
+          <p className="text-muted-foreground">Thanh toán một lần cho khóa học.</p>
+          <Link
+            href="/refund"
+            className="inline-flex min-h-11 items-center text-primary-text hover:underline"
+          >
+            Chính sách hoàn tiền
+          </Link>
+        </div>
+      )}
     </section>
   );
 }

@@ -1,6 +1,4 @@
-import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckoutPanel } from "@/components/checkout/checkout-panel";
 import { publicFetch, type CourseDetail } from "@/lib/catalog";
@@ -26,25 +24,8 @@ export default async function CheckoutPage({
 
   return (
     <div className="page-shell grid gap-8 py-10 lg:py-14">
-      <nav aria-label="Đường dẫn" className="text-sm text-muted-foreground">
-        <ol className="flex list-none flex-wrap items-center gap-1 p-0">
-          <li>
-            <Link className="inline-flex min-h-11 items-center hover:text-primary-text" href="/courses">
-              Khóa học
-            </Link>
-          </li>
-          <ChevronRight aria-hidden="true" className="size-4" strokeWidth={1.75} />
-          <li>
-            <Link className="inline-flex min-h-11 items-center hover:text-primary-text" href={`/courses/${course.slug}`}>
-              {course.title}
-            </Link>
-          </li>
-          <ChevronRight aria-hidden="true" className="size-4" strokeWidth={1.75} />
-          <li aria-current="page">Thanh toán</li>
-        </ol>
-      </nav>
       <h1 tabIndex={-1} className="text-4xl font-bold">
-        Thanh toán
+        Hoàn tất đăng ký học
       </h1>
       <CheckoutPanel slug={course.slug} courseTitle={course.title} />
     </div>

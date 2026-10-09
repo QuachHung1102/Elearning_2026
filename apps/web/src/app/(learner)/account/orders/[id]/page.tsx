@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -42,20 +42,18 @@ export default async function OrderPage({
 
   return (
     <div className="grid gap-8">
-      <nav aria-label="Đường dẫn" className="text-sm text-muted-foreground">
-        <ol className="flex list-none flex-wrap items-center gap-1 p-0">
-          <li>
-            <Link className="inline-flex min-h-11 items-center hover:text-primary-text" href="/account/orders">
-              Đơn hàng
-            </Link>
-          </li>
-          <ChevronRight aria-hidden="true" className="size-4" strokeWidth={1.75} />
-          <li aria-current="page">{shortId(order.id)}</li>
-        </ol>
-      </nav>
-      <h1 tabIndex={-1} className="text-4xl font-bold">
-        Chi tiết đơn hàng
-      </h1>
+      <div className="grid justify-items-start gap-2">
+        <h1 tabIndex={-1} className="text-4xl font-bold">
+          Đơn hàng {shortId(order.id)}
+        </h1>
+        <Link
+          className="inline-flex min-h-11 items-center gap-1 text-sm text-primary-text hover:underline"
+          href="/account/orders"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.75} />
+          Lịch sử đơn hàng
+        </Link>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:gap-10">
         <div className="grid content-start gap-6">

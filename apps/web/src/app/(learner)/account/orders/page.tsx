@@ -1,3 +1,4 @@
+import { Receipt } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -10,7 +11,7 @@ import { firstValue, type Paginated } from "@/lib/catalog";
 import { CHECKOUT_ENABLED, type PurchaseRow } from "@/lib/orders";
 import { serverFetch } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Đơn hàng" };
+export const metadata: Metadata = { title: "Đơn hàng của tôi" };
 
 const PAGE_SIZE = 10;
 
@@ -31,16 +32,9 @@ export default async function OrdersPage({
 
   return (
     <section className="grid gap-8">
-      <div className="grid gap-2">
-        <h1 tabIndex={-1} className="text-4xl font-bold">
-          Đơn hàng
-        </h1>
-        <p className="text-muted-foreground">
-          Lịch sử mua khóa học và trạng thái thanh toán của bạn.
-        </p>
-      </div>
       {orders.items.length === 0 ? (
         <EmptyState
+          icon={Receipt}
           title="Bạn chưa có đơn hàng nào"
           description="Đơn hàng sẽ xuất hiện ở đây sau lần đăng ký học đầu tiên."
           action={

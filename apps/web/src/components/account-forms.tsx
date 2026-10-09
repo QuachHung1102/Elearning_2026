@@ -84,7 +84,7 @@ export function ProfileForm({ user }: { user: User }) {
         />
       </Field>
       <div>
-        <Button type="submit" loading={busy} disabled={!changed}>
+        <Button type="submit" loading={busy} disabled={!changed} className="w-full">
           Lưu thay đổi
         </Button>
         {!changed && (
@@ -228,7 +228,7 @@ export function SessionsTable({
         busy={busyId === session.id}
         onConfirm={() => revoke(session.id)}
         trigger={
-          <Button variant="ghost" size="sm">
+          <Button variant="outline" size="sm">
             <LogOut aria-hidden="true" className="size-4" strokeWidth={1.75} />
             Thu hồi
           </Button>
@@ -318,7 +318,7 @@ export function SessionsTable({
           busy={busyId === "all"}
           onConfirm={revokeOthers}
           trigger={
-            <Button variant="outline">
+            <Button variant="outline" className="w-full sm:w-auto">
               <ShieldCheck
                 aria-hidden="true"
                 className="size-4"

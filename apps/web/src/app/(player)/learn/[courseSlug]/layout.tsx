@@ -5,6 +5,7 @@ import { CurriculumDrawer } from "@/components/learning/curriculum-drawer";
 import { PlayerCurriculum } from "@/components/learning/player-curriculum";
 import { ProgressBar } from "@/components/learning/progress-bar";
 import { OfflineBanner, SyncChip } from "@/components/learning/sync-status";
+import { buttonClass } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { progressText, type CourseProgress } from "@/lib/learning";
 import { getSession } from "@/lib/session";
@@ -79,9 +80,17 @@ export default async function PlayerLayout({
             <ArrowLeft aria-hidden="true" className="size-5" strokeWidth={1.75} />
             <span className="sr-only">Quay lại {back.label}</span>
           </Link>
-          <p className="min-w-0 flex-1 truncate font-heading font-semibold">
+          <p className="min-w-0 flex-1 truncate font-heading font-semibold md:text-xl">
             {course.title}
           </p>
+          {mode === "ENROLLED" && (
+            <Link
+              href={back.href}
+              className={buttonClass("outline", "md", "min-w-48 max-lg:hidden")}
+            >
+              {back.label}
+            </Link>
+          )}
           {tracked && (
             // Next to the thin bar under this row; from 1024px the sidebar
             // shows its own.
