@@ -64,8 +64,8 @@ export async function StaffLayout({
     unstable_rethrow(error);
     console.error(error);
     return (
-      <main id="main" tabIndex={-1} className="min-w-0 px-4 py-8 lg:px-8">
-        {children}
+      <main id="main" tabIndex={-1} className="min-w-0 px-4 py-6 sm:py-8 lg:px-8">
+        <div className="mx-auto max-w-7xl">{children}</div>
       </main>
     );
   }

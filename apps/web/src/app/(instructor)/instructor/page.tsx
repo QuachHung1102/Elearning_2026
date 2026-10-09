@@ -57,7 +57,7 @@ export default async function InstructorHomePage() {
         />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
             <StatTile label="Khóa học đang bán" value={overview.publishedCourses} />
             <StatTile
               label="Lượt ghi danh"

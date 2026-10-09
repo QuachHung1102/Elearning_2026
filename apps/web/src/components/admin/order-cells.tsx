@@ -49,7 +49,7 @@ export function OrderPaymentCell({ order }: { order: AdminPaymentRow }) {
       </div>
       {latest.status === "PENDING" && (
         <p className="text-xs text-muted-foreground">
-          hết hạn lúc <Time value={latest.expiresAt} />
+          Hết hạn lúc <Time value={latest.expiresAt} />
         </p>
       )}
       <details className="group w-full">

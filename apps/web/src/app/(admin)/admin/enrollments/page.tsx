@@ -59,7 +59,7 @@ export default async function AdminEnrollmentsPage({
           Quyền học
         </h1>
         <p className="text-muted-foreground">
-          Cấp một quyền học và thu hồi một quyền học.
+          Cấp thủ công hoặc thu hồi quyền học của học viên.
         </p>
       </div>
       {action}
@@ -257,16 +257,15 @@ export default async function AdminEnrollmentsPage({
           <ul className="grid list-none gap-3 p-0 md:hidden">
             {enrollments.items.map((enrollment) => (
               <li key={enrollment.id} className="panel grid gap-2 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <Link
-                    className="inline-flex min-h-11 min-w-0 items-center text-base font-semibold underline-offset-2 [overflow-wrap:anywhere] hover:underline"
-                    href={`/admin/users/${enrollment.user.id}`}
-                  >
-                    {enrollment.user.email}
-                  </Link>
-                  <span className="shrink-0 pt-3">
-                    <StatusBadge status={enrollment.status} />
-                  </span>
+                {/* Full width for the email: beside a badge it broke mid-word. */}
+                <Link
+                  className="inline-flex min-h-11 min-w-0 items-center text-base font-semibold underline-offset-2 [overflow-wrap:anywhere] hover:underline"
+                  href={`/admin/users/${enrollment.user.id}`}
+                >
+                  {enrollment.user.email}
+                </Link>
+                <div>
+                  <StatusBadge status={enrollment.status} />
                 </div>
                 <dl className="grid gap-1 text-sm">
                   <div className="flex items-baseline gap-1">
