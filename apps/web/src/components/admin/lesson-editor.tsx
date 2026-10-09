@@ -211,7 +211,8 @@ export function LessonEditor({
           <textarea
             id="content"
             name="content"
-            className="control min-h-64 font-mono text-sm"
+            rows={12}
+            className="control font-mono text-sm"
             maxLength={50000}
             defaultValue={content ?? ""}
           />
@@ -224,19 +225,19 @@ export function LessonEditor({
             defaultChecked={lesson.isPreview}
             className="size-5 accent-primary-strong"
           />
-          <span className="font-semibold">Cho học thử</span>
+          <span className="font-semibold">Cho phép học thử</span>
           <span className="text-sm text-muted-foreground">
             Bài học thử mở cho mọi tài khoản đã đăng nhập.
           </span>
         </label>
 
-        <div className="sticky bottom-0 -mx-4 flex min-h-16 items-center gap-3 border-t border-border bg-card px-4 py-3">
+        <div className="sticky bottom-0 -mx-4 grid gap-3 border-t border-border bg-card px-4 py-3 sm:grid-cols-2 sm:gap-6">
           <Button type="submit" loading={busy === "save"}>
             Lưu bài học
           </Button>
           <a
             href={`${base}/courses/${course.id}/curriculum`}
-            className={buttonClass("ghost")}
+            className={buttonClass("outline")}
           >
             Về chương trình học
           </a>
@@ -245,7 +246,7 @@ export function LessonEditor({
 
       <aside className="grid h-fit content-start gap-6">
         <section className="panel grid gap-3 p-5">
-          <h2 className="text-xl font-semibold">Video</h2>
+          <h2 className="text-xl font-semibold">Video bài học</h2>
           {type === "ARTICLE" ? (
             <p className="text-sm text-muted-foreground">
               Bài đọc không gắn video. Thời lượng luôn là 0.
@@ -266,7 +267,7 @@ export function LessonEditor({
                 onClick={refreshVideo}
               >
                 <RefreshCw aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                Kiểm tra lại trạng thái
+                Kiểm tra video
               </Button>
             </>
           ) : (
@@ -297,7 +298,7 @@ export function LessonEditor({
         </section>
 
         <section className="panel grid gap-3 p-5">
-          <h2 className="text-xl font-semibold">Tài liệu</h2>
+          <h2 className="text-xl font-semibold">Tài liệu đính kèm</h2>
           {resources.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Chưa có tài liệu nào.
@@ -354,7 +355,7 @@ export function LessonEditor({
             className={buttonClass("outline", "md", "w-fit cursor-pointer")}
           >
             <Paperclip aria-hidden="true" className="size-4" strokeWidth={1.75} />
-            Thêm tài liệu
+            Tải tài liệu lên
           </label>
           <p className="text-sm text-muted-foreground">
             PDF, ZIP, PNG, JPEG hoặc TXT.

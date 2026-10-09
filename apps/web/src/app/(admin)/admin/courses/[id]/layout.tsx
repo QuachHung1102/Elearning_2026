@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { StatusBadge } from "@/components/ui/badge";
+import { buttonClass } from "@/components/ui/button";
 import { getAdminCourse, staffBase } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,8 @@ export default async function CourseLayout({
   const tabs = [
     { href: `${base}/courses/${id}`, label: "Thông tin chung" },
     { href: `${base}/courses/${id}/curriculum`, label: "Chương trình học" },
+    // Staff open any course they manage in the player's ADMIN mode.
+    { href: `/learn/${course.slug}`, label: "Xem trước" },
   ];
 
   return (
@@ -25,7 +28,7 @@ export default async function CourseLayout({
       <header className="grid gap-3">
         <Link
           href={`${base}/courses`}
-          className="inline-flex min-h-11 w-fit items-center text-sm text-muted-foreground hover:text-primary-text"
+          className="inline-flex min-h-11 w-fit items-center text-sm text-primary-text hover:underline"
         >
           {base === "/instructor" ? "← Khóa học của tôi" : "← Danh sách khóa học"}
         </Link>
@@ -35,12 +38,15 @@ export default async function CourseLayout({
           </h1>
           <StatusBadge status={course.status} />
         </div>
-        <nav aria-label="Phần của khóa học" className="flex flex-wrap gap-1">
+        <nav
+          aria-label="Phần của khóa học"
+          className="grid gap-3 sm:grid-cols-3"
+        >
           {tabs.map((tab) => (
             <Link
               key={tab.href}
               href={tab.href}
-              className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium hover:bg-muted"
+              className={buttonClass("outline", "md", "w-full")}
             >
               {tab.label}
             </Link>
