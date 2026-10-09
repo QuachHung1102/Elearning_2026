@@ -135,8 +135,9 @@ h4 {
   text-wrap: balance;
 }
 
-/* In the base layer: unlayered, it beat every utility, so a <button> lost its
-   text-sm and font-semibold while a link styled as a button kept them. */
+/* In the base layer, so a control's own `text-sm` or `font-semibold` wins:
+   unlayered, this beat every utility and a <Button> rendered bigger and
+   lighter than the same `buttonClass` on a <Link>. */
 @layer base {
   button,
   input,

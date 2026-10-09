@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { StaffBase } from "@/lib/admin";
 import { apiFetch, errorMessage } from "@/lib/api";
 import type { Category, CourseDetail } from "@/lib/catalog";
 import { baseSlug } from "@/lib/slug";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClass } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Alert } from "@/components/ui/feedback";
 
@@ -42,14 +43,9 @@ export function CourseCreateForm({
   }
 
   return (
-    <form action={create} className="grid max-w-xl gap-6">
+    <form action={create} className="panel grid max-w-2xl gap-6 p-4 sm:p-6">
       {error && <Alert variant="destructive" title={error} />}
-      <Field
-        id="title"
-        label="Tiêu đề khóa học"
-        required
-        hint="Bạn có thể sửa lại sau."
-      >
+      <Field id="title" label="Tiêu đề khóa học" required>
         <input
           id="title"
           name="title"
@@ -75,7 +71,7 @@ export function CourseCreateForm({
 
       <Field id="categoryId" label="Danh mục">
         <select id="categoryId" name="categoryId" className="control">
-          <option value="">Chọn sau</option>
+          <option value="">Chọn danh mục</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
@@ -84,9 +80,18 @@ export function CourseCreateForm({
         </select>
       </Field>
 
-      <Button type="submit" size="lg" loading={saving} className="w-fit">
-        Tạo bản nháp
-      </Button>
+      <Alert variant="info" title="Bắt đầu bằng bản nháp">
+        Bạn có thể bổ sung nội dung, giá và ảnh bìa ở bước tiếp theo.
+      </Alert>
+
+      <div className="grid gap-4">
+        <Button type="submit" size="lg" loading={saving}>
+          Tạo bản nháp
+        </Button>
+        <Link href={`${base}/courses`} className={buttonClass("outline", "lg")}>
+          Hủy
+        </Link>
+      </div>
     </form>
   );
 }
