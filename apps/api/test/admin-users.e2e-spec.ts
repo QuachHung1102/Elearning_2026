@@ -81,7 +81,7 @@ describe('Phase 3 admin users and audit log (e2e)', () => {
     }).compile();
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureApp(app);
-    await app.init();
+    await app.listen(0, '127.0.0.1');
     prisma = app.get(PrismaService);
   });
 

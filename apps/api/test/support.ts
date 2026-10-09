@@ -22,7 +22,10 @@ export async function bootApp(options?: Parameters<typeof configureApp>[1]) {
   }).compile();
   const app = moduleFixture.createNestApplication<NestExpressApplication>();
   configureApp(app, options);
-  await app.init();
+  // Listening up front: handed a server that is not listening, supertest
+  // listens and closes it per request, so parallel requests reset each other
+  // (ECONNRESET on Linux CI).
+  await app.listen(0, '127.0.0.1');
   return { app, prisma: app.get(PrismaService) };
 }
 
