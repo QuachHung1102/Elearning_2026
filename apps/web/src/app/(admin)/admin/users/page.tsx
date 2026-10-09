@@ -40,9 +40,14 @@ export default async function AdminUsersPage({
 
   return (
     <div className="grid gap-6">
-      <h1 tabIndex={-1} className="text-3xl font-bold">
-        Người dùng
-      </h1>
+      <header className="grid gap-2">
+        <h1 tabIndex={-1} className="text-3xl font-bold">
+          Người dùng
+        </h1>
+        <p className="text-muted-foreground">
+          Mở hồ sơ một người để cấp quyền học, đổi vai trò hoặc khóa tài khoản.
+        </p>
+      </header>
 
       {/* Keyed on the applied filter: a client navigation such as "Xóa bộ
           lọc" reuses this form, and React ignores a new `defaultValue` on a
@@ -52,9 +57,9 @@ export default async function AdminUsersPage({
         method="get"
         action="/admin/users"
         role="search"
-        className="flex flex-wrap items-end gap-3"
+        className="grid grid-cols-2 items-end gap-3 md:grid-cols-[minmax(0,24rem)_minmax(0,12rem)_minmax(0,12rem)_auto] md:justify-start"
       >
-        <div className="grid w-full gap-1 sm:max-w-sm">
+        <div className="col-span-2 grid min-w-0 gap-1 md:col-span-1">
           <label className="text-sm font-medium" htmlFor="users-q">
             Tìm theo tên hoặc email
           </label>
@@ -67,7 +72,7 @@ export default async function AdminUsersPage({
             maxLength={100}
           />
         </div>
-        <div className="grid gap-1">
+        <div className="grid min-w-0 gap-1">
           <label className="text-sm font-medium" htmlFor="users-status">
             Trạng thái
           </label>
@@ -82,7 +87,7 @@ export default async function AdminUsersPage({
             <option value="BLOCKED">{STATUS_LABEL.BLOCKED}</option>
           </select>
         </div>
-        <div className="grid gap-1">
+        <div className="grid min-w-0 gap-1">
           <label className="text-sm font-medium" htmlFor="users-role">
             Vai trò
           </label>
@@ -100,7 +105,10 @@ export default async function AdminUsersPage({
             ))}
           </select>
         </div>
-        <button type="submit" className={buttonClass("outline", "lg")}>
+        <button
+          type="submit"
+          className={buttonClass("outline", "lg", "col-span-2 md:col-span-1")}
+        >
           Lọc
         </button>
       </form>
@@ -194,27 +202,23 @@ export default async function AdminUsersPage({
           <ul className="grid list-none gap-3 p-0 md:hidden">
             {users.items.map((user) => (
               <li key={user.id} className="panel grid gap-2 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <Link
-                    className="inline-flex min-h-11 min-w-0 items-center text-base font-semibold underline-offset-2 [overflow-wrap:anywhere] hover:underline"
-                    href={`/admin/users/${user.id}`}
-                  >
-                    {user.email}
-                  </Link>
-                  <span className="shrink-0 pt-3">
-                    <StatusBadge status={user.status} />
-                  </span>
+                {/* Full width for the email: beside a badge it broke mid-word. */}
+                <Link
+                  className="inline-flex min-h-11 min-w-0 items-center text-base font-semibold underline-offset-2 [overflow-wrap:anywhere] hover:underline"
+                  href={`/admin/users/${user.id}`}
+                >
+                  {user.email}
+                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <RoleBadge role={user.role} />
+                  <StatusBadge status={user.status} />
                 </div>
                 <dl className="grid gap-1 text-sm">
                   <div className="flex gap-1">
-                    <dt className="text-muted-foreground">Người dùng:</dt>
+                    <dt className="shrink-0 text-muted-foreground">Người dùng:</dt>
                     <dd className="min-w-0 [overflow-wrap:anywhere]">
                       {user.displayName}
                     </dd>
-                  </div>
-                  <div className="flex gap-1">
-                    <dt className="text-muted-foreground">Vai trò:</dt>
-                    <dd>{ROLE_LABEL[user.role]}</dd>
                   </div>
                   <div className="flex gap-1">
                     <dt className="text-muted-foreground">Quyền học:</dt>

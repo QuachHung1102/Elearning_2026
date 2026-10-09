@@ -44,13 +44,13 @@ export default async function AdminUserPage({
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="grid min-w-0 gap-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1
-                tabIndex={-1}
-                className="text-3xl font-bold [overflow-wrap:anywhere]"
-              >
-                {user.displayName}
-              </h1>
+            <h1
+              tabIndex={-1}
+              className="text-3xl font-bold [overflow-wrap:anywhere]"
+            >
+              {user.displayName}
+            </h1>
+            <div className="flex flex-wrap gap-2">
               <RoleBadge role={user.role} />
               <StatusBadge status={user.status} />
             </div>
@@ -61,7 +61,9 @@ export default async function AdminUserPage({
               Ngày đăng ký: {formatDate(user.createdAt)}
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          {/* Full-width buttons on a phone rather than three ragged widths;
+              the confirm dialogs wrap their trigger in a span. */}
+          <div className="grid w-full gap-3 sm:flex sm:w-auto sm:flex-wrap [&>span>button]:w-full sm:[&>span>button]:w-auto">
             {courses && <ManualGrantDialog user={user} courses={courses} />}
             {user.id !== viewer?.id && <RoleDialog user={user} />}
             <BlockUserDialog user={user} />
@@ -69,7 +71,7 @@ export default async function AdminUserPage({
         </div>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatTile label="Quyền học đang hiệu lực" value={user.enrollmentCount} />
         <StatTile
           label="Phiên đăng nhập đang mở"
@@ -82,7 +84,7 @@ export default async function AdminUserPage({
           Khóa học được cấp quyền
         </h2>
         {enrollments.length === 0 ? (
-          <p className="text-muted-foreground">
+          <p className="rounded-lg bg-muted p-6 text-muted-foreground-strong">
             Người dùng này chưa có quyền học khóa nào.
           </p>
         ) : (

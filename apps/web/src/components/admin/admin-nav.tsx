@@ -5,13 +5,16 @@ import {
   FolderTree,
   KeyRound,
   LayoutDashboard,
+  Menu,
   Receipt,
   ScrollText,
   UsersRound,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { CHECKOUT_ENABLED } from "@/lib/orders";
 
@@ -46,36 +49,73 @@ const AREAS = {
 export type StaffArea = keyof typeof AREAS;
 
 /**
- * Wraps below 1024px instead of scrolling sideways, so no item hides off
- * screen (UX_PLAN.md §7.3). ponytail: stand-in for the §7.1 drawer and
- * icon-only rail; build those when the nav outgrows two rows.
+ * A sidebar from 1024px. Below it, a native disclosure in the top bar names
+ * the current page and opens the same links over the content, so the nav no
+ * longer pushes the page down by four rows of chips. Every item stays
+ * reachable without sideways scrolling (UX_PLAN.md §7.3). `footer` (the
+ * site link and sign-out) joins the disclosure; the shell shows it in the
+ * sidebar itself.
+ *
+ * Keyed on the path, the disclosure closes after each navigation.
  */
-export function AdminNav({ area = "admin" }: { area?: StaffArea }) {
+export function AdminNav({
+  area = "admin",
+  footer,
+}: {
+  area?: StaffArea;
+  footer?: ReactNode;
+}) {
   const pathname = usePathname();
   const { label, items } = AREAS[area];
   const home = items[0].href;
-  return (
-    <nav
-      aria-label={label}
-      className="order-last flex w-full min-w-0 flex-wrap gap-1 lg:order-none lg:w-auto lg:flex-col lg:flex-nowrap"
+  const isCurrent = (href: string) =>
+    href === home
+      ? pathname === href
+      : pathname === href || pathname.startsWith(`${href}/`);
+  const links = items.map((item) => (
+    <Link
+      key={item.href}
+      href={item.href}
+      aria-current={isCurrent(item.href) ? "page" : undefined}
+      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium hover:bg-muted aria-[current=page]:bg-primary-subtle aria-[current=page]:text-primary-on-subtle"
     >
-      {items.map((item) => {
-        const current =
-          item.href === home
-            ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={current ? "page" : undefined}
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium hover:bg-muted aria-[current=page]:bg-primary-subtle aria-[current=page]:text-primary-on-subtle"
-          >
-            <item.icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+      <item.icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
+      {item.label}
+    </Link>
+  ));
+  const current = items.find((item) => isCurrent(item.href));
+
+  return (
+    <>
+      <details key={pathname} className="group lg:hidden">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md border border-input bg-card px-3 text-sm font-medium hover:bg-muted [&::-webkit-details-marker]:hidden">
+          <Menu
+            aria-hidden="true"
+            className="size-5 group-open:hidden"
+            strokeWidth={1.75}
+          />
+          <X
+            aria-hidden="true"
+            className="hidden size-5 group-open:block"
+            strokeWidth={1.75}
+          />
+          <span className="sr-only">Menu, đang ở: </span>
+          {current?.label ?? "Menu"}
+        </summary>
+        <div className="absolute inset-x-0 top-full z-30 grid gap-3 border-b border-border bg-card px-4 py-3 shadow-[var(--shadow-modal)]">
+          <nav aria-label={label} className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+            {links}
+          </nav>
+          {footer && (
+            <div className="flex flex-wrap gap-1 border-t border-border pt-3 *:w-auto">
+              {footer}
+            </div>
+          )}
+        </div>
+      </details>
+      <nav aria-label={label} className="hidden gap-1 lg:flex lg:flex-col">
+        {links}
+      </nav>
+    </>
   );
 }

@@ -211,7 +211,7 @@ export default async function AdminOrdersPage({
                       >
                         {order.user.displayName}
                       </Link>
-                      <span className="block text-muted-foreground [overflow-wrap:anywhere]">
+                      <span className="block text-muted-foreground [overflow-wrap:break-word]">
                         {order.user.email}
                       </span>
                     </td>
@@ -255,15 +255,17 @@ export default async function AdminOrdersPage({
                 <dl className="grid gap-1 text-sm">
                   <div className="flex items-baseline gap-1">
                     <dt className="shrink-0 text-muted-foreground">Học viên:</dt>
-                    <dd className="min-w-0 [overflow-wrap:anywhere]">
+                    {/* Name over email: inline, the email wrapped under the
+                        label at an odd indent. */}
+                    <dd className="grid min-w-0 justify-items-start [overflow-wrap:anywhere]">
                       <Link
                         className="inline-flex min-h-11 items-center font-medium underline-offset-2 hover:underline"
                         href={`/admin/users/${order.user.id}`}
                       >
                         {order.user.displayName}
-                      </Link>{" "}
+                      </Link>
                       <span className="text-muted-foreground">
-                        ({order.user.email})
+                        {order.user.email}
                       </span>
                     </dd>
                   </div>
