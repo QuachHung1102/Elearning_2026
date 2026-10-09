@@ -696,7 +696,7 @@ Vòng lặp chạy trên **mọi** instance. Ở một instance — cấu hình 
 
 ### Endpoint confirm dev
 
-`POST /api/v1/dev/payments/:appTransId/confirm` — `@UseGuards(AdminGuard)`, giống mọi route `/dev/*`.
+`POST /api/v1/dev/payments/:appTransId/confirm` — `@UseGuards(SessionAuthGuard, AuthRateLimitGuard)`, 10 lần/phút mỗi người dùng. Người gọi phải là **chính người mua** của đơn (attempt → purchase → `userId`) hoặc `ADMIN`; ai khác nhận `404` y như `appTransId` không tồn tại, nên mã đơn của người khác không lộ gì. Đây là route `/dev/*` duy nhất không dùng `AdminGuard`.
 
 Nó **không** tự cấp `Enrollment`. Nó đặt `Map` của `DemoZaloPayClient` sang `SUCCEEDED`, dựng payload callback đúng schema của ZaloPay (ký MAC bằng `ZALOPAY_KEY2` demo) rồi gọi:
 
@@ -706,15 +706,15 @@ await this.checkout.confirmPayment(payload);
 
 Đúng hàm mà callback thật gọi và tác vụ reconcile gọi. Nghĩa là xác minh MAC, xác minh số tiền, idempotency, chuyển trạng thái `PaymentAttempt`, transaction PostgreSQL và `enrollment.grant()` đều được chạy thật. Bấm confirm hai lần vẫn chỉ ra một `Enrollment` — và đó là test có ý nghĩa.
 
-Học viên **không** bấm được nút này, và điều đó không cản trở gì: người đang chạy demo là developer, và developer có tài khoản admin từ seed. Từ `/admin/orders`, chọn attempt đang `PENDING`, bấm xác nhận. Không có trang HTML không guard, không có QR quét được bằng điện thoại — cả hai chỉ tồn tại để tiết kiệm một lần đăng nhập và đổi lại một endpoint mở trên máy có người khác truy cập được.
+Học viên bấm nút **"Thanh toán"** ngay trên trang `/checkout/[courseSlug]`: màn hình vẫn y như hiện tại (QR, tóm tắt đơn, đồng hồ đếm ngược), chỉ thêm ghi chú "không trừ tiền thật" và nút này thay cho việc quét mã. Bấm xong, trang đọc lại đơn đã lưu và chuyển sang kết quả "Thanh toán thành công" → "Vào học". Không cần admin, không có tiền thật. Admin vẫn xác nhận được mọi đơn từ `/admin/orders` (chọn attempt đang `PENDING`, bấm xác nhận). Không có trang HTML không guard, không có QR quét được bằng điện thoại: route vẫn cần phiên đăng nhập và CSRF như mọi mutation khác.
 
 ### Ba lớp chặn ở production
 
 1. `DevModule` chỉ được import khi có ít nhất một driver ở chế độ demo. Ở production route **không tồn tại** → 404.
 2. Kiểm tra ở mục 6 làm app không khởi động nổi với bất kỳ driver demo nào ở production.
-3. `@UseGuards(AdminGuard)` — một guard duy nhất — trên toàn bộ `DevModule` (API_CONTRACT.md §3.1–§3.2), phòng trường hợp ai đó chạy demo mode trên một máy có người khác truy cập được.
+3. `@UseGuards(AdminGuard)` trên các route `/dev/*` (API_CONTRACT.md §3.1–§3.2), phòng trường hợp ai đó chạy demo mode trên một máy có người khác truy cập được. Ngoại lệ duy nhất là endpoint confirm thanh toán ở trên: nó cần phiên đăng nhập và chỉ chạy cho người mua của đơn hoặc admin.
 
-Lớp 1 là lớp thật sự có tác dụng. Hai lớp còn lại là để phòng cấu hình sai. Lớp 3 không có ngoại lệ nào — kể cả hộp thư dev, xem mục 4.
+Lớp 1 là lớp thật sự có tác dụng. Hai lớp còn lại là để phòng cấu hình sai. Hộp thư dev vẫn chỉ admin xem được, xem mục 4.
 
 ## 6. Chặn demo driver ở production
 
@@ -1026,7 +1026,7 @@ Bảng đầy đủ ở DATA_MODEL.md §Tài khoản demo. Bốn tài khoản, m
 
 | Vai trò | Email | Mật khẩu | Vì sao tồn tại |
 |---|---|---|---|
-| Quản trị | `admin@elearning.local` | `Demo!Admin123` | Soạn nội dung, hộp thư dev, confirm thanh toán dev. `emailVerifiedAt` đã đặt. |
+| Quản trị | `admin@elearning.local` | `Demo!Admin123` | Soạn nội dung, hộp thư dev, confirm thanh toán dev cho mọi đơn. `emailVerifiedAt` đã đặt. |
 | Học viên đang học | `student1@elearning.local` | `Demo!Student123` | Có quyền học C1 + C2, có 9 hàng `LessonProgress` — trạng thái "tiếp tục học" có dữ liệu thật ngay |
 | Học viên mới | `student2@elearning.local` | `Demo!Student123` | Có quyền học C1, chưa có tiến độ — trạng thái rỗng của trang học |
 | Khách chưa mua | `student3@elearning.local` | `Demo!Student123` | **Đường từ chối**: playback token phải `403 NOT_ENROLLED`, khóa `DRAFT` phải `404` |
@@ -1051,7 +1051,7 @@ Ba điều chỉ liên quan tới demo mode, và chỉ có ở đây:
 | Xem hộp thư dev (layout HTML, dấu tiếng Việt) | Đăng nhập admin rồi mở `http://localhost:3001/api/v1/dev/mail` |
 | Cấp quyền học thủ công | Đăng nhập admin → `/admin/users/[id]` → `ManualGrantDialog` |
 | Thu hồi quyền học | `/admin/enrollments` → `RevokeDialog`. Đặt `status = REVOKED`, không xóa hàng. |
-| Xác nhận thanh toán giả | Đăng nhập admin → `/admin/orders` → chọn attempt `PENDING` → xác nhận |
+| Xác nhận thanh toán giả | Học viên đã xác minh email → `/checkout/[courseSlug]` → bấm **"Thanh toán"**. Hoặc admin → `/admin/orders` → chọn attempt `PENDING` → xác nhận |
 | Reset sạch | `corepack pnpm --filter api prisma migrate reset` rồi `Remove-Item -Recurse apps/api/.storage, apps/api/.mail` |
 | Đổi sang video thật | Đặt `VIDEO_DRIVER=cloudflare` + 5 biến `CLOUDFLARE_*`, restart API. Không sửa code. |
 

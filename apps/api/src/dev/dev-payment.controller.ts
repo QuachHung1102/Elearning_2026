@@ -1,19 +1,26 @@
-import { Controller, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
+import { Controller, HttpCode, HttpStatus, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { AuditActor } from '../audit/audit-actor.decorator.js';
 import type { AuditActorContext } from '../audit/audit.service.js';
-import { AdminGuard } from '../auth/admin.guard.js';
+import { AuthRateLimitGuard } from '../auth/auth-rate-limit.guard.js';
+import { RateLimit } from '../auth/rate-limit.decorator.js';
+import {
+  SessionAuthGuard,
+  type AuthenticatedRequest,
+} from '../auth/session-auth.guard.js';
 import { CheckoutService } from '../checkout/checkout.service.js';
 import { DemoZaloPayClient } from '../checkout/demo-zalopay.client.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
+import { UserRole } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 /**
  * The demo "the customer paid" button (DEMO_MODE.md §5). Registered only while
  * `PAYMENT_DRIVER=demo` (see `DevModule`), so with a real driver the route does
- * not exist at all.
+ * not exist at all. The buyer presses it on the checkout page; an admin may
+ * press it for anyone's order.
  */
 @Controller('dev/payments')
-@UseGuards(AdminGuard)
+@UseGuards(SessionAuthGuard, AuthRateLimitGuard)
 export class DevPaymentController {
   constructor(
     private readonly prisma: PrismaService,
@@ -30,15 +37,19 @@ export class DevPaymentController {
    */
   @Post(':appTransId/confirm')
   @HttpCode(HttpStatus.OK)
+  @RateLimit({ key: 'user', limit: 10, windowSeconds: 60 })
   async confirm(
+    @Req() request: AuthenticatedRequest,
     @Param('appTransId') appTransId: string,
     @AuditActor() actor: AuditActorContext,
   ) {
     const attempt = await this.prisma.paymentAttempt.findUnique({
       where: { appTransId },
-      select: { amountVnd: true, expiresAt: true },
+      select: { amountVnd: true, expiresAt: true, purchase: { select: { userId: true } } },
     });
-    if (!attempt) {
+    const { user } = request.auth;
+    // Someone else's order answers like an unknown one, so ids reveal nothing.
+    if (!attempt || (user.role !== UserRole.ADMIN && attempt.purchase.userId !== user.id)) {
       throw appError(HttpStatus.NOT_FOUND, ERROR_CODE.NOT_FOUND, 'Not Found');
     }
 

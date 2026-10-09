@@ -706,7 +706,7 @@ Chạy với `PAYMENT_DRIVER=demo`.
 2. `/courses/[slug]` → giá hiển thị đúng, nút "Đăng ký học" đã thay cho khối liên hệ.
 3. Bấm nút → `/checkout/[slug]` hiện QR giả, trạng thái "Chờ thanh toán", đồng hồ đếm ngược.
 4. Mở tab khác, quay lại `/courses/[slug]`, bấm "Đăng ký học" lần nữa → về đúng trang checkout cũ, **cùng một** `paymentAttemptId` (cùng mã QR), không sinh QR mới.
-5. Ở một trình duyệt khác đăng nhập admin, mở `/admin/orders`, chọn giao dịch `PENDING` và bấm "Xác nhận thanh toán" (chỉ hiện khi `PAYMENT_DRIVER=demo`; học viên không bấm được — `DEMO_MODE.md` §"Endpoint confirm dev").
+5. Ngay trên trang checkout, học viên bấm "Thanh toán" (chỉ hiện khi `PAYMENT_DRIVER=demo`, kèm ghi chú không trừ tiền thật — `DEMO_MODE.md` §"Endpoint confirm dev"). Không cần admin; admin vẫn xác nhận được từ `/admin/orders` bằng nút "Xác nhận thanh toán".
 6. Trang checkout tự đổi sang "Thành công" nhờ polling, rồi chuyển sang `/learn/[slug]`.
 7. Console `api` in email biên nhận.
 8. `/my-courses` → khóa học nằm trong danh sách. `/account/orders` → một dòng `PAID`.
@@ -714,15 +714,15 @@ Chạy với `PAYMENT_DRIVER=demo`.
 10. Xác nhận lại cùng `appTransId` (`POST /dev/payments/{appTransId}/confirm`, cookie admin) → trả `200`, nhưng số enrollment không đổi.
 11. `/admin/orders` → hoàn tiền (`POST /admin/purchases/{id}/refund`) → nhập lý do (bắt buộc) → trạng thái `REFUNDED`, `Enrollment` chuyển `REVOKED`, `AuditLog` có `purchase.refunded` kèm lý do, hàng `lesson_progress` vẫn còn nguyên.
 12. Với một khóa khác: tạo QR, để `CHECKOUT_QR_TTL_MINUTES` trôi qua (đặt `1` để thử) → trang tự chuyển sang "Mã QR đã hết hạn" và hiện nút "Tạo mã QR mới". Bấm nút → `paymentAttemptId` mới khác cái cũ (admin thấy thêm một `appTransId` mới ở `/admin/orders`).
-13. Kiểm tra ở 375px: QR không tràn, nút "Giả lập thanh toán" và "Tạo mã QR mới" ≥ 44px.
+13. Kiểm tra ở 375px: QR không tràn, nút "Thanh toán" và "Tạo mã QR mới" ≥ 44px.
 
 ### Acceptance
 
 | # | Kiểm tra | Kết quả bắt buộc |
 |---|---|---|
-| A4.1 | `POST /checkout/:slug` lần đầu | `201`, body có `paymentAttemptId`, `qrCode`, `expiresAt` (`appTransId` là mã phía nhà cung cấp, chỉ admin thấy) |
+| A4.1 | `POST /checkout/:slug` lần đầu | `201`, body có `paymentAttemptId`, `appTransId` (mã phía nhà cung cấp, nút "Thanh toán" demo cần nó), `qrCode`, `expiresAt` |
 | A4.2 | `POST /checkout/:slug` lần hai trong TTL | `200` (không phải `201`), `paymentAttemptId` **giống hệt** A4.1; `psql ... "select count(*) from payment_attempts where purchase_id=..."` = `1` |
-| A4.3 | `POST /dev/payments/{appTransId}/confirm` (cookie admin) | `200`; `psql ... "select status from purchases where id=..."` = `PAID` |
+| A4.3 | `POST /dev/payments/{appTransId}/confirm` (cookie của chính người mua, hoặc admin) | `200`; `psql ... "select status from purchases where id=..."` = `PAID`. Học viên khác gọi cùng `appTransId` → `404`, không có enrollment |
 | A4.4 | Sau A4.3 | `psql ... "select source, purchase_id from enrollments where user_id=... and course_id=..."` → `PURCHASE`, id khác `NULL` |
 | A4.5 | Lặp lại A4.3 lần hai | `200`, và `select count(*) from enrollments where user_id=... and course_id=...` vẫn `1` |
 | A4.6 | `GET /purchases/me` | 1 dòng, `status` = `PAID`, `priceVnd` = giá đã chụp lúc tạo attempt |

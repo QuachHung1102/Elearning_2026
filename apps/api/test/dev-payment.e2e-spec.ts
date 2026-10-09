@@ -169,13 +169,44 @@ describe('POST /dev/payments/{appTransId}/confirm (e2e)', () => {
     await confirm(staff, '260930_00000000').expect(404);
   });
 
-  it('is invisible to everyone but an admin', async () => {
-    const { session, attempt } = await shopper();
+  // The demo checkout page's "Thanh toán" button: the buyer pays their own order.
+  it('lets the buyer confirm their own order', async () => {
+    const { course, user, session, purchaseId, attempt } = await shopper();
+
+    const response = await confirm(session, attempt.appTransId).expect(200);
+
+    expect(response.body).toEqual({ status: 'PAID' });
+    expect(
+      await prisma.enrollment.findUniqueOrThrow({
+        where: { userId_courseId: { userId: user.id, courseId: course.id } },
+      }),
+    ).toMatchObject({ status: 'ACTIVE', source: 'PURCHASE', purchaseId });
+  });
+
+  // Changed on purpose: the buyer may now confirm (above). Anyone else signed in
+  // gets the unknown-order 404, so another learner's ids reveal nothing.
+  it('is invisible to a signed-in user who neither bought the order nor is an admin', async () => {
+    const { attempt } = await shopper();
+    const otherStudent = await createUser(prisma, 'STUDENT');
     const instructor = await createUser(prisma, 'INSTRUCTOR');
 
-    await confirm(null, attempt.appTransId).expect(404);
-    await confirm(session, attempt.appTransId).expect(404);
+    await confirm(await signIn(app, otherStudent.email), attempt.appTransId).expect(404);
     await confirm(await signIn(app, instructor.email), attempt.appTransId).expect(404);
+    expect(await prisma.enrollment.count()).toBe(0);
+    expect((await prisma.paymentAttempt.findUniqueOrThrow({ where: { id: attempt.id } })).status).toBe('PENDING');
+  });
+
+  // Without a CSRF token the global guard already answers 404 under /dev (as it
+  // always did); with one, the missing session is a plain 401.
+  it('needs a session', async () => {
+    const { attempt } = await shopper();
+    const csrf = await request(app.getHttpServer()).get('/api/v1/auth/csrf').expect(200);
+
+    await confirm(null, attempt.appTransId).expect(404);
+    await confirm(null, attempt.appTransId)
+      .set('Cookie', csrf.headers['set-cookie'])
+      .set('X-CSRF-Token', csrf.body.csrfToken)
+      .expect(401);
     expect(await prisma.enrollment.count()).toBe(0);
   });
 

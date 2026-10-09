@@ -68,7 +68,7 @@ describe('checkout, end to end (e2e)', () => {
     return { course, learnerUser, learner: await signIn(app, learnerUser.email) };
   }
 
-  it('walks the demo script on the seed: QR, one QR per order, admin confirm, access, revenue, refund', async () => {
+  it('walks the demo script on the seed: QR, one QR per order, buyer confirm, access, revenue, refund', async () => {
     const course = await prisma.course.findUniqueOrThrow({ where: { slug: C2 } });
     const buyer = await prisma.user.findUniqueOrThrow({ where: { email: BUYER.email } });
     const learner = await signIn(app, BUYER.email, BUYER.password);
@@ -101,9 +101,9 @@ describe('checkout, end to end (e2e)', () => {
     expect(polling.body).toMatchObject({ status: 'PENDING', courseSlug: C2 });
     expect(polling.body.attempts).toHaveLength(1);
 
-    // 5. the admin presses "Xác nhận thanh toán" (A4.3, A4.4)
+    // 5. the buyer presses "Thanh toán" on the checkout page (A4.3, A4.4)
     const attempt = await attemptOf(first.body.paymentAttemptId);
-    const confirmed = await call('post', admin, `/dev/payments/${attempt.appTransId}/confirm`).expect(200);
+    const confirmed = await call('post', learner, `/dev/payments/${attempt.appTransId}/confirm`).expect(200);
     expect(confirmed.body).toEqual({ status: 'PAID' });
     expect(await prisma.purchase.findUniqueOrThrow({ where: { id: first.body.purchaseId } })).toMatchObject({
       status: 'PAID',

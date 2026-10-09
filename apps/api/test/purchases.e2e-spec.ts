@@ -133,6 +133,7 @@ describe('purchases (e2e)', () => {
       expect(response.body.attempts[0]).toEqual({
         purchaseId: purchase.id,
         paymentAttemptId: second.id,
+        appTransId: second.appTransId,
         status: 'PENDING',
         amountVnd: 499_000,
         provider: 'DEMO',

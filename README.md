@@ -36,8 +36,8 @@ node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'
 Mặc định `PAYMENT_DRIVER=demo`: mã QR là giả, không cần tài khoản ZaloPay. `NEXT_PUBLIC_CHECKOUT_ENABLED=true` (đã có ở `apps/web/.env.example`) bật nút "Đăng ký học", `/checkout`, `/account/orders` và `/admin/orders`; biến này được nhúng lúc build nên đổi giá trị thì phải build lại.
 
 1. Đăng nhập `student3@elearning.local`, mở một khóa có giá và bấm "Đăng ký học".
-2. Ở một trình duyệt khác, đăng nhập admin, vào `/admin/orders` và bấm "Xác nhận thanh toán".
-3. Trang thanh toán của học viên tự chuyển sang "Thanh toán thành công"; `/admin` hiện doanh thu.
+2. Trên trang thanh toán, bấm "Thanh toán" (chế độ demo, không trừ tiền thật). Admin cũng xác nhận được từ `/admin/orders` bằng nút "Xác nhận thanh toán".
+3. Trang thanh toán chuyển sang "Thanh toán thành công"; `/admin` hiện doanh thu.
 
 Các bước đầy đủ và kết quả mong đợi: `docs/ROADMAP.md` §8 (Demo script). `PAYMENT_DRIVER=zalopay` cần thông tin merchant sandbox và chưa được kiểm chứng (`docs/_PLAN.md`, A4.9).
 

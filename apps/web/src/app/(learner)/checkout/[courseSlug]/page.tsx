@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { CheckoutPanel } from "@/components/checkout/checkout-panel";
 import { publicFetch, type CourseDetail } from "@/lib/catalog";
 import { CHECKOUT_ENABLED } from "@/lib/orders";
-import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +22,7 @@ export default async function CheckoutPage({
 }) {
   if (!CHECKOUT_ENABLED) notFound();
   const { courseSlug } = await params;
-  const [course, user] = await Promise.all([
-    publicFetch<CourseDetail>(`/courses/${courseSlug}`),
-    getSession(),
-  ]);
+  const course = await publicFetch<CourseDetail>(`/courses/${courseSlug}`);
 
   return (
     <div className="page-shell grid gap-8 py-10 lg:py-14">
@@ -50,11 +46,7 @@ export default async function CheckoutPage({
       <h1 tabIndex={-1} className="text-4xl font-bold">
         Thanh toán
       </h1>
-      <CheckoutPanel
-        slug={course.slug}
-        courseTitle={course.title}
-        isAdmin={user?.role === "ADMIN"}
-      />
+      <CheckoutPanel slug={course.slug} courseTitle={course.title} />
     </div>
   );
 }
