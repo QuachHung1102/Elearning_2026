@@ -304,7 +304,7 @@ URL demo có chữ ký, có hạn và gắn với người xem, nên đường x
 export const OBJECT_STORAGE = Symbol('OBJECT_STORAGE');
 
 export interface ObjectStorage {
-  signedUploadUrl(key: string, contentType: string, ttl: number): Promise<string>;
+  signedUploadUrl(key: string, contentType: string, sizeBytes: number, ttl: number): Promise<string>;
   signedDownloadUrl(key: string, ttl: number): Promise<string>;
   publicUrl(key: string): string;
   delete(key: string): Promise<void>;
@@ -330,15 +330,15 @@ lessons/{lessonId}/resources/{uuid}-{slugified-filename}.{ext}
 - Gốc lưu trữ: `apps/api/.storage/` (`STORAGE_LOCAL_DIR`), đã gitignore.
 - Cả hai method trả cùng dạng URL: `${API_PUBLIC_URL}/api/v1/media/local/{key}?exp={unix}&sig={hmac}`. Uploader trong admin viết một lần cho cả hai driver (R2 dùng presigned PUT y hệt).
 
-Chữ ký **phải chứa HTTP method**, và chữ ký upload phải chứa cả `contentType`:
+Chữ ký **phải chứa HTTP method**, và chữ ký upload phải chứa cả `contentType` lẫn `sizeBytes` (R2 ký `content-length` y như vậy, nên URL chỉ nhận body đúng độ dài đã khai):
 
 ```ts
 const hmac = (message: string) =>
   createHmac('sha256', process.env.AUTH_JWT_SECRET!).update(message).digest('base64url');
 
 const downloadMessage = (key: string, exp: number) => `local-file:GET:${key}:${exp}`;
-const uploadMessage = (key: string, contentType: string, exp: number) =>
-  `local-file:PUT:${key}:${contentType}:${exp}`;
+const uploadMessage = (key: string, contentType: string, sizeBytes: number, exp: number) =>
+  `local-file:PUT:${key}:${contentType}:${sizeBytes}:${exp}`;
 ```
 
 Nếu chuỗi ký không chứa method thì hai method sinh ra **đúng cùng một chữ ký**, và mọi signed download URL mà học viên hợp lệ đang cầm cho một file PDF cũng là chữ ký `PUT` hợp lệ cho chính key đó: học viên `PUT` đè lên tài liệu của khóa học trong suốt TTL. R2 ký HTTP method trong SigV4 và bind `Content-Type` khi được ký, nên bản thật không có lỗ này — bỏ hai thứ đó làm driver demo **lỏng hơn** bản thật ở đúng khía cạnh mà mục 9 tuyên bố là mô phỏng trung thực.
@@ -412,13 +412,13 @@ Bước 1–3 giống hệt đường đọc, nhưng **không** có ngoại lệ
    | `public/courses/*/cover/` | `image/jpeg`, `image/png`, `image/webp` |
    | `lessons/*/resources/` | `application/pdf`, `application/zip`, `image/png`, `image/jpeg`, `text/plain` — đúng năm giá trị của DATA_MODEL.md §LessonResource |
 
-5. So sánh `hmac(uploadMessage(k, req.get('content-type'), exp))` với `sig` bằng `timingSafeEqual`. Sai → `403 SIGNATURE_INVALID`. Vì `contentType` nằm trong chuỗi ký, gửi kiểu khác kiểu đã xin URL là chữ ký sai — không cần so sánh riêng.
-6. `Content-Length` thiếu, không phải số nguyên, hoặc `> MAX_UPLOAD_BYTES` → `413`.
+5. `Content-Length` thiếu, không phải số nguyên, hoặc `> MAX_UPLOAD_BYTES` → `413`.
+6. So sánh `hmac(uploadMessage(k, req.get('content-type'), req.get('content-length'), exp))` với `sig` bằng `timingSafeEqual`. Sai → `403 SIGNATURE_INVALID`. Vì `contentType` và độ dài nằm trong chuỗi ký, gửi kiểu khác hoặc số byte khác lúc xin URL là chữ ký sai — không cần so sánh riêng.
 7. `mkdir -p` thư mục cha, ghi file, trả `204` với body rỗng.
 
 Hai allowlist khác nhau vì hai luồng khác nhau: ảnh bìa được nhúng trong `<img>` trên trang công khai nên chỉ nhận ảnh raster; tài liệu bài học được phát lại cho học viên từ một URL đã ký, nên `text/html` hay `image/svg+xml` lọt vào là một trang chạy script trên chính origin của mình.
 
-Bước 6 là kiểm tra thứ hai, không phải kiểm tra duy nhất. Body parser phải tự chặn trước: `express.raw({ type: '*/*', limit: MAX_UPLOAD_BYTES })` chỉ cho route này. Không có nó thì toàn bộ body đã nằm trong RAM trước khi handler chạy, và bước 6 chỉ báo lỗi sau khi thiệt hại đã xảy ra.
+Bước 5 là kiểm tra thứ hai, không phải kiểm tra duy nhất. Body parser phải tự chặn trước: `express.raw({ type: '*/*', limit: MAX_UPLOAD_BYTES })` chỉ cho route này. Không có nó thì toàn bộ body đã nằm trong RAM trước khi handler chạy, và bước 5 chỉ báo lỗi sau khi thiệt hại đã xảy ra.
 
 Ghi đè key đã tồn tại là **cho phép** và có chủ ý: admin thay ảnh bìa bằng cách upload lại. `objectKey` do server sinh và chứa một UUID (xem template key ở trên), nên client không chọn được key của người khác — API_CONTRACT.md §5.6 ràng buộc điều đó.
 

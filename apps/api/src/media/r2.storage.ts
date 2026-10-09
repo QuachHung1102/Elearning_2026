@@ -4,7 +4,6 @@ import { config } from '../config.js';
 import type { ObjectStorage } from './object-storage.js';
 
 const ALGORITHM = 'AWS4-HMAC-SHA256';
-const REGION = 'auto';
 const SERVICE = 's3';
 
 /**
@@ -13,13 +12,19 @@ const SERVICE = 's3';
  */
 @Injectable()
 export class R2ObjectStorage implements ObjectStorage {
+  /**
+   * `content-length` is signed, so R2 rejects a body of any other length;
+   * without it the URL accepts any size. Browsers set Content-Length from the
+   * `File` themselves, so the uploader only has to declare `file.size`.
+   */
   async signedUploadUrl(
     key: string,
     contentType: string,
+    sizeBytes: number,
     ttl: number,
   ): Promise<string> {
     return this.presign('PUT', key, ttl, {
-      'X-Amz-SignedHeaders': 'content-type;host',
+      'content-length': String(sizeBytes),
       'content-type': contentType,
     });
   }
@@ -40,63 +45,92 @@ export class R2ObjectStorage implements ObjectStorage {
     }
   }
 
+  /** Path-style (`/{bucket}/{key}`), region `auto`, as R2 expects. */
   private presign(
     method: string,
     key: string,
     ttl: number,
-    extra: Record<string, string>,
+    headers: Record<string, string>,
   ): string {
-    const endpoint = new URL(config.r2Endpoint);
-    const now = new Date();
-    const amzDate = now.toISOString().replace(/[-:]|\.\d{3}/g, '');
-    const dateStamp = amzDate.slice(0, 8);
-    const scope = `${dateStamp}/${REGION}/${SERVICE}/aws4_request`;
-    const contentType = extra['content-type'];
-    const signedHeaders = contentType ? 'content-type;host' : 'host';
-
-    const query: Record<string, string> = {
-      'X-Amz-Algorithm': ALGORITHM,
-      'X-Amz-Credential': `${config.r2AccessKeyId}/${scope}`,
-      'X-Amz-Date': amzDate,
-      'X-Amz-Expires': String(ttl),
-      'X-Amz-SignedHeaders': signedHeaders,
-    };
-    const canonicalQuery = Object.keys(query)
-      .sort()
-      .map((name) => `${encodeRfc3986(name)}=${encodeRfc3986(query[name])}`)
-      .join('&');
-
-    const canonicalUri = `/${config.r2Bucket}/${key}`
-      .split('/')
-      .map(encodeRfc3986)
-      .join('/');
-    const canonicalHeaders = contentType
-      ? `content-type:${contentType}\nhost:${endpoint.host}\n`
-      : `host:${endpoint.host}\n`;
-    const canonicalRequest = [
+    return presign({
       method,
-      canonicalUri,
-      canonicalQuery,
-      canonicalHeaders,
-      signedHeaders,
-      'UNSIGNED-PAYLOAD',
-    ].join('\n');
-
-    const stringToSign = [
-      ALGORITHM,
-      amzDate,
-      scope,
-      createHash('sha256').update(canonicalRequest).digest('hex'),
-    ].join('\n');
-
-    let signingKey = hmac(`AWS4${config.r2SecretAccessKey}`, dateStamp);
-    for (const part of [REGION, SERVICE, 'aws4_request']) {
-      signingKey = hmac(signingKey, part);
-    }
-    const signature = hmac(signingKey, stringToSign).toString('hex');
-
-    return `${endpoint.origin}${canonicalUri}?${canonicalQuery}&X-Amz-Signature=${signature}`;
+      endpoint: config.r2Endpoint,
+      path: `${config.r2Bucket}/${key}`,
+      ttl,
+      headers,
+      region: 'auto',
+      accessKeyId: config.r2AccessKeyId,
+      secretAccessKey: config.r2SecretAccessKey,
+      now: new Date(),
+    });
   }
+}
+
+/** SigV4 query-string presign. `headers` take lower-case names; `host` is always signed. */
+export function presign(input: {
+  method: string;
+  endpoint: string;
+  path: string;
+  ttl: number;
+  headers: Record<string, string>;
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  now: Date;
+}): string {
+  const endpoint = new URL(input.endpoint);
+  const amzDate = input.now.toISOString().replace(/[-:]|\.\d{3}/g, '');
+  const dateStamp = amzDate.slice(0, 8);
+  const scope = `${dateStamp}/${input.region}/${SERVICE}/aws4_request`;
+  const headers: Record<string, string> = {
+    ...input.headers,
+    host: endpoint.host,
+  };
+  const headerNames = Object.keys(headers).sort();
+  const signedHeaders = headerNames.join(';');
+
+  const query: Record<string, string> = {
+    'X-Amz-Algorithm': ALGORITHM,
+    'X-Amz-Credential': `${input.accessKeyId}/${scope}`,
+    'X-Amz-Date': amzDate,
+    'X-Amz-Expires': String(input.ttl),
+    'X-Amz-SignedHeaders': signedHeaders,
+  };
+  const canonicalQuery = Object.keys(query)
+    .sort()
+    .map((name) => `${encodeRfc3986(name)}=${encodeRfc3986(query[name])}`)
+    .join('&');
+
+  const canonicalUri = `/${input.path}`
+    .split('/')
+    .map(encodeRfc3986)
+    .join('/');
+  const canonicalHeaders = headerNames
+    .map((name) => `${name}:${headers[name]}\n`)
+    .join('');
+  const canonicalRequest = [
+    input.method,
+    canonicalUri,
+    canonicalQuery,
+    canonicalHeaders,
+    signedHeaders,
+    'UNSIGNED-PAYLOAD',
+  ].join('\n');
+
+  const stringToSign = [
+    ALGORITHM,
+    amzDate,
+    scope,
+    createHash('sha256').update(canonicalRequest).digest('hex'),
+  ].join('\n');
+
+  let signingKey = hmac(`AWS4${input.secretAccessKey}`, dateStamp);
+  for (const part of [input.region, SERVICE, 'aws4_request']) {
+    signingKey = hmac(signingKey, part);
+  }
+  const signature = hmac(signingKey, stringToSign).toString('hex');
+
+  return `${endpoint.origin}${canonicalUri}?${canonicalQuery}&X-Amz-Signature=${signature}`;
 }
 
 function hmac(key: string | Buffer, message: string): Buffer {

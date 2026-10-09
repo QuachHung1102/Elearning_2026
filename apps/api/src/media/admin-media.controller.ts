@@ -53,7 +53,11 @@ export class AdminMediaController {
     if (!course) {
       throw appError(HttpStatus.NOT_FOUND, ERROR_CODE.NOT_FOUND, 'Not Found');
     }
-    return this.signedUpload(coverKey(id, input.contentType), input.contentType);
+    return this.signedUpload(
+      coverKey(id, input.contentType),
+      input.contentType,
+      input.sizeBytes,
+    );
   }
 
   @Post('lessons/:id/resources/upload-url')
@@ -73,15 +77,21 @@ export class AdminMediaController {
     return this.signedUpload(
       resourceKey(id, input.filename),
       input.contentType,
+      input.sizeBytes,
     );
   }
 
-  private async signedUpload(objectKey: string, contentType: string) {
+  private async signedUpload(
+    objectKey: string,
+    contentType: string,
+    sizeBytes: number,
+  ) {
     const ttl = config.signedFileTtlSeconds;
     return {
       uploadUrl: await this.storage.signedUploadUrl(
         objectKey,
         contentType,
+        sizeBytes,
         ttl,
       ),
       method: 'PUT',

@@ -33,7 +33,7 @@ describe('a resource download (e2e)', () => {
       data: { sectionId: section.id, title: 'Bài 1', type: 'ARTICLE', position: 1 },
     });
     const key = `lessons/${lesson.id}/resources/${randomUUID()}-tai-lieu.pdf`;
-    const upload = new URL(await storage.signedUploadUrl(key, 'application/pdf', 300));
+    const upload = new URL(await storage.signedUploadUrl(key, 'application/pdf', 13, 300));
     await request(app.getHttpServer())
       .put(`/api/v1/media/local/${key}${upload.search}`)
       .set('Content-Type', 'application/pdf')

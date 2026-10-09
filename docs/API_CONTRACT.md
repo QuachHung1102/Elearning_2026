@@ -114,7 +114,7 @@ Trình duyệt luôn gọi cùng origin qua rewrite của Next (`/api/:path*` �
 | `204` | Không body. |
 | Upload file thật | Không bao giờ đi qua NestJS. Client `PUT` thẳng lên storage bằng signed URL. |
 | Giới hạn body JSON | `256kb` (`express.json({ limit: '256kb' })`). Đủ cho `Lesson.content` 50.000 ký tự tiếng Việt UTF-8 (~150kb) cộng phần còn lại của body. Mặc định `100kb` của Express **không đủ** và sẽ hỏng đúng ở màn hình soạn bài dài nhất. |
-| Giới hạn body thô | `PUT /media/local/{key}`: `MAX_UPLOAD_BYTES` (`52428800`). Handler đọc hằng số phía server và kiểm `Content-Length` **trước khi đọc byte đầu tiên** — đúng bước 6 của DEMO_MODE.md §3. |
+| Giới hạn body thô | `PUT /media/local/{key}`: `MAX_UPLOAD_BYTES` (`52428800`). Handler đọc hằng số phía server và kiểm `Content-Length` **trước khi đọc byte đầu tiên** — đúng bước 5 của DEMO_MODE.md §3. |
 | Vượt giới hạn | `413 PAYLOAD_TOO_LARGE`. |
 | Sai `Content-Type` | `415 UNSUPPORTED_MEDIA_TYPE`. |
 
@@ -687,6 +687,8 @@ Không có nhánh này thì chủ sở hữu nhận `403 NOT_ENROLLED` trên ch�
 **Chủ sở hữu video:** `VideoAsset.instructorId` là người đăng ký (`null` = admin, tức chủ sở hữu site — cùng quy ước với `Course.instructorId`, DATA_MODEL.md §VideoAsset). `AdminVideoController` gắn `@StaffAccess('scoped')` và tự lọc theo `@OwnerScope()`: một `INSTRUCTOR` gọi `GET /admin/videos/{id}` với video không đứng tên mình nhận `404` như video không tồn tại, và `PATCH /admin/lessons/{id}` gắn `videoAssetId` của người khác (kể cả video của admin) cũng nhận `404`, bài học không đổi. Admin không bị lọc. Video đã gắn sẵn vào bài thì giữ nguyên khi PATCH các trường khác.
 
 `objectKey` **do server sinh**, client không bao giờ chọn. Client chỉ gửi tên file gốc; server tạo key theo template trong DEMO_MODE.md §3 và trả về trong `SignedUpload`. Client không tự đặt key nghĩa là client không thể ghi ra ngoài prefix của mình.
+
+`sizeBytes` được **ký vào** `uploadUrl`: R2 ký `content-length` trong `X-Amz-SignedHeaders`, driver demo đặt nó trong chuỗi ký. `PUT` phải gửi body đúng `sizeBytes` byte; độ dài khác là chữ ký sai (`403`, cả R2 lẫn `PUT /media/local/{key}`). Trình duyệt tự đặt `Content-Length` từ `File`, nên client chỉ cần gửi `file.size`.
 
 Allowlist `contentType` của tài liệu bài học là **đúng năm giá trị** ở DATA_MODEL.md §LessonResource, ép bằng `@IsIn` chứ không `@IsMimeType`. Đây là biên tin cậy: file admin upload được phát lại cho học viên từ một URL đã ký, nên một `text/html` hay `image/svg+xml` lọt vào là một trang chạy script trên chính origin của mình. Ảnh bìa có allowlist riêng, hẹp hơn (`image/jpeg|png|webp`) vì nó được nhúng trong `<img>` trên trang công khai. DEMO_MODE.md §3 bước 4 của đường `PUT` ép đúng hai allowlist này theo prefix key.
 
