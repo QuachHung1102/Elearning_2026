@@ -92,7 +92,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     cloudflareStreamApiToken: env.CLOUDFLARE_STREAM_API_TOKEN ?? '',
     cloudflareStreamSigningKeyId: env.CLOUDFLARE_STREAM_SIGNING_KEY_ID ?? '',
     cloudflareStreamSigningKeyPem: env.CLOUDFLARE_STREAM_SIGNING_KEY_PEM ?? '',
-    cloudflareStreamAllowedOrigins: env.CLOUDFLARE_STREAM_ALLOWED_ORIGINS ?? '',
     playbackTokenTtlSeconds: integer(env, 'PLAYBACK_TOKEN_TTL_SECONDS', 3_600),
     r2Endpoint: env.R2_ENDPOINT ?? '',
     r2Bucket: env.R2_BUCKET ?? '',

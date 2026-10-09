@@ -24,6 +24,7 @@ import {
   AdminMutationRateLimit,
   RateLimit,
 } from '../auth/rate-limit.decorator.js';
+import { lockCourse, recomputeCourse } from '../catalog/catalog.shared.js';
 import { CreateVideoDto } from '../catalog/course.dto.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
 import { config } from '../config.js';
@@ -86,9 +87,11 @@ export class AdminVideoController {
           provider,
           externalId: input.externalId,
           instructorId: ownerId,
-          status: status.ready
-            ? VideoAssetStatus.READY
-            : VideoAssetStatus.PENDING,
+          status: status.errored
+            ? VideoAssetStatus.ERRORED
+            : status.ready
+              ? VideoAssetStatus.READY
+              : VideoAssetStatus.PENDING,
           durationSeconds: status.durationSeconds,
         },
       });
@@ -118,26 +121,47 @@ export class AdminVideoController {
     if (!asset || (ownerId !== null && asset.instructorId !== ownerId)) {
       throw appError(HttpStatus.NOT_FOUND, ERROR_CODE.NOT_FOUND, 'Not Found');
     }
-    // READY is final, and a fresh answer is reused: the provider is only asked
-    // about a pending video, at most once per STATUS_FRESH_MS.
+    // READY and ERRORED are final, and a fresh answer is reused: the provider
+    // is only asked about a pending video, at most once per STATUS_FRESH_MS.
     if (
       asset.status === VideoAssetStatus.READY ||
+      asset.status === VideoAssetStatus.ERRORED ||
       Date.now() - asset.updatedAt.getTime() < STATUS_FRESH_MS
     ) {
       return this.toDto(asset);
     }
-    // Synchronous poll: read the provider, then write back what it said.
+    // Synchronous poll: read the provider, then write back what it said. A
+    // provider that cannot answer throws, and the row stays as it was.
     const status = await this.stream.getStatus(asset.externalId);
-    const updated = await this.prisma.videoAsset.update({
-      where: { id },
-      data: {
-        status: status.ready
-          ? VideoAssetStatus.READY
-          : asset.status === VideoAssetStatus.ERRORED
-            ? VideoAssetStatus.ERRORED
-            : VideoAssetStatus.PROCESSING,
-        durationSeconds: status.durationSeconds || asset.durationSeconds,
-      },
+    const next = status.errored
+      ? VideoAssetStatus.ERRORED
+      : status.ready
+        ? VideoAssetStatus.READY
+        : VideoAssetStatus.PROCESSING;
+    const durationSeconds = status.durationSeconds || asset.durationSeconds;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // Attaching copied the duration the asset had then — 0 while encoding —
+      // so the lesson and the course total catch up when it turns ready.
+      const lesson =
+        next === VideoAssetStatus.READY
+          ? await tx.lesson.findUnique({
+              where: { videoAssetId: id },
+              select: { id: true, section: { select: { courseId: true } } },
+            })
+          : null;
+      if (lesson) await lockCourse(tx, lesson.section.courseId);
+      const row = await tx.videoAsset.update({
+        where: { id },
+        data: { status: next, durationSeconds },
+      });
+      if (lesson) {
+        await tx.lesson.update({
+          where: { id: lesson.id },
+          data: { durationSeconds },
+        });
+        await recomputeCourse(tx, lesson.section.courseId);
+      }
+      return row;
     });
     return this.toDto(updated);
   }

@@ -18,12 +18,12 @@ import {
   mustFindCourse,
   nextPosition,
   notFound,
+  recomputeCourse,
   storageProvider,
   toLessonOutline,
   toResource,
   toSectionOutline,
   writeOrder,
-  type Tx,
 } from './catalog.shared.js';
 import type {
   CreateLessonDto,
@@ -108,7 +108,7 @@ export class CurriculumService {
         );
       }
       await tx.section.delete({ where: { id } });
-      await this.recompute(tx, section.courseId);
+      await recomputeCourse(tx, section.courseId);
       await this.audit.record(
         {
           ...actor,
@@ -141,7 +141,7 @@ export class CurriculumService {
       await writeOrder(sectionIds, ({ id, position }) =>
         tx.section.update({ where: { id }, data: { position } }),
       );
-      await this.recompute(tx, courseId);
+      await recomputeCourse(tx, courseId);
       await this.audit.record(
         {
           ...actor,
@@ -174,7 +174,7 @@ export class CurriculumService {
           position,
         },
       });
-      await this.recompute(tx, section.courseId);
+      await recomputeCourse(tx, section.courseId);
       await this.audit.record(
         {
           ...actor,
@@ -286,7 +286,7 @@ export class CurriculumService {
           durationSeconds,
         },
       });
-      await this.recompute(tx, lesson.section.courseId);
+      await recomputeCourse(tx, lesson.section.courseId);
 
       const changedFields = [
         input.title !== undefined && input.title !== lesson.title && 'title',
@@ -351,7 +351,7 @@ export class CurriculumService {
         where: { lessonId: id },
       });
       await tx.lesson.delete({ where: { id } });
-      await this.recompute(tx, lesson.section.courseId);
+      await recomputeCourse(tx, lesson.section.courseId);
       await this.audit.record(
         {
           ...actor,
@@ -388,7 +388,7 @@ export class CurriculumService {
       await writeOrder(lessonIds, ({ id, position }) =>
         tx.lesson.update({ where: { id }, data: { position } }),
       );
-      await this.recompute(tx, section.courseId);
+      await recomputeCourse(tx, section.courseId);
       await this.audit.record(
         {
           ...actor,
@@ -481,27 +481,6 @@ export class CurriculumService {
   }
 
   // ── Shared ───────────────────────────────────────────────────────
-
-  /**
-   * The single writer of the two denormalised curriculum counters. Called in
-   * the same transaction as every mutation that touches a lesson — publish is
-   * just one more caller, not the only one.
-   */
-  private async recompute(tx: Tx, courseId: string): Promise<void> {
-    await lockCourse(tx, courseId);
-    const { _count, _sum } = await tx.lesson.aggregate({
-      where: { section: { courseId } },
-      _count: true,
-      _sum: { durationSeconds: true },
-    });
-    await tx.course.update({
-      where: { id: courseId },
-      data: {
-        lessonCount: _count,
-        totalDurationSeconds: _sum.durationSeconds ?? 0,
-      },
-    });
-  }
 
   private async mustFindSection(id: string) {
     const section = await this.prisma.section.findUnique({ where: { id } });

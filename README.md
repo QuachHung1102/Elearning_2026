@@ -101,3 +101,16 @@ Script tự `pg_dump` nguồn (nếu không có `-DumpFile`), `pg_restore` vào 
 ## Triển khai trên Railway
 
 Hai service `web` và `api` phải có **cùng** `INTERNAL_API_SECRET` (chuỗi ngẫu nhiên ≥ 32 byte, ví dụ `openssl rand -base64 48`; dùng shared variable của Railway). Máy chủ Next gửi nó kèm IP của khách trong mọi request tới API, để rate limit và audit log tính theo từng khách thay vì theo máy chủ Next (API_CONTRACT.md §8.1). Thiếu ở production thì API không boot và `web` không build/start; lệch giá trị thì mọi khách lại dùng chung một bucket. Không bao giờ đặt tên nó với tiền tố `NEXT_PUBLIC_`.
+
+`web` cần `CSP_MEDIA_ORIGINS` liệt kê mọi host ngoài site mà trình duyệt tải ảnh, video, HLS hoặc `PUT` tải lên tới; thiếu một host thì CSP chặn đúng thứ đó (ảnh bìa trống, "Không phát được video", tải lên lỗi). Ở production (`STORAGE_DRIVER=r2`, `VIDEO_DRIVER=cloudflare`) giá trị là đúng bốn origin, cách nhau bằng dấu cách, không wildcard, không path:
+
+```
+CSP_MEDIA_ORIGINS="<origin của R2_PUBLIC_BASE_URL> <origin của R2_ENDPOINT> https://videodelivery.net https://customer-<CODE>.cloudflarestream.com"
+```
+
+- origin của `R2_PUBLIC_BASE_URL` (custom domain hoặc `https://pub-<HASH>.r2.dev`): ảnh bìa;
+- origin của `R2_ENDPOINT` (`https://<ACCOUNT_ID>.r2.cloudflarestorage.com`): URL `PUT` đã ký;
+- `https://videodelivery.net`: host của playback URL mà API ký, hls.js tải playlist từ đó;
+- `https://customer-<CODE>.cloudflarestream.com`: domain Stream của tài khoản (xem trong dashboard Stream).
+
+Driver demo phục vụ mọi thứ qua `/api` của chính site nên để trống. Biến được đọc lúc build và start, đổi xong phải deploy lại `web`.

@@ -889,8 +889,6 @@ CLOUDFLARE_STREAM_API_TOKEN=""
 CLOUDFLARE_STREAM_SIGNING_KEY_ID=""
 # [PROD] Private key PEM (base64) tương ứng signing key ở trên.
 CLOUDFLARE_STREAM_SIGNING_KEY_PEM=""
-# [PROD] Danh sách origin được phép nhúng player, phân tách bằng dấu phẩy.
-CLOUDFLARE_STREAM_ALLOWED_ORIGINS="https://your-domain.com"
 # Hạn playback token. Ngắn thôi; token rò rỉ chỉ sống được chừng này.
 PLAYBACK_TOKEN_TTL_SECONDS=3600
 

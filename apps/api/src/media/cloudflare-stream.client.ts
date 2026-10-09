@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable } from '@nestjs/common';
 import { createSign } from 'node:crypto';
 import { config } from '../config.js';
 import type {
@@ -21,10 +21,26 @@ export class CloudflareStreamClient implements StreamClient {
         signal: AbortSignal.timeout(10_000),
       },
     );
-    if (!response.ok) return { ready: false, durationSeconds: 0 };
+    // Deleted, or a uid this account never had: it will not turn ready.
+    if (response.status === 404) {
+      return { ready: false, durationSeconds: 0, errored: true };
+    }
+    // A bad token or an outage is not "still encoding": say so.
+    if (!response.ok) {
+      throw new BadGatewayException(
+        `Cloudflare Stream answered ${response.status}`,
+      );
+    }
     const body = (await response.json()) as {
-      result?: { readyToStream?: boolean; duration?: number };
+      result?: {
+        readyToStream?: boolean;
+        duration?: number;
+        status?: { state?: string };
+      };
     };
+    if (body.result?.status?.state === 'error') {
+      return { ready: false, durationSeconds: 0, errored: true };
+    }
     return {
       ready: body.result?.readyToStream === true,
       durationSeconds: Math.max(0, Math.round(body.result?.duration ?? 0)),

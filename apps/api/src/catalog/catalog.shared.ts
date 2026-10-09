@@ -35,6 +35,30 @@ export async function lockCourse(tx: Tx, courseId: string): Promise<void> {
       SELECT 1 FROM courses WHERE id = ${courseId}::uuid FOR NO KEY UPDATE`;
 }
 
+/**
+ * The single writer of the two denormalised curriculum counters. Called in
+ * the same transaction as every mutation that touches a lesson — publish and
+ * the video status poll are just more callers, not the only ones.
+ */
+export async function recomputeCourse(
+  tx: Tx,
+  courseId: string,
+): Promise<void> {
+  await lockCourse(tx, courseId);
+  const { _count, _sum } = await tx.lesson.aggregate({
+    where: { section: { courseId } },
+    _count: true,
+    _sum: { durationSeconds: true },
+  });
+  await tx.course.update({
+    where: { id: courseId },
+    data: {
+      lessonCount: _count,
+      totalDurationSeconds: _sum.durationSeconds ?? 0,
+    },
+  });
+}
+
 /** The `findFirst` arguments that read the highest position in a scope. */
 export const LAST_POSITION = {
   orderBy: { position: 'desc' },

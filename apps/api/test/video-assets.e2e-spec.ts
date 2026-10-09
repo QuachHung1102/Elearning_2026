@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { BadGatewayException } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { STREAM_CLIENT, type StreamClient } from '../src/media/stream.client.js';
@@ -165,6 +166,89 @@ describe('Video assets (e2e)', () => {
     });
     expect((await poll(admin, pending.id)).body.status).toBe('READY');
     expect(getStatus).toHaveBeenCalledTimes(1);
+  });
+
+  /** A pending asset, attached to a VIDEO lesson, whose last answer is stale. */
+  async function attachedPendingAsset() {
+    const asset = await prisma.videoAsset.create({
+      data: { provider: 'DEMO', externalId: `demo/${randomUUID()}` },
+    });
+    await prisma.videoAsset.update({
+      where: { id: asset.id },
+      data: { updatedAt: new Date(Date.now() - 60_000) },
+    });
+    const course = await prisma.course.create({
+      data: {
+        slug: `poll-${randomUUID().slice(0, 8)}`,
+        title: 'Khóa poll',
+        description: '',
+        priceVnd: 0,
+        learningOutcomes: [],
+        requirements: [],
+        targetAudience: [],
+        totalDurationSeconds: 30,
+        sections: {
+          create: {
+            title: 'Chương',
+            position: 1,
+            lessons: {
+              create: [
+                { title: 'Bài video', type: 'VIDEO', position: 1, videoAssetId: asset.id },
+                { title: 'Bài khác', type: 'VIDEO', position: 2, durationSeconds: 30 },
+              ],
+            },
+          },
+        },
+      },
+    });
+    return { asset, courseId: course.id };
+  }
+
+  it('copies the duration of a video that turns ready onto its lesson and course (REVIEW F-27)', async () => {
+    // The real demo driver: the local path takes the same write as Cloudflare.
+    const { asset, courseId } = await attachedPendingAsset();
+
+    const polled = await poll(admin, asset.id);
+    expect(polled.body).toMatchObject({ status: 'READY', durationSeconds: 60 });
+
+    const lesson = await prisma.lesson.findUniqueOrThrow({
+      where: { videoAssetId: asset.id },
+    });
+    expect(lesson.durationSeconds).toBe(60);
+    const course = await prisma.course.findUniqueOrThrow({ where: { id: courseId } });
+    expect(course.totalDurationSeconds).toBe(90);
+  });
+
+  it('marks a video the provider reports failed or gone as ERRORED, and stops asking (REVIEW F-27)', async () => {
+    const getStatus = vi
+      .spyOn(app.get<StreamClient>(STREAM_CLIENT), 'getStatus')
+      .mockResolvedValue({ ready: false, durationSeconds: 0, errored: true });
+
+    const registered = await register(admin);
+    expect(registered.body.status).toBe('ERRORED');
+
+    const { asset } = await attachedPendingAsset();
+    getStatus.mockClear();
+    expect((await poll(admin, asset.id)).body.status).toBe('ERRORED');
+    await prisma.videoAsset.update({
+      where: { id: asset.id },
+      data: { updatedAt: new Date(Date.now() - 60_000) },
+    });
+    expect((await poll(admin, asset.id)).body.status).toBe('ERRORED');
+    expect(getStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers a provider failure as an error, not as "still processing" (REVIEW F-27)', async () => {
+    vi.spyOn(app.get<StreamClient>(STREAM_CLIENT), 'getStatus').mockRejectedValue(
+      new BadGatewayException('Cloudflare Stream answered 401'),
+    );
+    const { asset } = await attachedPendingAsset();
+
+    const polled = await poll(admin, asset.id);
+    expect(polled.status).toBe(502);
+    expect(polled.body.code).toBe('INTERNAL');
+    const row = await prisma.videoAsset.findUniqueOrThrow({ where: { id: asset.id } });
+    expect(row.status).toBe('PENDING');
   });
 
   it('rate limits status polls per user', async () => {

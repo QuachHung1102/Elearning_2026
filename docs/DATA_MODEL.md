@@ -956,7 +956,7 @@ Năm enum mang vòng đời. `PaymentAttemptStatus` đã có luật ở mục tr
 
 | Từ | Sang | Ai kích hoạt | Điều kiện | Side effect |
 |---|---|---|---|---|
-| `PENDING` | `PROCESSING` / `READY` / `ERRORED` | `GET /admin/videos/{id}` gọi `getStatus()` | Theo phản hồi driver | Ghi lại `durationSeconds`; nếu `READY` thì chép sang `Lesson.durationSeconds` |
+| `PENDING` | `PROCESSING` / `READY` / `ERRORED` | `GET /admin/videos/{id}` gọi `getStatus()` | Theo phản hồi driver | Ghi lại `durationSeconds`; nếu `READY` thì chép sang `Lesson.durationSeconds` và tính lại `Course.totalDurationSeconds`. `ERRORED` khi Cloudflare trả `404` hoặc `state = "error"` |
 | `PROCESSING` | `READY` / `ERRORED` | như trên | | như trên |
 | `ERRORED` | bất kỳ | — | **Không hợp lệ** | Trạng thái cuối. Tạo `VideoAsset` mới với `externalId` khác; xem §VideoAsset |
 
