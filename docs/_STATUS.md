@@ -1,6 +1,6 @@
 # Trạng thái triển khai
 
-Cập nhật: 2026-10-06. Kế hoạch việc còn lại và trạng thái từng task: [_PLAN.md](./_PLAN.md);
+Cập nhật: 2026-10-10. Kế hoạch việc còn lại và trạng thái từng task: [_PLAN.md](./_PLAN.md);
 kết quả rà soát ngày 2026-09-30: [REVIEW_2026-09-30.md](./REVIEW_2026-09-30.md).
 
 ## Đã hoàn thành
@@ -20,7 +20,8 @@ kết quả rà soát ngày 2026-09-30: [REVIEW_2026-09-30.md](./REVIEW_2026-09-
 | **Phase 5 — hardening (một phần)** (nhánh `feat/instructor-role`, đã commit local, chưa push) | Header bảo mật cho API và web (CSP không nonce, HSTS chỉ ở production); một định nghĩa "production" cho boot guard, cookie `Secure`, HSTS và seed; rate limit cho catalog và callback, `no-store` cho danh sách phiên; log JSON có `requestId`, `purchaseId`, `appTransId` và che dữ liệu nhạy cảm; đăng nhập giới hạn theo tài khoản, scrypt có tham số trong chuỗi băm và băm lại khi đăng nhập; lớp `omit` cho `passwordHash`; SEO (JSON-LD `Course`, Open Graph, sitemap đủ mọi trang). Kèm việc dọn của WP2: tên tệp tiếng Việt khi tải về (trước đây 500), lỗi đua slug (5/6 yêu cầu song song nhận 409), index `lesson_progress(lesson_id)`, bỏ `sleep` trong e2e. Chi tiết và bằng chứng từng việc: `_PLAN.md` WP4 |
 | PostgreSQL | 4 migration replay sạch trên `elearning_ci`, `prisma migrate diff` không lệch; seed chạy hai lần; đúng 1 admin; 2 `CHECK` còn nguyên sau replay |
 | **Lượt 2026-10-05/06** (commit local, chưa push) | Xong T2.6, T2.9, T2.10, T2.12, T2.13, T3.17, T4.5, T4.9, T4.10, T4.11, T4.13, T4.16, T4.17, T5.3 — chi tiết và bằng chứng từng task ở `_PLAN.md`. Lỗi thật tìm ra trong lượt: đối soát đóng nhầm attempt đã thu tiền khi xác nhận bị lỗi (T3.17); deadlock 500 khi sửa/xóa bài song song với sắp xếp lại, trùng vị trí tài liệu/danh mục khi tạo song song (T2.13); mọi request phía server của web dùng chung một bucket rate limit theo IP — 429 ở production khi có tải (T4.17, cần đặt `INTERNAL_API_SECRET` trên Railway) |
-| Kiểm tra | Đo 2026-10-06 trên `906e172`: lint ✓, typecheck ✓, 587 unit test ✓ (403 api + 184 web), 361 E2E API ✓ (35 tệp), 4/4 Playwright (`corepack pnpm e2e:web`), build ✓ khi API tắt, `contrast-check.py` 37/37. Migration: 8, DB dev đã `migrate deploy` đủ |
+| **Lượt 2026-10-10** (commit local, chưa push) | Xong phần code của T4.12 (T4.12a SMTP thật, T4.12b URL tải lên R2 ký độ dài, T4.12c Cloudflare Stream báo lỗi đúng và chép thời lượng), T4.18 (video Cloudflare bắt buộc URL ký — lỗ hổng tìm ra trong lượt), T4.19 (thanh toán demo do người mua tự bấm, theo yêu cầu chủ sở hữu). T4.12 còn phần thử ở staging, cần tài khoản |
+| Kiểm tra | Đo 2026-10-10 trên `25ea37e`: lint ✓, typecheck ✓, 613 unit test ✓ (429 api + 184 web), 367 E2E API ✓ (35 tệp), 4/4 Playwright (`corepack pnpm e2e:web`; database `elearning_e2e` phải tồn tại, README "createdb"), build ✓ khi API tắt với `NEXT_PUBLIC_CHECKOUT_ENABLED=true`, `contrast-check.py` 37/37 (đo 2026-10-06, lượt này không đổi màu). Migration: 8 |
 | Design token + palette | `design/contrast-check.py` → 37/37 cặp đạt WCAG AA, exit 0 (T4.13 thêm 14 cặp; `accent-hover` đổi sang `#f59e0b`, canvas `.pen` chưa cập nhật — T5.4) |
 | Design system | `DESIGN.md` + `.impeccable/design.json`, đủ 8 phần chuẩn và 8 preview component |
 | CI | Workflow Ubuntu + PostgreSQL chạy D1–D7, `prisma generate` trước D1. Chưa chạy cho nhánh Phase 3 và nhánh giảng viên (chưa push). Bước build không còn cần API đang chạy (`_PLAN.md` T0.9), đã chạy được ở máy local khi API tắt |
@@ -38,6 +39,10 @@ chỉ `LessonResource` dùng presigned URL.
    nằm sau một seam: 1 interface, 2 class (demo + real), chọn bằng env var.
 4. Làm hết 5 phase.
 5. UI tiếng Việt. File thiết kế: `design/elearning.pen`.
+6. **Thanh toán giả cho bản demo** (2026-10-10): với `PAYMENT_DRIVER=demo`, trang checkout hiện như
+   thật và người mua bấm "Thanh toán" là được ghi danh, không cần admin (T4.19). Production vẫn
+   không khởi động với driver demo, nên bản demo công khai chạy ở môi trường Railway không tên
+   `production`.
 
 ## Design token
 
@@ -139,9 +144,8 @@ Chưa làm hoặc chưa kiểm chứng:
 
 - **Xong:** T4.1 header bảo mật, T4.2 boot guard bổ sung, T4.3 rate limit và cache theo hợp đồng,
   T4.4 log có cấu trúc, T4.6 siết đăng nhập, T4.7 SEO, T4.15 lớp `omit` cho `passwordHash`.
-- **Còn lại, làm được ngay:** T4.5 (video asset theo chủ sở hữu), T4.9 (Playwright), T4.10 (HLS),
-  T4.11 (sao lưu và diễn tập khôi phục), T4.13 (rà a11y).
-- **Chờ đầu vào từ chủ sở hữu:** T4.8 (nội dung pháp lý), T4.12 (tài khoản Cloudflare, R2, SMTP),
+- **Xong thêm (2026-10-05…10):** T4.5, T4.9, T4.10, T4.11, T4.13, T4.16, T4.17, phần code T4.12 (a/b/c), T4.18, T4.19.
+- **Chờ đầu vào từ chủ sở hữu:** T4.8 (nội dung pháp lý), T4.12 phần thử tay ở staging (tài khoản Cloudflare, R2, SMTP),
   T4.14 (staging thật, phụ thuộc T4.12).
 - **Biến môi trường mới:** `CSP_MEDIA_ORIGINS` và `NEXT_PUBLIC_SITE_URL` (web), `LOG_REQUESTS` (API);
   `PASSWORD_HASH_COST` chỉ dành cho `.env.test` và bị chặn khởi động ở production.
