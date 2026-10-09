@@ -188,6 +188,9 @@ export function CheckoutPanel({
             onRenew={() => void open()}
           />
         )}
+        {view && view !== "paid" && view !== "failed" && (
+          <PaymentStatus view={view} checking={checking} onCheck={checkNow} />
+        )}
       </div>
       <div className="grid content-start gap-6">
         <OrderSummary
@@ -196,9 +199,6 @@ export function CheckoutPanel({
           href={`/courses/${slug}`}
           priceVnd={attempt?.amountVnd ?? null}
         />
-        {view && view !== "paid" && view !== "failed" && (
-          <PaymentStatus view={view} checking={checking} onCheck={checkNow} />
-        )}
       </div>
     </div>
   );

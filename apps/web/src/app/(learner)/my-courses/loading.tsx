@@ -6,7 +6,10 @@ export default function Loading() {
   return (
     <div className="page-shell grid gap-6 py-6 lg:gap-8 lg:py-10" aria-busy="true">
       <span className="sr-only">Đang tải…</span>
-      <Skeleton className="h-11 w-72" />
+      <div className="grid gap-2">
+        <Skeleton className="h-11 w-72" />
+        <Skeleton className="h-7 w-80 max-w-full" />
+      </div>
       <Skeleton className="h-[2.8125rem] w-48" />
       <ul
         aria-hidden="true"

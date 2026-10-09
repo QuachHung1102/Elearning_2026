@@ -2,13 +2,13 @@ import { BookOpen, Menu } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SITE_OWNER } from "@/lib/site";
-import { UserMenu } from "./user-menu";
+import { MainNav, UserMenu } from "./user-menu";
 
 function Logo() {
   return (
     <Link
       href="/"
-      className="inline-flex min-h-11 items-center gap-2 rounded-md font-heading text-lg font-bold"
+      className="inline-flex min-h-11 items-center gap-2 rounded-md font-heading text-2xl font-semibold text-primary-text"
     >
       <BookOpen
         aria-hidden="true"
@@ -20,16 +20,10 @@ function Logo() {
   );
 }
 
-const LINKS = [
-  ["Khóa học", "/courses"],
-  ["Giới thiệu", "/about"],
-  ["Liên hệ", "/contact"],
-] as const;
-
 /**
  * No cookie read anywhere in this tree: the marketing shell has to stay
  * statically renderable so the catalog can be cached for everyone. The
- * signed-in bits live in `UserMenu`, a client island.
+ * signed-in bits live in `MainNav` and `UserMenu`, client islands.
  */
 function Header() {
   return (
@@ -40,15 +34,7 @@ function Header() {
           className="hidden items-center gap-1 md:flex"
           aria-label="Điều hướng chính"
         >
-          {LINKS.map(([label, href]) => (
-            <Link
-              key={href}
-              href={href}
-              className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium hover:bg-muted"
-            >
-              {label}
-            </Link>
-          ))}
+          <MainNav className="inline-flex min-h-11 items-center rounded-md px-4 text-sm text-primary-text hover:bg-muted" />
         </nav>
         <div className="hidden items-center gap-2 md:flex">
           <UserMenu variant="desktop" />
@@ -64,15 +50,7 @@ function Header() {
             className="absolute right-0 top-full z-40 mt-2 grid w-[calc(100vw-2rem)] max-w-sm rounded-lg border border-border bg-card p-3 shadow-[var(--shadow-overlay)]"
             aria-label="Điều hướng di động"
           >
-            {LINKS.map(([label, href]) => (
-              <Link
-                key={href}
-                href={href}
-                className="flex min-h-12 items-center rounded-md px-3 font-medium hover:bg-muted"
-              >
-                {label}
-              </Link>
-            ))}
+            <MainNav className="flex min-h-12 items-center rounded-md px-3 font-medium text-primary-text hover:bg-muted" />
             <UserMenu variant="mobile" />
           </nav>
         </details>
@@ -81,33 +59,54 @@ function Header() {
   );
 }
 
+const FOOTER_LINKS = [
+  [
+    ["Khóa học", "/courses"],
+    ["Giới thiệu", "/about"],
+    ["Liên hệ", "/contact"],
+  ],
+  [
+    ["Điều khoản sử dụng", "/terms"],
+    ["Chính sách bảo mật", "/privacy"],
+  ],
+  [
+    ["Chính sách hoàn tiền", "/refund"],
+    ["Chính sách thanh toán", "/payment"],
+  ],
+] as const;
+
 function Footer() {
   return (
-    <footer className="mt-20 border-t border-border bg-card py-8 text-card-foreground">
-      <div className="page-shell flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="font-heading font-semibold">{SITE_OWNER.name}</p>
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Bảo lưu mọi quyền.
-          </p>
+    <footer className="mt-20 bg-muted py-12">
+      <div className="page-shell grid gap-6">
+        <div className="grid gap-8 md:grid-cols-2">
+          <div className="grid content-start gap-4">
+            <Logo />
+            <p className="text-sm text-muted-foreground-strong">
+              Học thực tế. Tiến bộ từng ngày.
+            </p>
+          </div>
+          <nav className="grid gap-2 text-sm" aria-label="Liên kết cuối trang">
+            {FOOTER_LINKS.map((group) => (
+              <p key={group[0][1]} className="flex flex-wrap items-center gap-x-2">
+                {group.map(([label, href], index) => (
+                  <span key={href} className="inline-flex items-center gap-x-2">
+                    {index > 0 && <span aria-hidden="true">·</span>}
+                    <Link
+                      className="inline-flex min-h-11 items-center text-primary-text hover:underline"
+                      href={href}
+                    >
+                      {label}
+                    </Link>
+                  </span>
+                ))}
+              </p>
+            ))}
+          </nav>
         </div>
-        <nav
-          className="flex flex-wrap gap-x-5 gap-y-2 text-sm"
-          aria-label="Pháp lý"
-        >
-          <Link
-            className="inline-flex min-h-11 items-center py-2 hover:text-primary-text"
-            href="/terms"
-          >
-            Điều khoản sử dụng
-          </Link>
-          <Link
-            className="inline-flex min-h-11 items-center py-2 hover:text-primary-text"
-            href="/privacy"
-          >
-            Chính sách bảo mật
-          </Link>
-        </nav>
+        <p className="text-xs text-muted-foreground-strong">
+          © {new Date().getFullYear()} {SITE_OWNER.name}. Bảo lưu mọi quyền.
+        </p>
       </div>
     </footer>
   );
@@ -115,13 +114,15 @@ function Footer() {
 
 export function SiteShell({ children }: { children: ReactNode }) {
   return (
-    <>
+    // A column at least as tall as the screen, so a short page keeps its
+    // footer at the bottom instead of floating above an empty band.
+    <div className="flex min-h-dvh flex-col">
       <Header />
-      <main id="main" tabIndex={-1}>
+      <main id="main" tabIndex={-1} className="flex-1">
         {children}
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
 

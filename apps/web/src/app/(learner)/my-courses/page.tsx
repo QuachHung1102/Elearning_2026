@@ -1,3 +1,4 @@
+import { BookOpen, GraduationCap } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -8,7 +9,7 @@ import { EmptyState } from "@/components/ui/feedback";
 import { requireAuth } from "@/lib/api";
 import { firstValue, type Paginated } from "@/lib/catalog";
 import type { EnrollmentItem } from "@/lib/learning";
-import { serverFetch } from "@/lib/session";
+import { getSession, serverFetch } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Khóa học của tôi" };
 
@@ -35,12 +36,21 @@ export default async function MyCoursesPage({
     throw new Error(`GET /enrollments/me answered ${response.status}`);
   }
   const { items } = (await response.json()) as Paginated<EnrollmentItem>;
+  // The layout's cached read; it ran before this page could render.
+  const user = await getSession().catch(() => null);
 
   return (
     <div className="page-shell grid gap-6 py-6 lg:gap-8 lg:py-10">
-      <h1 tabIndex={-1} className="text-4xl font-bold">
-        Khóa học của tôi
-      </h1>
+      <div className="grid gap-2">
+        <h1 tabIndex={-1} className="text-4xl font-bold">
+          Học tiếp từ nơi bạn đã dừng
+        </h1>
+        {user && (
+          <p className="text-lg text-muted-foreground">
+            Chào {user.displayName}, hôm nay bạn muốn học gì?
+          </p>
+        )}
+      </div>
 
       <nav aria-label="Lọc khóa học của tôi" className="flex flex-wrap gap-2">
         {TABS.map((tab) => {
@@ -61,6 +71,7 @@ export default async function MyCoursesPage({
       {items.length === 0 ? (
         done ? (
           <EmptyState
+            icon={GraduationCap}
             title="Bạn chưa hoàn thành khóa học nào"
             description="Hoàn thành hết bài trong một khóa để nó xuất hiện ở đây."
             action={
@@ -71,8 +82,9 @@ export default async function MyCoursesPage({
           />
         ) : (
           <EmptyState
+            icon={BookOpen}
             title="Bạn chưa có khóa học nào"
-            description="Khi bạn được cấp quyền học, khóa học sẽ xuất hiện tại đây."
+            description="Khóa học bạn đăng ký hoặc được cấp quyền học sẽ xuất hiện tại đây."
             action={
               <Link href="/courses" className={buttonClass("primary")}>
                 Xem danh sách khóa học

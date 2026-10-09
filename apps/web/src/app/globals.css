@@ -135,11 +135,15 @@ h4 {
   text-wrap: balance;
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
+/* In the base layer: unlayered, it beat every utility, so a <button> lost its
+   text-sm and font-semibold while a link styled as a button kept them. */
+@layer base {
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
 }
 
 :focus-visible {

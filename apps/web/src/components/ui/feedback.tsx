@@ -5,6 +5,7 @@ import {
   CircleX,
   Info,
   SearchX,
+  type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -133,14 +134,17 @@ export function EmptyState({
   title,
   description,
   action,
+  icon: Icon = SearchX,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
+  /** A search that found nothing by default; a list with nothing in it yet says so. */
+  icon?: LucideIcon;
 }) {
   return (
     <section className="grid justify-items-start gap-3 rounded-lg bg-muted p-6">
-      <SearchX
+      <Icon
         aria-hidden="true"
         className="size-10 text-muted-foreground-strong"
         strokeWidth={1.75}
