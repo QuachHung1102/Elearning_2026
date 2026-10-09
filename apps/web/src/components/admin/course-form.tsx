@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CircleAlert, Upload, X } from "lucide-react";
+import { Check, CircleAlert, Dot, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { ApiError, apiFetch, errorMessage } from "@/lib/api";
@@ -24,63 +24,64 @@ import { TagListInput } from "./tag-list-input";
  * API_CONTRACT.md §5.3, so an unknown pair is a bug, not a new feature.
  */
 const CHECKLIST: { field: string; reason: string; label: string }[] = [
-  { field: "coverImageKey", reason: "MISSING", label: "Chưa có ảnh bìa" },
-  { field: "description", reason: "MISSING", label: "Chưa có mô tả khóa học" },
+  { field: "coverImageKey", reason: "MISSING", label: "Ảnh bìa" },
+  { field: "description", reason: "MISSING", label: "Mô tả khóa học" },
   {
     field: "description",
     reason: "TOO_SHORT",
-    label: "Mô tả cần ít nhất 200 ký tự",
+    label: "Mô tả từ 200 ký tự",
   },
-  { field: "priceVnd", reason: "MISSING", label: "Chưa đặt giá bán" },
-  { field: "categoryId", reason: "MISSING", label: "Chưa chọn danh mục" },
+  { field: "priceVnd", reason: "MISSING", label: "Giá bán hợp lệ" },
+  { field: "categoryId", reason: "MISSING", label: "Danh mục" },
   {
     field: "learningOutcomes",
     reason: "EMPTY",
-    label: 'Chưa có mục "Bạn sẽ học được gì"',
+    label: 'Mục "Bạn sẽ học được gì"',
   },
-  { field: "sections", reason: "EMPTY", label: "Khóa học chưa có chương nào" },
-  { field: "lessons", reason: "EMPTY", label: "Có chương chưa có bài học nào" },
-  { field: "lessons", reason: "MISSING", label: "Có bài viết chưa có nội dung" },
-  { field: "videoAsset", reason: "MISSING", label: "Có bài chưa gắn video" },
+  { field: "sections", reason: "EMPTY", label: "Có ít nhất một chương" },
+  { field: "lessons", reason: "EMPTY", label: "Chương nào cũng có bài học" },
+  { field: "lessons", reason: "MISSING", label: "Bài đọc có nội dung" },
+  { field: "videoAsset", reason: "MISSING", label: "Bài video đã gắn video" },
   {
     field: "videoAsset",
     reason: "NOT_READY",
-    label: "Có video đang được xử lý",
+    label: "Video đã sẵn sàng",
   },
   {
     field: "previewLesson",
     reason: "MISSING",
-    label: "Chưa có bài học thử nào",
+    label: "Có bài học thử",
   },
 ];
 
-function PublishChecklist({ issues }: { issues: PublishIssue[] }) {
+/**
+ * The API checks these only on a publish attempt, so until one has failed
+ * (`issues` is null) the list is the requirements, unmarked: a green tick
+ * there would claim checks that never ran.
+ */
+function PublishChecklist({ issues }: { issues: PublishIssue[] | null }) {
   return (
     <ul className="grid list-none gap-2 p-0">
       {CHECKLIST.map((entry) => {
-        const failed = issues.some(
+        const failed = issues?.some(
           (issue) =>
             issue.field === entry.field && issue.reason === entry.reason,
         );
+        const Icon = !issues ? Dot : failed ? CircleAlert : Check;
         return (
           <li
             key={`${entry.field}-${entry.reason}`}
-            className={`flex items-start gap-2 text-sm ${failed ? "text-destructive" : "text-muted-foreground"}`}
+            className={`flex items-start gap-2 text-sm ${failed ? "text-destructive" : "text-foreground"}`}
           >
-            {failed ? (
-              <CircleAlert
-                aria-hidden="true"
-                className="mt-0.5 size-4 shrink-0"
-                strokeWidth={1.75}
-              />
-            ) : (
-              <Check
-                aria-hidden="true"
-                className="mt-0.5 size-4 shrink-0 text-success"
-                strokeWidth={1.75}
-              />
-            )}
+            <Icon
+              aria-hidden="true"
+              className={`mt-0.5 size-4 shrink-0 ${issues && !failed ? "text-success" : ""}`}
+              strokeWidth={1.75}
+            />
             {entry.label}
+            {issues && (
+              <span className="sr-only">{failed ? ": chưa đạt" : ": đạt"}</span>
+            )}
           </li>
         );
       })}
@@ -111,7 +112,7 @@ export function CourseForm({
   const fileInput = useRef<HTMLInputElement>(null);
   const [coverUrl, setCoverUrl] = useState(course.coverUrl);
   const [coverKey, setCoverKey] = useState<string | null>(null);
-  const [issues, setIssues] = useState<PublishIssue[]>([]);
+  const [issues, setIssues] = useState<PublishIssue[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"save" | "publish" | null>(null);
 
@@ -203,7 +204,7 @@ export function CourseForm({
   async function transition(action: "publish" | "unpublish", label: string) {
     setBusy("publish");
     setError(null);
-    setIssues([]);
+    setIssues(null);
     try {
       await apiFetch(`/admin/courses/${course.id}/${action}`, {
         method: "POST",
@@ -233,8 +234,14 @@ export function CourseForm({
 
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_20rem] xl:gap-10">
-      <form action={save} className="grid content-start gap-6">
+      <form id="course-form" action={save} className="grid content-start gap-6">
         {error && <Alert variant="destructive" title={error} />}
+        {course.status === "ARCHIVED" && (
+          <Alert variant="info" title="Khóa học đã được lưu trữ">
+            Khóa học không hiển thị công khai và không nhận học viên mới. Bỏ
+            lưu trữ sẽ đưa khóa về bản nháp để chạy lại checklist xuất bản.
+          </Alert>
+        )}
 
         <Field id="title" label="Tiêu đề" required>
           <input
@@ -268,7 +275,7 @@ export function CourseForm({
           />
         </Field>
 
-        <Field id="subtitle" label="Dòng mô tả">
+        <Field id="subtitle" label="Mô tả ngắn">
           <input
             id="subtitle"
             name="subtitle"
@@ -278,21 +285,36 @@ export function CourseForm({
           />
         </Field>
 
-        <Field
-          id="description"
-          label="Mô tả khóa học"
-          hint="Viết bằng Markdown. Cần ít nhất 200 ký tự để xuất bản."
-        >
-          <textarea
-            id="description"
-            name="description"
-            className="control min-h-64 font-mono text-sm"
-            maxLength={20000}
-            defaultValue={course.description}
-          />
-        </Field>
-
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="grid gap-6 sm:grid-cols-2 sm:items-start">
+          <Field id="categoryId" label="Danh mục">
+            <select
+              id="categoryId"
+              name="categoryId"
+              className="control"
+              defaultValue={course.category?.id ?? ""}
+            >
+              <option value="">Chưa chọn</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field id="level" label="Trình độ">
+            <select
+              id="level"
+              name="level"
+              className="control"
+              defaultValue={course.level}
+            >
+              {(Object.keys(LEVEL_LABEL) as CourseLevel[]).map((level) => (
+                <option key={level} value={level}>
+                  {LEVEL_LABEL[level]}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field id="priceVnd" label="Giá bán (VND)" required>
             <input
               id="priceVnd"
@@ -308,7 +330,7 @@ export function CourseForm({
           </Field>
           <Field
             id="compareAtPriceVnd"
-            label="Giá gạch ngang (VND)"
+            label="Giá gốc (không bắt buộc)"
             hint="Phải lớn hơn giá bán. Bỏ trống nếu không giảm giá."
           >
             <input
@@ -321,20 +343,6 @@ export function CourseForm({
               className="control"
               defaultValue={course.compareAtPriceVnd ?? ""}
             />
-          </Field>
-          <Field id="level" label="Trình độ">
-            <select
-              id="level"
-              name="level"
-              className="control"
-              defaultValue={course.level}
-            >
-              {(Object.keys(LEVEL_LABEL) as CourseLevel[]).map((level) => (
-                <option key={level} value={level}>
-                  {LEVEL_LABEL[level]}
-                </option>
-              ))}
-            </select>
           </Field>
           {instructors ? (
             <Field
@@ -367,22 +375,22 @@ export function CourseForm({
               />
             </Field>
           )}
-          <Field id="categoryId" label="Danh mục">
-            <select
-              id="categoryId"
-              name="categoryId"
-              className="control"
-              defaultValue={course.category?.id ?? ""}
-            >
-              <option value="">Chưa chọn</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </Field>
         </div>
+
+        <Field
+          id="description"
+          label="Mô tả khóa học"
+          hint="Viết bằng Markdown. Cần ít nhất 200 ký tự để xuất bản."
+        >
+          <textarea
+            id="description"
+            name="description"
+            rows={12}
+            className="control font-mono text-sm"
+            maxLength={20000}
+            defaultValue={course.description}
+          />
+        </Field>
 
         <TagListInput
           id="learningOutcomes"
@@ -402,19 +410,12 @@ export function CourseForm({
           max={8}
           defaultValue={course.targetAudience}
         />
-
-        <div className="sticky bottom-0 -mx-4 flex min-h-16 flex-wrap items-center gap-3 border-t border-border bg-card px-4 py-3">
-          <Button type="submit" loading={busy === "save"}>
-            Lưu
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Lưu trước khi xuất bản để checklist tính trên dữ liệu mới nhất.
-          </span>
-        </div>
       </form>
 
-      <aside className="grid h-fit content-start gap-6">
-        <section className="panel grid gap-3 p-5">
+      {/* Below the form until 1280px: side by side there, so a 16:9 cover
+          does not grow to the full content width. */}
+      <aside className="panel grid h-fit content-start gap-6 p-4 sm:p-6 md:grid-cols-2 xl:grid-cols-1">
+        <section className="grid gap-3">
           <h2 className="text-xl font-semibold">Ảnh bìa</h2>
           {coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -448,64 +449,84 @@ export function CourseForm({
           </p>
         </section>
 
-        <section className="panel grid gap-3 p-5">
+        <section className="grid gap-3">
           <h2 className="text-xl font-semibold">Điều kiện xuất bản</h2>
           <PublishChecklist issues={issues} />
-          <div className="flex flex-wrap gap-2">
-            {course.status !== "PUBLISHED" && (
-              <Button
-                onClick={() => transition("publish", "Đã xuất bản khóa học")}
-                loading={busy === "publish"}
-              >
-                Xuất bản
-              </Button>
-            )}
-            {course.status === "PUBLISHED" && (
-              <Button
-                variant="outline"
-                onClick={() => transition("unpublish", "Đã gỡ xuống bản nháp")}
-                loading={busy === "publish"}
-              >
-                Gỡ xuất bản
-              </Button>
-            )}
-            {course.status === "ARCHIVED" && (
-              <Button
-                variant="outline"
-                onClick={() => transition("unpublish", "Đã bỏ lưu trữ")}
-                loading={busy === "publish"}
-              >
-                Bỏ lưu trữ
-              </Button>
-            )}
-            {/* Only a published course can be archived; a draft is deleted instead. */}
-            {course.status === "PUBLISHED" && (
-              <ConfirmDialog
-                title="Lưu trữ khóa học"
-                description="Khóa học biến mất khỏi catalog và không nhận học viên mới. Người đã có quyền học vẫn học bình thường, và bạn có thể bỏ lưu trữ sau."
-                confirmLabel="Lưu trữ khóa học"
-                onConfirm={async () => {
-                  await apiFetch(`/admin/courses/${course.id}/archive`, {
-                    method: "POST",
-                  });
-                  showToast("Đã lưu trữ khóa học", "success");
-                  router.refresh();
-                }}
-                trigger={
-                  <Button variant="ghost">
-                    <X aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                    Lưu trữ
-                  </Button>
-                }
-              />
-            )}
-          </div>
+          {issues && issues.length > 0 && (
+            <Alert variant="warning" title="Chưa thể xuất bản">
+              Hoàn thiện các mục được đánh dấu rồi xuất bản lại.
+            </Alert>
+          )}
           <p className="text-sm text-muted-foreground">
-            Khóa đã lưu trữ biến mất khỏi catalog, nhưng người đã có quyền học
-            vẫn học bình thường.
+            Lưu trước khi xuất bản để checklist tính trên dữ liệu mới nhất. Khóa
+            đã lưu trữ biến mất khỏi catalog, nhưng người đã có quyền học vẫn
+            học bình thường.
           </p>
         </section>
       </aside>
+
+      {/* Outside the form (the submit button joins it by `form`), so the
+          confirm dialogs below never nest one form in another. */}
+      <div className="sticky bottom-0 -mx-4 grid gap-3 border-t border-border bg-card px-4 py-3 sm:auto-cols-fr sm:grid-flow-col sm:gap-6 xl:col-span-2">
+        <Button
+          type="submit"
+          form="course-form"
+          loading={busy === "save"}
+          className="w-full"
+        >
+          Lưu thay đổi
+        </Button>
+        {course.status !== "PUBLISHED" && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => transition("publish", "Đã xuất bản khóa học")}
+            loading={busy === "publish"}
+          >
+            Xuất bản
+          </Button>
+        )}
+        {course.status === "PUBLISHED" && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => transition("unpublish", "Đã gỡ xuống bản nháp")}
+            loading={busy === "publish"}
+          >
+            Gỡ xuất bản
+          </Button>
+        )}
+        {course.status === "ARCHIVED" && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => transition("unpublish", "Đã bỏ lưu trữ")}
+            loading={busy === "publish"}
+          >
+            Bỏ lưu trữ
+          </Button>
+        )}
+        {/* Only a published course can be archived; a draft is deleted instead. */}
+        {course.status === "PUBLISHED" && (
+          <ConfirmDialog
+            title="Lưu trữ khóa học"
+            description="Khóa học biến mất khỏi catalog và không nhận học viên mới. Người đã có quyền học vẫn học bình thường, và bạn có thể bỏ lưu trữ sau."
+            confirmLabel="Lưu trữ khóa học"
+            onConfirm={async () => {
+              await apiFetch(`/admin/courses/${course.id}/archive`, {
+                method: "POST",
+              });
+              showToast("Đã lưu trữ khóa học", "success");
+              router.refresh();
+            }}
+            trigger={
+              <Button variant="outline" className="w-full">
+                Lưu trữ khóa học
+              </Button>
+            }
+          />
+        )}
+      </div>
     </div>
   );
 }

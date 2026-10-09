@@ -95,7 +95,7 @@ export default async function InstructorStudentsPage({
           defaultValue={courseId}
           className="control"
         >
-          <option value="">Tất cả</option>
+          <option value="">Mọi khóa học</option>
           {courses.items.map((course) => (
             <option key={course.id} value={course.id}>
               {course.title}
@@ -113,7 +113,7 @@ export default async function InstructorStudentsPage({
           defaultValue={status}
           className="control"
         >
-          <option value="">Tất cả</option>
+          <option value="">Mọi trạng thái</option>
           <option value="ACTIVE">{STATUS_LABEL.ACTIVE}</option>
           <option value="REVOKED">{STATUS_LABEL.REVOKED}</option>
         </select>

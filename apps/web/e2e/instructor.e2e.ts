@@ -40,7 +40,7 @@ test("an instructor builds a course, publishes it, and it is public", async ({
     );
   await page.locator("#priceVnd").fill("199000");
   await page.locator("#learningOutcomes").fill("Tạo khóa học\nXuất bản khóa học");
-  await page.getByRole("button", { name: "Lưu", exact: true }).click();
+  await page.getByRole("button", { name: "Lưu thay đổi" }).click();
   await expect(page.getByText("Đã lưu khóa học")).toBeVisible();
 
   await page.getByRole("link", { name: "Chương trình học" }).click();
@@ -57,7 +57,7 @@ test("an instructor builds a course, publishes it, and it is public", async ({
   await page.getByRole("link", { name: lessonTitle }).click();
 
   await page.locator("#content").fill("Nội dung **bài đọc** đầu tiên.");
-  await page.getByRole("checkbox", { name: /Cho học thử/ }).check();
+  await page.getByRole("checkbox", { name: /Cho phép học thử/ }).check();
   await page.getByRole("button", { name: "Lưu bài học" }).click();
   await expect(page.getByText("Đã lưu bài học")).toBeVisible();
 

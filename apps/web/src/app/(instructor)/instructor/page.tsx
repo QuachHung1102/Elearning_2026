@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { EnrollmentProgress } from "@/components/admin/enrollment-progress";
 import { StatTile } from "@/components/admin/shell";
@@ -32,7 +33,11 @@ export default async function InstructorHomePage() {
         <h1 tabIndex={-1} className="text-3xl font-bold">
           Tổng quan
         </h1>
-        <Link href="/instructor/courses/new" className={buttonClass("primary")}>
+        <Link
+          href="/instructor/courses/new"
+          className={buttonClass("primary", "md", "w-full sm:w-auto")}
+        >
+          <Plus aria-hidden="true" className="size-5" strokeWidth={1.75} />
           Tạo khóa học
         </Link>
       </header>
