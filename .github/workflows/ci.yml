@@ -43,7 +43,17 @@ jobs:
       - run: corepack pnpm lint
       - run: corepack pnpm typecheck
       - run: corepack pnpm test
-      - run: corepack pnpm --filter api test:e2e
+      - name: API e2e
+        shell: bash
+        run: |
+          set +e
+          corepack pnpm --filter api test:e2e 2>&1 | tee e2e.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            msg=$(grep -nE "Error|FAIL|timed out|×|✗" e2e.log | grep -v '"level":"error"' | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=e2e diagnostics::$msg"
+          fi
+          exit $status
       - run: corepack pnpm build
       - name: Replay migrations and seed twice
         env:
