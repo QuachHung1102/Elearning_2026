@@ -80,7 +80,9 @@ export class AdminVideoController {
       );
     }
 
-    const status = await this.stream.getStatus(input.externalId);
+    // Throws (502) unless the provider locked the video to signed URLs; the
+    // row and its audit entry are only written after it succeeds.
+    const status = await this.stream.register(input.externalId);
     const asset = await this.prisma.$transaction(async (tx) => {
       const created = await tx.videoAsset.create({
         data: {

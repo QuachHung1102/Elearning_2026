@@ -11,6 +11,7 @@ function setup(
 ) {
   const stream: StreamClient = {
     getStatus: vi.fn(async () => ({ ready, durationSeconds: 60 })),
+    register: vi.fn(async () => ({ ready, durationSeconds: 60 })),
     signPlayback: vi.fn(async (uid: string) => ({
       playbackUrl: `https://stream.test/${uid}`,
       kind: 'hls' as const,

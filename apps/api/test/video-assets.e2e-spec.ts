@@ -251,6 +251,27 @@ describe('Video assets (e2e)', () => {
     expect(row.status).toBe('PENDING');
   });
 
+  it('stores nothing when the provider cannot lock the video to signed URLs (T4.18)', async () => {
+    const stream = app.get<StreamClient>(STREAM_CLIENT);
+    vi.spyOn(stream, 'register').mockRejectedValue(
+      new BadGatewayException('Cloudflare Stream answered 403'),
+    );
+    const externalId = `demo/${randomUUID()}`;
+
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/admin/videos')
+      .set(as(admin))
+      .send({ externalId });
+
+    expect(response.status).toBe(502);
+    expect(await prisma.videoAsset.count({ where: { externalId } })).toBe(0);
+    expect(
+      await prisma.auditLog.count({
+        where: { action: 'video.registered', metadata: { path: ['externalId'], equals: externalId } },
+      }),
+    ).toBe(0);
+  });
+
   it('rate limits status polls per user', async () => {
     const poller = await createUser(prisma, 'ADMIN');
     const session = await signIn(app, poller.email);

@@ -694,6 +694,8 @@ Allowlist `contentType` của tài liệu bài học là **đúng năm giá tr�
 
 Không có webhook Cloudflare Stream. Một chủ sở hữu upload vài video mỗi tháng — polling `GET /admin/videos/{id}` trong lúc màn hình lesson đang mở là đủ, và webhook thì kéo theo endpoint công khai, xác minh chữ ký và một trạng thái nữa để đồng bộ. Thêm webhook khi upload trở thành hàng loạt.
 
+`POST /admin/videos` gọi `register()` thay vì `getStatus()`: với Cloudflare nó bật `requireSignedURLs` trên video (`POST /stream/{uid}`) và đọc trạng thái từ câu trả lời. Không bật được thì `502`, không ghi `VideoAsset` hay `AuditLog` nào — không bao giờ lưu một video phát được mà không cần token.
+
 `getStatus()` có ba kết quả: sẵn sàng, chưa sẵn sàng, và hỏng — Cloudflare trả `404` (video đã xoá, UID sai) hoặc `status.state = "error"`, ghi thành `ERRORED`, trạng thái cuối nên lần poll sau không hỏi lại. Khi Cloudflare không trả lời được (`401`/`403` token sai, `5xx`, timeout) thì không có kết quả nào: mọi endpoint gọi `getStatus()` trả `502` mã `INTERNAL` và không ghi gì, thay vì để video "đang xử lý" mãi. Lần poll thấy `READY` chép `durationSeconds` sang `Lesson` đang dùng video và tính lại `Course.totalDurationSeconds` trong cùng transaction.
 
 ### 5.7 Reporting

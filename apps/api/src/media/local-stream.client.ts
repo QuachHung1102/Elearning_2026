@@ -20,6 +20,11 @@ export class LocalStreamClient implements StreamClient {
     };
   }
 
+  /** Nothing to lock: every demo URL is already signed and viewer-bound. */
+  register(uid: string): Promise<VideoStatus> {
+    return this.getStatus(uid);
+  }
+
   /**
    * A real expiring URL on the shared media route rather than a bare static
    * file, so the playback authorisation path is exercised locally
