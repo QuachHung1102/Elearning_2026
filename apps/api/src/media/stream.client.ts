@@ -6,7 +6,16 @@ export type PlaybackToken = {
   expiresAt: Date;
 };
 
-export type VideoStatus = { ready: boolean; durationSeconds: number };
+/**
+ * `errored`: the provider says the video failed to encode or does not exist —
+ * final, it will never turn ready. Anything the provider could not answer
+ * (auth, outage, timeout) is thrown instead, never reported as "not ready".
+ */
+export type VideoStatus = {
+  ready: boolean;
+  durationSeconds: number;
+  errored?: boolean;
+};
 
 export interface StreamClient {
   getStatus(uid: string): Promise<VideoStatus>;

@@ -217,7 +217,7 @@ Mỗi sự kiện là một dòng JSON (`logEvent`, `src/common/logger.ts`): `ti
 | `COURSE_NOT_PURCHASABLE` | 422 | Khoá `ARCHIVED` hoặc `priceVnd = 0`. Khoá `DRAFT` trả `404` như khoá không tồn tại (không lộ slug chưa xuất bản) |
 | `COURSE_NOT_PUBLISHABLE` | 422 | Publish khi nội dung chưa hợp lệ; `details.issues[]` liệt kê từng thiếu sót |
 | `RATE_LIMITED` | 429 | Vượt giới hạn ở mục 8; kèm header `Retry-After` |
-| `INTERNAL` | 500 | Lỗi không xác định. Không bao giờ lộ stack hay message gốc. |
+| `INTERNAL` | 500, 502 | Lỗi không xác định; `502` khi nhà cung cấp video không trả lời được (§5.6). Không bao giờ lộ stack hay message gốc. |
 
 Không có `LINK_EXPIRED`. Hết hạn và sai chữ ký dùng chung `SIGNATURE_INVALID`; thêm mã thứ hai là mở lại đúng thứ DEMO_MODE.md §3 đã cố ý đóng.
 
@@ -694,6 +694,8 @@ Allowlist `contentType` của tài liệu bài học là **đúng năm giá tr�
 
 Không có webhook Cloudflare Stream. Một chủ sở hữu upload vài video mỗi tháng — polling `GET /admin/videos/{id}` trong lúc màn hình lesson đang mở là đủ, và webhook thì kéo theo endpoint công khai, xác minh chữ ký và một trạng thái nữa để đồng bộ. Thêm webhook khi upload trở thành hàng loạt.
 
+`getStatus()` có ba kết quả: sẵn sàng, chưa sẵn sàng, và hỏng — Cloudflare trả `404` (video đã xoá, UID sai) hoặc `status.state = "error"`, ghi thành `ERRORED`, trạng thái cuối nên lần poll sau không hỏi lại. Khi Cloudflare không trả lời được (`401`/`403` token sai, `5xx`, timeout) thì không có kết quả nào: mọi endpoint gọi `getStatus()` trả `502` mã `INTERNAL` và không ghi gì, thay vì để video "đang xử lý" mãi. Lần poll thấy `READY` chép `durationSeconds` sang `Lesson` đang dùng video và tính lại `Course.totalDurationSeconds` trong cùng transaction.
+
 ### 5.7 Reporting
 
 | Method + Path | Vai trò | Trang | Request | 2xx | Lỗi |
@@ -857,7 +859,7 @@ Ràng buộc kèm theo:
 
 - Frontend **không bao giờ** nhận `VideoAsset.externalId`, `CLOUDFLARE_STREAM_API_TOKEN`, hay private key. `LessonContent` chỉ có `hasVideo: boolean`. `externalId` chỉ xuất hiện trong `/admin/videos*` và `GET /admin/courses/{id}`.
 - Token TTL lấy từ `PLAYBACK_TOKEN_TTL_SECONDS`, gắn với đúng một video UID, không tái sử dụng cho video khác.
-- `CLOUDFLARE_STREAM_ALLOWED_ORIGINS` giới hạn domain được nhúng player.
+- Token Cloudflare không gắn người xem (claim của Cloudflare không có chỗ cho nó) và không giới hạn origin: `accessRules` của signed token không có luật theo origin, còn `allowedOrigins` là thiết lập riêng của từng video trên Cloudflare (dashboard hoặc `POST /stream/{uid}`), ứng dụng không đặt. Giới hạn của một URL rò rỉ là TTL ngắn (`PLAYBACK_TOKEN_TTL_SECONDS`). Vì vậy không có biến `CLOUDFLARE_STREAM_ALLOWED_ORIGINS`.
 - Không cache: `no-store`.
 - Bài preview **vẫn yêu cầu đăng nhập**. Đây là quyết định, không phải sơ suất: nó thu hẹp bề mặt ẩn danh trên đường media xuống 0 và biến preview thành lý do tạo tài khoản. Nếu chủ sở hữu muốn preview ẩn danh kiểu Udemy, đổi đúng bước 1 thành "resolve session nếu có" và giữ nguyên bước 2–8 — nhưng phải chấp nhận rate limit theo IP thay vì theo user.
 
