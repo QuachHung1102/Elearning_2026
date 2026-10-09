@@ -51,6 +51,8 @@ export type PurchaseRow = {
 export type CheckoutSession = {
   purchaseId: string;
   paymentAttemptId: string;
+  /** The order code at the provider; the demo "Thanh toán" button sends it. */
+  appTransId: string;
   status: AttemptStatus;
   amountVnd: number;
   provider: PaymentProvider;

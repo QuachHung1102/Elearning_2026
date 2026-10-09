@@ -39,11 +39,9 @@ const OPENING: CheckoutState = { phase: "opening" };
 export function CheckoutPanel({
   slug,
   courseTitle,
-  isAdmin,
 }: {
   slug: string;
   courseTitle: string;
-  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [state, dispatch] = useReducer(checkoutReducer, OPENING);
@@ -158,16 +156,12 @@ export function CheckoutPanel({
       <div className="grid content-start gap-6">
         {attempt?.provider === "DEMO" && view !== "paid" && (
           <Alert variant="info" title="Chế độ demo">
-            <p>
-              Mã QR này không quét được. Nhờ quản trị viên xác nhận thanh toán
-              trong mục Đơn hàng của trang quản trị.
-            </p>
-            {isAdmin && (
-              <p className="mt-2">
-                <Link className="underline" href="/admin/orders">
-                  Mở Đơn hàng để xác nhận
-                </Link>
-              </p>
+            <p>Không trừ tiền thật. Bấm “Thanh toán” thay cho việc quét mã.</p>
+            {view === "pending" && (
+              <DemoPay
+                appTransId={attempt.appTransId}
+                onPaid={checkNow}
+              />
             )}
           </Alert>
         )}
@@ -206,6 +200,53 @@ export function CheckoutPanel({
           <PaymentStatus view={view} checking={checking} onCheck={checkNow} />
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Demo only: stands in for scanning the QR. The API runs the same signed
+ * confirmation a real payment does; the panel then shows "paid" only once the
+ * stored order says so, read right away instead of on the next poll.
+ */
+function DemoPay({
+  appTransId,
+  onPaid,
+}: {
+  appTransId: string;
+  onPaid: () => Promise<void>;
+}) {
+  const [paying, setPaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function pay() {
+    setPaying(true);
+    setError(null);
+    try {
+      await apiFetch(
+        `/dev/payments/${encodeURIComponent(appTransId)}/confirm`,
+        { method: "POST" },
+      );
+      await onPaid();
+    } catch (caught) {
+      const code = caught instanceof ApiError ? caught.code : "INTERNAL";
+      // The session-expired toast already says it and redirects.
+      if (code !== "UNAUTHENTICATED") setError(t(code));
+    } finally {
+      setPaying(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 grid justify-items-start gap-2">
+      <Button size="lg" loading={paying} onClick={() => void pay()}>
+        {error ? "Thử thanh toán lại" : "Thanh toán"}
+      </Button>
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

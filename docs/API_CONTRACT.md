@@ -355,7 +355,7 @@ Thứ tự trong `@UseGuards`:
 | Phạm vi | Thứ tự |
 |---|---|
 | Route cần đăng nhập, ngoài `/admin/*` | `SessionAuthGuard, AuthRateLimitGuard` |
-| `/admin/*` và `/dev/*` | `AdminGuard, AuthRateLimitGuard` — **một** guard xác thực, không phải hai |
+| `/admin/*` và `/dev/*` | `AdminGuard, AuthRateLimitGuard` — **một** guard xác thực, không phải hai. Ngoại lệ: `POST /dev/payments/{appTransId}/confirm` dùng `SessionAuthGuard, AuthRateLimitGuard` (người mua tự bấm, mục 5.9) |
 
 Rate limit đứng cuối để có thể đếm theo `userId`.
 
@@ -390,7 +390,7 @@ Người ẩn danh và `STUDENT` nhận `404` giống hệt `AdminGuard`, không
 | `/learn/*`, `/lessons/*` | `SessionAuth` + kiểm tra `Enrollment`; endpoint **đọc** có nhánh bypass cho `ADMIN` và cho `INSTRUCTOR` chủ khoá (mục 5.5) | `STUDENT`, `INSTRUCTOR`, `ADMIN` |
 | `/checkout/*`, `/purchases/*` | `SessionAuth` | `STUDENT`, `ADMIN` |
 | `/admin/*` | `AdminGuard` **một mình** (mục 3.1) trên hầu hết; `StaffGuard` (mục 3.1) trên các controller soạn nội dung, danh sách/gán quyền học và `reports/instructor-overview` | `ADMIN` mọi nơi; `INSTRUCTOR` chỉ trên handler gắn `@StaffAccess`, và chỉ với khoá mình đứng tên `instructorId`. Mọi vai trò khác, kể cả chưa đăng nhập → `404`. |
-| `/dev/*` | `AdminGuard` **một mình**, module chỉ được import khi có driver demo | `ADMIN` |
+| `/dev/*` | `AdminGuard` **một mình**, module chỉ được import khi có driver demo. Riêng `POST /dev/payments/{appTransId}/confirm`: `SessionAuth` + kiểm tra người mua | `ADMIN`; với confirm thanh toán: người mua của đơn hoặc `ADMIN` |
 | `/payments/{provider}/callback` | `@SkipCsrf`, xác minh HMAC | Máy chủ nhà cung cấp |
 | `/media/local/{key}` | `@SkipCsrf`, xác minh HMAC trong URL | Bất kỳ ai có URL còn hạn |
 
@@ -449,8 +449,8 @@ AdminEnrollment { id, user: { id, email, displayName }, course: { id, title },
 PurchaseRow     { id, courseId, courseSlug, courseTitle, priceVnd, status,
                   createdAt, paidAt, refundedAt }
                 status ∈ PENDING | PAID | REFUND_REQUESTED | REFUNDED | CANCELLED
-CheckoutSession { purchaseId, paymentAttemptId, status, amountVnd, provider,
-                  qrCode, orderUrl, createdAt, expiresAt }
+CheckoutSession { purchaseId, paymentAttemptId, appTransId, status, amountVnd,
+                  provider, qrCode, orderUrl, createdAt, expiresAt }
 AdminPaymentRow PurchaseRow & { user: { id, email, displayName },
                   attempts: AdminAttempt[] }      -- mới nhất trước
 AdminAttempt    { id, appTransId, providerTransId, provider, status, amountVnd,
@@ -821,7 +821,7 @@ Duyệt vẫn là thao tác của admin, và nó có đúng hai lối ra, cả h
 | `GET /health` | — | giám sát | `200 { status: "ok", database: "up", uptimeSeconds }` | Thay thế `GET /api/v1` đang trả `Hello World!`. Không lộ tên driver, version hay biến môi trường. |
 | `GET /dev/mail` | ADMIN | terminal | `200` HTML | Chỉ tồn tại khi `MAIL_DRIVER=demo` — xem DEMO_MODE.md §4 |
 | `GET /dev/mail/{id}` | ADMIN | terminal | `200` HTML | |
-| `POST /dev/payments/{appTransId}/confirm` | ADMIN | `/admin/orders`, `/checkout/[courseSlug]` | `200 { status: "PAID" \| "ALREADY_PROCESSED" \| "DUPLICATE_PAID" }` | Đặt đơn ở nhà cung cấp giả sang "đã trả", để nó ký callback bằng `key2` demo, **xác minh chữ ký bằng đúng hàm của callback thật**, rồi gọi `checkout.confirmPayment()`. Không tự cấp `Enrollment`. Bấm hai lần = callback lặp (`ALREADY_PROCESSED`, một enrollment, một email). Lỗi: `404` (không có attempt, hoặc người gọi không phải ADMIN — `AdminGuard` chặn kín), `409 PAYMENT_EXPIRED` (QR đã quá hạn), `409` (confirm bị từ chối; `message` nêu lý do), `400 SIGNATURE_INVALID`. Chỉ được đăng ký khi `PAYMENT_DRIVER=demo` — với driver thật route không tồn tại. |
+| `POST /dev/payments/{appTransId}/confirm` | người mua của đơn, ADMIN | `/checkout/[courseSlug]` (nút "Thanh toán"), `/admin/orders` | `200 { status: "PAID" \| "ALREADY_PROCESSED" \| "DUPLICATE_PAID" }` | Đặt đơn ở nhà cung cấp giả sang "đã trả", để nó ký callback bằng `key2` demo, **xác minh chữ ký bằng đúng hàm của callback thật**, rồi gọi `checkout.confirmPayment()`. Không tự cấp `Enrollment`. Bấm hai lần = callback lặp (`ALREADY_PROCESSED`, một enrollment, một email). Lỗi: `401` (chưa đăng nhập), `404` (không có attempt, hoặc người gọi không phải người mua của đơn và không phải ADMIN — trả y hệt đơn không tồn tại), `409 PAYMENT_EXPIRED` (QR đã quá hạn), `409` (confirm bị từ chối; `message` nêu lý do), `400 SIGNATURE_INVALID`. Chỉ được đăng ký khi `PAYMENT_DRIVER=demo` — với driver thật route không tồn tại. |
 
 `GET /api/v1` bị gỡ. Route không khớp phải trả envelope JSON `404 NOT_FOUND`, không phải trang HTML mặc định của Express.
 
@@ -962,6 +962,7 @@ Hai dòng đầu là hiện trạng, giữ nguyên số.
 | `GET /lessons/{id}/resources/{rid}/download` | user | 300s | 30 | Chống tải hàng loạt tài liệu |
 | `POST /checkout/{courseSlug}` | user | 300s | 5 | Tạo QR là thao tác đắt phía nhà cung cấp |
 | `GET /purchases/{id}` | user | 60s | 120 | Trang checkout polling mỗi 3s = 20 req/phút |
+| `POST /dev/payments/{appTransId}/confirm` | user | 60s | 10 | Chỉ tồn tại ở chế độ demo; nút "Thanh toán" chỉ cần một lần bấm thành công |
 | `POST /purchases/{id}/refund-request` | user | 300s | 5 | Chỉ có một lần thành công cho mỗi đơn; giới hạn để không dò được chính sách bằng cách bấm lặp |
 | `POST /payments/{provider}/callback` | ip, **chỉ đếm request sai HMAC** | 60s | 20 | Callback hợp lệ không bao giờ bị chặn. Chặn callback thật là mất tiền, còn nguy hiểm hơn thứ đang chống. Đếm cả body thiếu `data` hoặc `mac` (không có chữ ký nào để kiểm); vượt hạn thì `429` kèm `Retry-After` thay cho `-1`. |
 | Mọi mutation trên `/admin/*` (`POST\|PATCH\|PUT\|DELETE`) | user | 60s | 120 | Lưới an toàn chống script hỏng, không phải chống tấn công. Viết `POST /admin/*` là bỏ trống đúng những method sửa và xoá dữ liệu: `PATCH /admin/courses/{id}`, `PUT .../order`, `DELETE /admin/lessons/{id}` |

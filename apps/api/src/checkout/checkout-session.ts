@@ -8,6 +8,8 @@ import type {
 export type CheckoutSession = {
   purchaseId: string;
   paymentAttemptId: string;
+  /** The order code at the provider; the demo checkout page's pay button needs it. */
+  appTransId: string;
   status: PaymentAttemptStatus;
   amountVnd: number;
   provider: PaymentProvider;
@@ -24,6 +26,7 @@ export function toSession(attempt: PaymentAttempt): CheckoutSession {
   return {
     purchaseId: attempt.purchaseId,
     paymentAttemptId: attempt.id,
+    appTransId: attempt.appTransId,
     status: attempt.status,
     amountVnd: attempt.amountVnd,
     provider: attempt.provider,

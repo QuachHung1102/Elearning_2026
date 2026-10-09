@@ -62,6 +62,7 @@ describe('checkout (e2e)', () => {
     expect(response.body).toEqual({
       purchaseId: purchase.id,
       paymentAttemptId: attempt.id,
+      appTransId: attempt.appTransId,
       status: 'PENDING',
       amountVnd: 499_000,
       provider: 'DEMO',

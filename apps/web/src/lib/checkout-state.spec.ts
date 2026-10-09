@@ -15,6 +15,7 @@ const IN = (seconds: number) => new Date(NOW + seconds * 1_000).toISOString();
 const session = (over: Partial<CheckoutSession> = {}): CheckoutSession => ({
   purchaseId: "purchase-1",
   paymentAttemptId: "attempt-1",
+  appTransId: "260930_a1b2c3d4",
   status: "PENDING",
   amountVnd: 499_000,
   provider: "DEMO",
