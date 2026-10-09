@@ -145,8 +145,9 @@ Chưa làm hoặc chưa kiểm chứng:
 - **Xong:** T4.1 header bảo mật, T4.2 boot guard bổ sung, T4.3 rate limit và cache theo hợp đồng,
   T4.4 log có cấu trúc, T4.6 siết đăng nhập, T4.7 SEO, T4.15 lớp `omit` cho `passwordHash`.
 - **Xong thêm (2026-10-05…10):** T4.5, T4.9, T4.10, T4.11, T4.13, T4.16, T4.17, phần code T4.12 (a/b/c), T4.18, T4.19.
-- **Chờ đầu vào từ chủ sở hữu:** T4.8 (nội dung pháp lý), T4.12 phần thử tay ở staging (tài khoản Cloudflare, R2, SMTP),
-  T4.14 (staging thật, phụ thuộc T4.12).
+- **Ngoài phạm vi — bản demo (chủ sở hữu, 2026-10-10):** T4.8 (nội dung pháp lý; trang giữ banner bản nháp),
+  T4.12 phần thử tay ở staging, T4.14 (staging với driver thật), A4.9 (sandbox ZaloPay). Code driver thật
+  vẫn có và có test nhân giả, chỉ chưa chạy với tài khoản thật.
 - **Biến môi trường mới:** `CSP_MEDIA_ORIGINS` và `NEXT_PUBLIC_SITE_URL` (web), `LOG_REQUESTS` (API);
   `PASSWORD_HASH_COST` chỉ dành cho `.env.test` và bị chặn khởi động ở production.
 - **Migration mới:** `20260930010000_add_lesson_progress_lesson_index`.
