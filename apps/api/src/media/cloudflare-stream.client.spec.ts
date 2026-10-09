@@ -1,4 +1,5 @@
 import { BadGatewayException } from '@nestjs/common';
+import { config } from '../config.js';
 import { CloudflareStreamClient } from './cloudflare-stream.client.js';
 
 describe('CloudflareStreamClient.getStatus', () => {
@@ -75,5 +76,60 @@ describe('CloudflareStreamClient.getStatus', () => {
       }),
     );
     await expect(getStatus()).rejects.toThrow('timed out');
+  });
+});
+
+describe('CloudflareStreamClient.register (T4.18)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const answer = (status: number, body: unknown = {}) => {
+    const fetchMock = vi.fn(
+      async (_url: string, _init?: RequestInit) =>
+        new Response(JSON.stringify(body), { status }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  };
+  const register = () => new CloudflareStreamClient().register('uid-1');
+
+  it('requires signed URLs on the video and reports its status', async () => {
+    const fetchMock = answer(200, {
+      result: { requireSignedURLs: true, readyToStream: true, duration: 30.6 },
+    });
+
+    expect(await register()).toEqual({ ready: true, durationSeconds: 31 });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      `https://api.cloudflare.com/client/v4/accounts/${config.cloudflareAccountId}/stream/uid-1`,
+    );
+    expect(init?.method).toBe('POST');
+    expect(init?.headers).toMatchObject({
+      authorization: `Bearer ${config.cloudflareStreamApiToken}`,
+      'content-type': 'application/json',
+    });
+    expect(JSON.parse(String(init?.body))).toEqual({
+      uid: 'uid-1',
+      requireSignedURLs: true,
+    });
+  });
+
+  it('reports a 404 as errored, like getStatus', async () => {
+    answer(404, { success: false });
+    expect(await register()).toEqual({
+      ready: false,
+      durationSeconds: 0,
+      errored: true,
+    });
+  });
+
+  it.each([400, 401, 403, 500])('throws a provider error on %i', async (code) => {
+    answer(code, { success: false });
+    await expect(register()).rejects.toBeInstanceOf(BadGatewayException);
+  });
+
+  it('throws when the answer does not confirm signed URLs are required', async () => {
+    answer(200, { result: { requireSignedURLs: false, readyToStream: true } });
+    await expect(register()).rejects.toBeInstanceOf(BadGatewayException);
   });
 });

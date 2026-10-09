@@ -289,6 +289,7 @@ describe('Phase 3 learning (e2e)', () => {
    */
   const hlsStream: StreamClient = {
     getStatus: async () => ({ ready: true, durationSeconds: 60 }),
+    register: async () => ({ ready: true, durationSeconds: 60 }),
     signPlayback: async (uid, ttlSeconds) => ({
       playbackUrl: `https://stream.example.test/${uid}/manifest/video.m3u8`,
       kind: 'hls',

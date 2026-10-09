@@ -19,6 +19,12 @@ export type VideoStatus = {
 
 export interface StreamClient {
   getStatus(uid: string): Promise<VideoStatus>;
+  /**
+   * Called once, when the video is registered: make it playable only through
+   * `signPlayback`, then report its status. Throws when that cannot be done,
+   * so a video that would play unsigned is never stored.
+   */
+  register(uid: string): Promise<VideoStatus>;
   /** `viewerId` binds the demo URL to one user; see each implementation. */
   signPlayback(
     uid: string,

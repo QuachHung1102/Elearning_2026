@@ -114,3 +114,11 @@ CSP_MEDIA_ORIGINS="<origin của R2_PUBLIC_BASE_URL> <origin của R2_ENDPOINT> 
 - `https://customer-<CODE>.cloudflarestream.com`: domain Stream của tài khoản (xem trong dashboard Stream).
 
 Driver demo phục vụ mọi thứ qua `/api` của chính site nên để trống. Biến được đọc lúc build và start, đổi xong phải deploy lại `web`.
+
+Từ T4.18, đăng ký video Cloudflare (`POST /admin/videos`) tự bật `requireSignedURLs` trên video đó. Video đăng ký **trước** thay đổi này vẫn phát được với ai biết UID (UID đọc được trong mọi playback token): bật một lần cho từng video, trong dashboard Stream (Settings của video → *Require Signed URLs*) hoặc qua API:
+
+```
+curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/stream/<UID>" \
+  -H "Authorization: Bearer $CLOUDFLARE_STREAM_API_TOKEN" -H "Content-Type: application/json" \
+  --data '{"uid":"<UID>","requireSignedURLs":true}'
+```

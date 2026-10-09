@@ -62,6 +62,7 @@ export type PlaybackToken = {
 
 export interface StreamClient {
   getStatus(uid: string): Promise<{ ready: boolean; durationSeconds: number }>;
+  register(uid: string): Promise<{ ready: boolean; durationSeconds: number }>;
   signPlayback(
     uid: string,
     ttlSeconds: number,
@@ -220,6 +221,7 @@ Bước 1–6 không có nhánh nào phụ thuộc driver. Test quyền truy c�
 | Method | `CloudflareStreamClient` | `LocalStreamClient` |
 |---|---|---|
 | `getStatus(externalId)` | Gọi Stream API, đọc `readyToStream`, `duration` | Luôn `{ ready: true, durationSeconds: DEMO_VIDEO_DURATION_SECONDS }` |
+| `register(externalId)` (chỉ `POST /admin/videos` gọi) | `POST /stream/{uid}` với `{ uid, requireSignedURLs: true }`, đọc trạng thái từ chính câu trả lời; Cloudflare không xác nhận `requireSignedURLs` thì ném lỗi (`502`), không lưu gì — nếu không, ai đọc được `sub` của token là phát được video mãi | Như `getStatus`; URL demo vốn đã ký |
 | `signPlayback(externalId, ttl, viewerId)` | Ký JWT bằng signing key, trả `.../{token}/manifest/video.m3u8`, `kind: 'hls'`. Token Cloudflare không gắn với người xem nên `viewerId` bị bỏ qua | Trả `{API_PUBLIC_URL}/api/v1/media/local/videos/{base64url(externalId)}.mp4?exp=…&sig=…`, `kind: 'mp4'`, `expiresAt = exp` |
 
 `externalId` là `VideoAsset.externalId` (DATA_MODEL.md). Ở demo mode mọi `externalId` bắt đầu bằng `demo/` được ánh xạ về cùng một file — 58 hàng `VideoAsset`, một file trên đĩa.
