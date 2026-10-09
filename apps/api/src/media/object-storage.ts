@@ -5,9 +5,11 @@ import { normalize } from '../catalog/search-text.js';
 export const OBJECT_STORAGE = Symbol('OBJECT_STORAGE');
 
 export interface ObjectStorage {
+  /** The URL accepts a body of exactly `sizeBytes`, no other length. */
   signedUploadUrl(
     key: string,
     contentType: string,
+    sizeBytes: number,
     ttl: number,
   ): Promise<string>;
   signedDownloadUrl(key: string, ttl: number): Promise<string>;
@@ -116,8 +118,13 @@ export const downloadMessage = (key: string, exp: number) =>
 export const playbackMessage = (key: string, exp: number, viewerId: string) =>
   `local-file:GET:${key}:${exp}:${viewerId}`;
 
-export const uploadMessage = (key: string, contentType: string, exp: number) =>
-  `local-file:PUT:${key}:${contentType}:${exp}`;
+/** The length is signed as R2 signs `content-length`, so demo and real agree. */
+export const uploadMessage = (
+  key: string,
+  contentType: string,
+  sizeBytes: number,
+  exp: number,
+) => `local-file:PUT:${key}:${contentType}:${sizeBytes}:${exp}`;
 
 export function sign(message: string): string {
   return createHmac('sha256', config.jwtSecret).update(message).digest('base64url');

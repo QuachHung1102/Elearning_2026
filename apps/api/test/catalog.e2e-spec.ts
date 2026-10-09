@@ -6,6 +6,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { AUDIT_VOCABULARY } from '../src/audit/actions.js';
 import { configureApp } from '../src/app.setup.js';
+import { config } from '../src/config.js';
 import { hashPassword } from '../src/auth/password.js';
 import { EnrollmentService } from '../src/enrollment/enrollment.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
@@ -665,6 +666,15 @@ describe('Phase 2 catalog (e2e)', () => {
     );
     expect(signed.body.method).toBe('PUT');
 
+    // The URL is signed for one exact length, so the size must be declared.
+    for (const sizeBytes of [undefined, 0, config.maxUploadBytes + 1, 1.5]) {
+      await request(app.getHttpServer())
+        .post(`/api/v1/admin/lessons/${lessonId}/resources/upload-url`)
+        .set(as(admin))
+        .send({ filename: 'a.pdf', contentType: 'application/pdf', sizeBytes })
+        .expect(400);
+    }
+
     // A2.13
     await request(app.getHttpServer())
       .post(`/api/v1/admin/lessons/${lessonId}/resources`)
@@ -809,8 +819,16 @@ describe('Phase 2 catalog (e2e)', () => {
     const courseId = randomUUID();
     const key = `public/courses/${courseId}/cover/${randomUUID()}.png`;
     const upload = new URL(
-      await storage.signedUploadUrl(key, 'image/png', 300),
+      await storage.signedUploadUrl(key, 'image/png', 4, 300),
     );
+
+    // A body of any other length than the signed one is a bad signature.
+    await request(app.getHttpServer())
+      .put(`/api/v1/media/local/${key}${upload.search}`)
+      .set('Content-Type', 'image/png')
+      .send(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d]))
+      .expect(403)
+      .expect(({ body }) => expect(body.code).toBe('SIGNATURE_INVALID'));
 
     await request(app.getHttpServer())
       .put(`/api/v1/media/local/${key}${upload.search}`)
@@ -827,7 +845,7 @@ describe('Phase 2 catalog (e2e)', () => {
 
     // N2.14 — a valid signature does not buy a write outside the cover shape.
     const rogue = new URL(
-      await storage.signedUploadUrl('public/x.svg', 'image/png', 300),
+      await storage.signedUploadUrl('public/x.svg', 'image/png', 6, 300),
     );
     await request(app.getHttpServer())
       .put(`/api/v1/media/local/public/x.svg${rogue.search}`)
