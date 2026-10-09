@@ -7,6 +7,7 @@ import { apiFetch, errorMessage } from "@/lib/api";
 import type { Category } from "@/lib/catalog";
 import { formatNumber } from "@/lib/format";
 import { Button, buttonClass } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { showToast } from "@/components/ui/toast";
@@ -70,14 +71,6 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
           body: JSON.stringify({ categoryIds: order }),
         }),
       "Đã đổi thứ tự",
-    );
-  }
-
-  async function remove(category: Category) {
-    await run(
-      () =>
-        apiFetch(`/admin/categories/${category.id}`, { method: "DELETE" }),
-      "Đã xóa danh mục",
     );
   }
 
@@ -155,15 +148,28 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
                   <Pencil aria-hidden="true" className="size-4" strokeWidth={1.75} />
                   Sửa
                 </button>
-                <button
-                  type="button"
-                  className={buttonClass("ghost")}
-                  onClick={() => remove(category)}
-                  disabled={busy}
-                >
-                  <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                  Xóa
-                </button>
+                <ConfirmDialog
+                  title="Xóa danh mục"
+                  description={`Xóa danh mục "${category.name}"? Danh mục còn khóa học thì không xóa được.`}
+                  confirmLabel="Xóa danh mục"
+                  onConfirm={async () => {
+                    await apiFetch(`/admin/categories/${category.id}`, {
+                      method: "DELETE",
+                    });
+                    showToast("Đã xóa danh mục", "success");
+                    startTransition(() => router.refresh());
+                  }}
+                  trigger={
+                    <button
+                      type="button"
+                      className={buttonClass("ghost")}
+                      disabled={busy}
+                    >
+                      <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                      Xóa
+                    </button>
+                  }
+                />
               </div>
             </li>
           ))}
