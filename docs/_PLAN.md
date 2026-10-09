@@ -232,5 +232,5 @@ dòng đầu bảng dưới chỉ còn giá trị nếu sau này mở bán thậ
 | Tài khoản Cloudflare Stream + R2 và nhà cung cấp SMTP | T4.12, T4.14 |
 | Nội dung pháp lý (`/privacy`, `/terms`, `/refund`, `/payment`) và thông tin liên hệ | T4.8 |
 | Quyết định dữ liệu dev đã lệch 7 giờ: dịch `+7 giờ` hay seed lại | sau T0.4 |
-| Commit, push, mở PR và merge `feat/instructor-role` | D14, mọi bước cần CI |
+| Mở PR và merge `feat/instructor-role` (đã push, CI xanh 2026-10-10) | — |
 | Đặt `INTERNAL_API_SECRET` (≥ 32 byte, cùng giá trị) cho cả service `api` và `web` trên Railway; sau deploy kiểm `X-Real-IP` giả bị edge ghi đè (README "Triển khai trên Railway") | T4.17 ở production |

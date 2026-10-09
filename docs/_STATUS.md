@@ -24,7 +24,7 @@ kết quả rà soát ngày 2026-09-30: [REVIEW_2026-09-30.md](./REVIEW_2026-09-
 | Kiểm tra | Đo 2026-10-10 trên `25ea37e`: lint ✓, typecheck ✓, 613 unit test ✓ (429 api + 184 web), 367 E2E API ✓ (35 tệp), 4/4 Playwright (`corepack pnpm e2e:web`; database `elearning_e2e` phải tồn tại, README "createdb"), build ✓ khi API tắt với `NEXT_PUBLIC_CHECKOUT_ENABLED=true`, `contrast-check.py` 37/37 (đo 2026-10-06, lượt này không đổi màu). Migration: 8 |
 | Design token + palette | `design/contrast-check.py` → 37/37 cặp đạt WCAG AA, exit 0 (T4.13 thêm 14 cặp; `accent-hover` đổi sang `#f59e0b`, canvas `.pen` chưa cập nhật — T5.4) |
 | Design system | `DESIGN.md` + `.impeccable/design.json`, đủ 8 phần chuẩn và 8 preview component |
-| CI | Workflow Ubuntu + PostgreSQL chạy D1–D7, `prisma generate` trước D1. Chưa chạy cho nhánh Phase 3 và nhánh giảng viên (chưa push). Bước build không còn cần API đang chạy (`_PLAN.md` T0.9), đã chạy được ở máy local khi API tắt |
+| CI | **Xanh lần đầu cho `feat/instructor-role` ngày 2026-10-10** (run 37996163730 trên `b63fa59`): lint, typecheck, unit, e2e API, build, replay migration + seed hai lần, Playwright. Hai lỗi chặn đã sửa: image Postgres pull từ mirror ECR Public của image chính thức (Docker Hub lỗi pull liên tiếp); e2e `ECONNRESET` chỉ trên Linux vì supertest tự `listen`/`close` server dùng chung cho từng request song song — app e2e giờ `listen(0)` trước (lỗi này cũng làm `main` đỏ) |
 
 `docs/PROJECT_PLAN.md` giữ sửa đổi làm rõ ảnh bìa khóa học đọc bằng URL không ký;
 chỉ `LessonResource` dùng presigned URL.
@@ -135,7 +135,7 @@ Chưa làm hoặc chưa kiểm chứng:
 - **A4.9** — gọi sandbox ZaloPay thật: cần hồ sơ merchant và URL callback HTTPS công khai.
   `ZaloPayHttpClient` được kiểm bằng `fetch` giả và hai vector MAC tính ngoài mã bằng `openssl`.
 - Nhánh "không xác định" (ba lần poll lỗi) và nhánh giá đổi giữa lúc mở trang chỉ có unit test.
-- DoD: D6 (replay trên DB sạch), D14 (CI, cần push), D10, D12, D13 và cặp màu mới của bốn trang
+- DoD: D6 (replay trên DB sạch), D10, D12, D13 và cặp màu mới của bốn trang
   chưa rà riêng; D9 mới đo ở 390 và 1440 px.
 
 ## Phase 5 — Hardening và mở bán
