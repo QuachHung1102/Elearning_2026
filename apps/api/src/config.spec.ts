@@ -5,6 +5,11 @@ const valid = {
   AUTH_JWT_SECRET: 'a'.repeat(32),
 };
 
+const REAL_SMTP = {
+  SMTP_URL: 'smtps://user:secret@smtp.example.test:465',
+  MAIL_FROM: 'E-learning <no-reply@example.test>',
+};
+
 describe('loadConfig', () => {
   it('fails with the missing variable name', () => {
     expect(() =>
@@ -36,6 +41,7 @@ describe('loadConfig', () => {
       VIDEO_DRIVER: 'cloudflare',
       STORAGE_DRIVER: 'r2',
       MAIL_DRIVER: 'smtp',
+      ...REAL_SMTP,
       PAYMENT_DRIVER: 'zalopay',
       ZALOPAY_APP_ID: '2553',
       ZALOPAY_KEY1: 'key-one',
@@ -56,6 +62,7 @@ describe('loadConfig', () => {
       VIDEO_DRIVER: 'cloudflare',
       STORAGE_DRIVER: 'r2',
       MAIL_DRIVER: 'smtp',
+      ...REAL_SMTP,
       PAYMENT_DRIVER: 'zalopay',
       ZALOPAY_APP_ID: '2553',
       ZALOPAY_KEY1: 'key-one',
@@ -88,6 +95,7 @@ describe('loadConfig', () => {
       VIDEO_DRIVER: 'cloudflare',
       STORAGE_DRIVER: 'r2',
       MAIL_DRIVER: 'smtp',
+      ...REAL_SMTP,
       PAYMENT_DRIVER: 'zalopay',
       ZALOPAY_APP_ID: '2553',
       ZALOPAY_KEY1: 'key-one',
@@ -174,6 +182,43 @@ describe('loadConfig', () => {
           VIDEO_DRIVER: 'cloudflare',
         }).servesLocalFiles,
       ).toBe(false);
+    });
+  });
+
+  // T4.12a: SmtpMailer cannot send without a server and a sender.
+  describe('SMTP credentials', () => {
+    const production = {
+      ...valid,
+      NODE_ENV: 'production',
+      VIDEO_DRIVER: 'cloudflare',
+      STORAGE_DRIVER: 'r2',
+      MAIL_DRIVER: 'smtp',
+      ...REAL_SMTP,
+      PAYMENT_DRIVER: 'zalopay',
+      ZALOPAY_APP_ID: '2553',
+      ZALOPAY_KEY1: 'key-one',
+      ZALOPAY_KEY2: 'key-two',
+      ZALOPAY_CALLBACK_URL: 'https://example.com/api/v1/payments/zalopay/callback',
+      INTERNAL_API_SECRET: 'c'.repeat(32),
+    };
+
+    it('boots in production when both are present', () => {
+      expect(loadConfig(production)).toMatchObject({
+        smtpUrl: REAL_SMTP.SMTP_URL,
+        mailFrom: REAL_SMTP.MAIL_FROM,
+      });
+    });
+
+    it.each(['SMTP_URL', 'MAIL_FROM'])('refuses to boot in production without %s', (name) => {
+      expect(() => loadConfig({ ...production, [name]: '' })).toThrow(name);
+      expect(() => loadConfig({ ...production, [name]: undefined })).toThrow(name);
+    });
+
+    it('keeps the demo defaults for MAIL_DRIVER=demo', () => {
+      expect(loadConfig(valid)).toMatchObject({
+        smtpUrl: '',
+        mailFrom: 'E-learning <no-reply@localhost>',
+      });
     });
   });
 });

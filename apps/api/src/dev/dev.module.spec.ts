@@ -43,7 +43,14 @@ describe('DevModule', { timeout: 30_000 }, () => {
   });
 
   it('leaves the mail routes out when the mail driver is real', async () => {
-    expect(await controllers({ MAIL_DRIVER: 'smtp', PAYMENT_DRIVER: 'demo' })).toEqual([
+    expect(
+      await controllers({
+        MAIL_DRIVER: 'smtp',
+        SMTP_URL: 'smtp://127.0.0.1:2525',
+        MAIL_FROM: 'E-learning <no-reply@example.test>',
+        PAYMENT_DRIVER: 'demo',
+      }),
+    ).toEqual([
       'DevPaymentController',
     ]);
   });
