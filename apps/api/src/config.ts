@@ -86,7 +86,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     demoVideoFile: env.DEMO_VIDEO_FILE ?? 'assets/demo/sample.mp4',
     demoVideoDurationSeconds: integer(env, 'DEMO_VIDEO_DURATION_SECONDS', 60),
     storageLocalDir: env.STORAGE_LOCAL_DIR ?? '.storage',
-    mailFrom: env.MAIL_FROM ?? 'E-learning <no-reply@localhost>',
+    mailFrom:
+      mailDriver === 'smtp'
+        ? required(env, 'MAIL_FROM')
+        : (env.MAIL_FROM ?? 'E-learning <no-reply@localhost>'),
     localMailDir: env.LOCAL_MAIL_DIR ?? '.mail',
     cloudflareAccountId: env.CLOUDFLARE_ACCOUNT_ID ?? '',
     cloudflareStreamApiToken: env.CLOUDFLARE_STREAM_API_TOKEN ?? '',
@@ -101,7 +104,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     r2PublicBaseUrl: env.R2_PUBLIC_BASE_URL ?? '',
     signedFileTtlSeconds: integer(env, 'SIGNED_FILE_TTL_SECONDS', 300),
     maxUploadBytes: integer(env, 'MAX_UPLOAD_BYTES', 52_428_800),
-    smtpUrl: env.SMTP_URL ?? '',
+    smtpUrl:
+      mailDriver === 'smtp' ? required(env, 'SMTP_URL') : (env.SMTP_URL ?? ''),
     emailVerifyTtlMinutes: integer(env, 'EMAIL_VERIFY_TTL_MINUTES', 1_440),
     passwordResetTtlMinutes: integer(env, 'PASSWORD_RESET_TTL_MINUTES', 60),
     zalopayAppId: zalopay('ZALOPAY_APP_ID'),
