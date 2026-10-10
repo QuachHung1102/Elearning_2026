@@ -91,7 +91,7 @@ Bốn biến driver và giá trị hợp lệ, chép để đọc nhanh (nguồn
 
 Ràng buộc bắt buộc: **route chỉ tồn tại ở chế độ demo phải được đăng ký có điều kiện, không phải bị guard chặn.** `DevModule` (chứa `/dev/mail*` và `POST /dev/payments/{appTransId}/confirm`) chỉ được import khi có ít nhất một driver ở giá trị `demo`; `LocalFileController` (`GET|PUT /media/local/{key}`) chỉ vào mảng `controllers` khi `STORAGE_DRIVER !== 'r2'`. Mẫu code ở DEMO_MODE.md §1. Boot guard ở Phase 5 chặn production cùng driver demo nhưng **không gỡ route** — nên đăng ký có điều kiện là lớp bảo vệ thật, boot guard chỉ là lớp thứ hai. Đây là kiểm tra âm tính N2.11, N4.4 và N5.2.
 
-`ZALOPAY_CALLBACK_URL` là URL ZaloPay gọi ngược vào backend, gửi theo từng đơn hàng trong trường `callback_url`. PROJECT_PLAN.md yêu cầu nó là HTTPS công khai nên **không dùng được `localhost`**: A4.9 chạy trên staging Railway, hoặc local qua `cloudflared tunnel --url http://localhost:3001` rồi đặt `ZALOPAY_CALLBACK_URL` bằng URL tunnel.
+`ZALOPAY_CALLBACK_URL` là URL ZaloPay gọi ngược vào backend, gửi theo từng đơn hàng trong trường `callback_url`. PROJECT_PLAN.md yêu cầu nó là HTTPS công khai nên **không dùng được `localhost`**: A4.9 chạy trên một môi trường staging có URL công khai, hoặc local qua `cloudflared tunnel --url http://localhost:3001` rồi đặt `ZALOPAY_CALLBACK_URL` bằng URL tunnel.
 
 ### Hằng số không phải env
 
@@ -728,7 +728,7 @@ Chạy với `PAYMENT_DRIVER=demo`.
 | A4.6 | `GET /purchases/me` | 1 dòng, `status` = `PAID`, `priceVnd` = giá đã chụp lúc tạo attempt |
 | A4.7 | Đổi `Course.priceVnd` sau khi tạo attempt rồi thanh toán | tiền ghi nhận là giá snapshot, không phải giá mới |
 | A4.8 | Dừng api giữa lúc `PENDING`, chạy lại, chờ một chu kỳ reconcile | attempt được truy vấn lại và kết thúc đúng trạng thái |
-| A4.9 | Với `PAYMENT_DRIVER=zalopay`, sandbox credentials và `ZALOPAY_CALLBACK_URL` là URL HTTPS công khai (staging Railway, hoặc `cloudflared tunnel --url http://localhost:3001`): chạy bộ test sandbox | callback thật mở khóa đúng một `Enrollment` |
+| A4.9 | Với `PAYMENT_DRIVER=zalopay`, sandbox credentials và `ZALOPAY_CALLBACK_URL` là URL HTTPS công khai (môi trường staging, hoặc `cloudflared tunnel --url http://localhost:3001`): chạy bộ test sandbox | callback thật mở khóa đúng một `Enrollment` |
 | A4.10 | Để QR hết hạn trên trang checkout | UI chuyển sang "Mã QR đã hết hạn", nút "Tạo mã QR mới" xuất hiện, polling chỉ chậm lại (không dừng) để bắt khoản thanh toán đến muộn; bấm nút → attempt mới có `paymentAttemptId` khác |
 | A4.11 | `GET /admin/reports/overview` sau A4.3 | `revenueVnd` bằng `priceVnd` của purchase, `paidPurchases` = `1` |
 | A4.12 | Sau `POST /admin/purchases/:id/refund` | `psql ... "select count(*) from lesson_progress where user_id=..."` không đổi |
@@ -760,7 +760,7 @@ Chạy với `PAYMENT_DRIVER=demo`.
 - SEO: `app/sitemap.ts`, `app/robots.ts` (API native của Next), JSON-LD `Course` trên trang chi tiết, metadata Open Graph.
 - Trang `/privacy`, `/terms`, `/refund-policy`. `/contact` đã có từ Phase 1 (mục 2.2) vì nó là đích của nút mua suốt Phase 2–3.
 - Playwright cho ba luồng: khách → đăng ký → được cấp quyền → học xong một bài; khách bị chặn khỏi bài trả phí; checkout demo đầu-cuối.
-- Backup: `pg_dump` định kỳ ngoài Railway, và **một lần restore thật** vào database trống rồi chạy lại toàn bộ e2e trên đó.
+- Backup: `pg_dump` định kỳ ra ngoài server chạy database, và **một lần restore thật** vào database trống rồi chạy lại toàn bộ e2e trên đó.
 - Rà accessibility ở bốn breakpoint, kiểm tra tương phản.
 
 ### File và module

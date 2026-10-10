@@ -2,7 +2,7 @@
 .SYNOPSIS
   pg_dump a database to <repo>/backups/<db>-<timestamp>.dump (custom format).
 .EXAMPLE
-  ./apps/api/scripts/backup.ps1 -DatabaseUrl $env:RAILWAY_DATABASE_URL
+  ./apps/api/scripts/backup.ps1 -DatabaseUrl "postgresql://user:pass@host:5432/elearning"
   Without -DatabaseUrl it uses $env:DATABASE_URL. Prints the dump path last.
 #>
 param(
