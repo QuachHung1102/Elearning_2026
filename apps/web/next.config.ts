@@ -3,7 +3,7 @@ import { securityHeaders } from "./src/lib/security-headers";
 import { internalApiSecret } from "./src/lib/internal-api";
 import { API_ORIGIN } from "./src/lib/site";
 
-// Fail the build and the start, not the first request, when production lacks it.
+// Fail the build and the start, not the first request, when it is needed and missing.
 internalApiSecret();
 
 const nextConfig: NextConfig = {

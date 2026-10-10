@@ -111,12 +111,6 @@ describe('loadConfig', () => {
     it('is on when NODE_ENV says production', () => {
       expect(loadConfig({ ...allReal, NODE_ENV: 'production' }).isProduction).toBe(true);
     });
-
-    it('is on when only Railway names the environment production', () => {
-      expect(
-        loadConfig({ ...allReal, RAILWAY_ENVIRONMENT_NAME: 'production' }).isProduction,
-      ).toBe(true);
-    });
   });
 
   // P4-9: an empty key2 means anyone can compute a valid MAC.

@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 /**
  * REVIEW F-28, ROADMAP N5.2: the seed wipes and rewrites demo accounts, so it
- * must refuse anything that is production by either signal. The database it is
+ * must refuse a production environment. The database it is
  * pointed at cannot be reached: a seed that got past the guard dies on the
  * connection, with a different message, instead of touching anything.
  */
@@ -17,7 +17,6 @@ function seed(env: Record<string, string>) {
     env: {
       ...process.env,
       NODE_ENV: 'development',
-      RAILWAY_ENVIRONMENT_NAME: '',
       DATABASE_URL: UNREACHABLE,
       ...env,
     },
@@ -28,18 +27,15 @@ function seed(env: Record<string, string>) {
 }
 
 describe('the seed refuses a production database', () => {
-  it.each([
-    ['NODE_ENV', { NODE_ENV: 'production' }],
-    ['the Railway environment name', { RAILWAY_ENVIRONMENT_NAME: 'production' }],
-  ])('when %s says production', (_label, env) => {
-    const { status, output } = seed(env);
+  it('when NODE_ENV says production', () => {
+    const { status, output } = seed({ NODE_ENV: 'production' });
 
     expect(status).not.toBe(0);
     expect(output).toContain('Refusing to seed a production database');
   });
 
-  it('does not mistake a Railway staging environment for production', () => {
-    const { output } = seed({ RAILWAY_ENVIRONMENT_NAME: 'staging' });
+  it('does not mistake development for production', () => {
+    const { output } = seed({});
 
     expect(output).not.toContain('Refusing to seed');
   });

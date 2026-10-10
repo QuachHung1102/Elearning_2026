@@ -755,9 +755,7 @@ export function assertDriverValuesAreKnown(): void {
 }
 
 export function assertNoDemoDriversInProduction(): void {
-  const isProduction =
-    process.env.NODE_ENV === 'production' ||
-    process.env.RAILWAY_ENVIRONMENT_NAME === 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
 
   if (!isProduction) return;
 
@@ -792,11 +790,10 @@ async function bootstrap() {
 await bootstrap();
 ```
 
-Bốn chi tiết, mỗi cái sửa một lỗi cụ thể:
+Ba chi tiết, mỗi cái sửa một lỗi cụ thể:
 
 - **Allowlist, không phải blacklist.** Bản trước lọc `(process.env[name] ?? 'demo') === 'demo'`. `??` chỉ bắt `null`/`undefined`, **không** bắt chuỗi rỗng — mà chính `.env.example` ở mục 7 dạy đúng thói quen viết `VAR=""` cho mọi biến `[PROD]`. Đã chạy thử: với `NODE_ENV=production` và bốn biến driver đặt bằng `""`, danh sách `demo` ra rỗng, kiểm tra **PASS**, app boot bình thường — trong khi mọi biểu thức `useClass` vẫn chọn lớp demo vì `'' !== 'cloudflare'`. Production khởi động thành công với mp4 không bảo vệ trong `public/`, storage ký bằng HMAC tự chế, mailer ghi ra đĩa thay vì gửi, và `DemoZaloPayClient` cấp `Enrollment` mà không có tiền. Allowlist đảo ngược mặc định: thứ gì không **đúng bằng** chuỗi khiến `useClass` chọn lớp thật thì nó là demo. Một nguồn sự thật, cùng một hằng số.
 - **Kiểm giá trị hợp lệ ở mọi môi trường.** `VIDEO_DRIVER=cloudfare` (gõ thiếu chữ) hay `STORAGE_DRIVER=true` trước đây lặng lẽ chọn lớp demo ở local, và developer ngồi debug vì sao Cloudflare không được gọi. Tài liệu này lập luận rằng cấu hình sai phải là "lỗi ồn ào, không phải im lặng" — `assertDriverValuesAreKnown` là chỗ áp dụng nó cho trường hợp xảy ra hằng ngày, chứ không chỉ cho production.
-- **`RAILWAY_ENVIRONMENT_NAME === 'production'`, không phải `Boolean(RAILWAY_ENVIRONMENT_ID)`.** Railway đặt `RAILWAY_ENVIRONMENT_ID` trong **mọi** environment. Dùng nó nghĩa là service staging/sandbox trên Railway không boot nổi với `MAIL_DRIVER=demo` — trong khi PROJECT_PLAN.md §Triển khai đòi một environment ZaloPay sandbox riêng, và mục 1 tách bốn biến độc lập **chính vì** phải lên staging từng phần. Kiểm theo tên environment giữ nguyên ý định đó. (`auth-rate-limit.guard.ts` vẫn dùng `RAILWAY_ENVIRONMENT_ID` và vẫn đúng: ở đó câu hỏi là "có edge proxy Railway phía trước không", và câu trả lời đúng là "có, ở mọi environment".) Dự án không còn chọn Railway làm nơi triển khai: ngoài Railway hai biến này không tồn tại nên nhánh kiểm này không có tác dụng, production chỉ được nhận biết qua `NODE_ENV=production`.
 - **Side-effect import, không phải lời gọi hàm trong `bootstrap()`.** `apps/api/package.json` khai `"type": "module"`; toàn bộ đồ thị import được evaluate xong **trước** câu lệnh đầu tiên trong thân `main.ts`. Đã chạy repro: với `import { AppModule }` đứng trước, thứ tự thực tế là `app.module` evaluate (mọi biểu thức `useClass` ở mục 1 chạy ở đây, mảng `controllers` chốt, quyết định import `DevModule` chốt, và `auth.module.ts` có cơ hội ném `AUTH_JWT_SECRET must contain at least 32 bytes` trước — che mất thông báo lỗi driver) rồi mới tới lời gọi kiểm tra. Đặt `import './config/drivers.js'` làm **dòng import đầu tiên** thì ESM evaluate nó trước, đúng theo thứ tự khai báo import.
 
 Điều được đảm bảo là **không provider nào được instantiate và không kết nối nào được mở** — không phải "không module nào được evaluate". Evaluate một file module Nest chỉ chạy decorator và tính metadata; nó không mở socket, không chạm database. Ranh giới đó là ranh giới thật sự quan trọng.

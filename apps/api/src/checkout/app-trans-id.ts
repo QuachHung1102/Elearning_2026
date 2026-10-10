@@ -10,7 +10,7 @@ const DAY = new Intl.DateTimeFormat('en-CA', {
 /**
  * `yymmdd_` + 8 hex characters, unique per merchant per day. The day is the
  * Vietnam one, spelled out with `timeZone`: `toISOString()` (UTC, as on
- * Railway) gives the previous day between 00:00 and 07:00 there, so
+ * most servers) gives the previous day between 00:00 and 07:00 there, so
  * reconciliation would look in the wrong bucket (DEMO_MODE.md §5).
  * Random rather than a counter: the `unique` column catches the rest.
  */

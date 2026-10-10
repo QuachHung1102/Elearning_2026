@@ -100,9 +100,9 @@ Script tự `pg_dump` nguồn (nếu không có `-DumpFile`), `pg_restore` vào 
 
 ## Triển khai
 
-Hiện dự án chạy local. **Chưa chọn server triển khai**; khi chọn, cần quyết reverse proxy nào được tin header IP: code chỉ tin `X-Real-IP` khi chạy sau reverse proxy đã biết, nên phải cấu hình lại cho server được chọn (API_CONTRACT.md §8.1).
+Hiện dự án chạy local. **Chưa chọn server triển khai**; khi chọn, nếu reverse proxy trước hai service ghi đè `X-Real-IP` bằng IP của khách (nginx: `proxy_set_header X-Real-IP $remote_addr`) thì đặt `TRUST_X_REAL_IP=true` cho cả `web` và `api`. Không đặt thì code bỏ qua header đó và mọi khách dùng chung một bucket rate limit (API_CONTRACT.md §8.1).
 
-Hai service `web` và `api` phải có **cùng** `INTERNAL_API_SECRET` (chuỗi ngẫu nhiên ≥ 32 byte, ví dụ `openssl rand -base64 48`). Máy chủ Next gửi nó kèm IP của khách trong mọi request tới API, để rate limit và audit log tính theo từng khách thay vì theo máy chủ Next (API_CONTRACT.md §8.1). Thiếu ở production thì API không boot; lệch giá trị thì mọi khách lại dùng chung một bucket. Không bao giờ đặt tên nó với tiền tố `NEXT_PUBLIC_`.
+Hai service `web` và `api` phải có **cùng** `INTERNAL_API_SECRET` (chuỗi ngẫu nhiên ≥ 32 byte, ví dụ `openssl rand -base64 48`). Máy chủ Next gửi nó kèm IP của khách trong mọi request tới API, để rate limit và audit log tính theo từng khách thay vì theo máy chủ Next (API_CONTRACT.md §8.1). Thiếu ở production thì API không boot, và web không khởi động khi `TRUST_X_REAL_IP=true`; lệch giá trị thì mọi khách lại dùng chung một bucket. Không bao giờ đặt tên nó với tiền tố `NEXT_PUBLIC_`.
 
 Production từ chối khởi động với driver demo (`docs/DEMO_MODE.md`): triển khai thật cần driver thật.
 

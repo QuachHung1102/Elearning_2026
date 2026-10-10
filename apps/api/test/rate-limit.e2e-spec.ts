@@ -14,7 +14,7 @@ import {
 /**
  * API_CONTRACT.md §8 and ROADMAP.md §9 (A5.6, A5.9): past the limit a client gets
  * `429 RATE_LIMITED` with `Retry-After`. Every case here uses its own client IP
- * (`X-Real-IP` is trusted under RAILWAY_ENVIRONMENT_ID, which .env.test sets).
+ * (`X-Real-IP` is trusted under TRUST_X_REAL_IP, which .env.test sets).
  */
 describe('rate limits (e2e)', () => {
   let app: NestExpressApplication;
