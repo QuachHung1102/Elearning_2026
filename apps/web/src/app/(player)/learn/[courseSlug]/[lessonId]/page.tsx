@@ -1,3 +1,4 @@
+import { FileText } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -119,8 +120,9 @@ export default async function LessonPage({ params }: { params: Params }) {
                 <Prose source={lesson.content} />
               ) : (
                 <EmptyState
-                  title="Bài học này chưa có nội dung chữ"
-                  description={isArticle ? undefined : "Xem video ở phía trên."}
+                  icon={FileText}
+                  title={isArticle ? "Bài đọc này chưa có nội dung" : "Bài này chỉ có video"}
+                  description={isArticle ? undefined : "Nội dung bài học nằm trong video ở phía trên."}
                 />
               )
             }

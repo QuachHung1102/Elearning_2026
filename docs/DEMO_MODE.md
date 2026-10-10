@@ -62,6 +62,7 @@ export type PlaybackToken = {
 
 export interface StreamClient {
   getStatus(uid: string): Promise<{ ready: boolean; durationSeconds: number }>;
+  register(uid: string): Promise<{ ready: boolean; durationSeconds: number }>;
   signPlayback(
     uid: string,
     ttlSeconds: number,
@@ -220,6 +221,7 @@ Bước 1–6 không có nhánh nào phụ thuộc driver. Test quyền truy c�
 | Method | `CloudflareStreamClient` | `LocalStreamClient` |
 |---|---|---|
 | `getStatus(externalId)` | Gọi Stream API, đọc `readyToStream`, `duration` | Luôn `{ ready: true, durationSeconds: DEMO_VIDEO_DURATION_SECONDS }` |
+| `register(externalId)` (chỉ `POST /admin/videos` gọi) | `POST /stream/{uid}` với `{ uid, requireSignedURLs: true }`, đọc trạng thái từ chính câu trả lời; Cloudflare không xác nhận `requireSignedURLs` thì ném lỗi (`502`), không lưu gì — nếu không, ai đọc được `sub` của token là phát được video mãi | Như `getStatus`; URL demo vốn đã ký |
 | `signPlayback(externalId, ttl, viewerId)` | Ký JWT bằng signing key, trả `.../{token}/manifest/video.m3u8`, `kind: 'hls'`. Token Cloudflare không gắn với người xem nên `viewerId` bị bỏ qua | Trả `{API_PUBLIC_URL}/api/v1/media/local/videos/{base64url(externalId)}.mp4?exp=…&sig=…`, `kind: 'mp4'`, `expiresAt = exp` |
 
 `externalId` là `VideoAsset.externalId` (DATA_MODEL.md). Ở demo mode mọi `externalId` bắt đầu bằng `demo/` được ánh xạ về cùng một file — 58 hàng `VideoAsset`, một file trên đĩa.
@@ -258,7 +260,9 @@ ffprobe -v error -show_entries format=duration -of csv=p=0 apps/api/assets/demo/
 Player đọc `kind` trong response, không đoán từ đuôi URL:
 
 - `kind: 'mp4'` → `<video src={playbackUrl}>` native.
-- `kind: 'hls'` → `hls.js` khi trình duyệt không hỗ trợ HLS native (Safari hỗ trợ sẵn).
+- `kind: 'hls'` → `hls.js` khi trình duyệt không hỗ trợ HLS native (Safari hỗ trợ sẵn). `hls.js` chỉ được `import()` khi đó, nên trang không tải nó cho MP4 hay HLS native.
+
+CSP của web với HLS qua `hls.js`: playlist và segment đi bằng XHR (`connect-src`), video phát qua Media Source (`media-src blob:`, đã có sẵn). Bản ESM của `hls.js` không tạo worker nên không cần `worker-src`. Host phát của Cloudflare Stream (`https://videodelivery.net`, hoặc customer domain nếu dùng) phải nằm trong `CSP_MEDIA_ORIGINS`, nếu không trình duyệt chặn playlist và player rơi vào "Không phát được video".
 
 Một nhánh `if`, đặt trong component player. Không có component riêng cho demo.
 
@@ -302,7 +306,7 @@ URL demo có chữ ký, có hạn và gắn với người xem, nên đường x
 export const OBJECT_STORAGE = Symbol('OBJECT_STORAGE');
 
 export interface ObjectStorage {
-  signedUploadUrl(key: string, contentType: string, ttl: number): Promise<string>;
+  signedUploadUrl(key: string, contentType: string, sizeBytes: number, ttl: number): Promise<string>;
   signedDownloadUrl(key: string, ttl: number): Promise<string>;
   publicUrl(key: string): string;
   delete(key: string): Promise<void>;
@@ -328,15 +332,15 @@ lessons/{lessonId}/resources/{uuid}-{slugified-filename}.{ext}
 - Gốc lưu trữ: `apps/api/.storage/` (`STORAGE_LOCAL_DIR`), đã gitignore.
 - Cả hai method trả cùng dạng URL: `${API_PUBLIC_URL}/api/v1/media/local/{key}?exp={unix}&sig={hmac}`. Uploader trong admin viết một lần cho cả hai driver (R2 dùng presigned PUT y hệt).
 
-Chữ ký **phải chứa HTTP method**, và chữ ký upload phải chứa cả `contentType`:
+Chữ ký **phải chứa HTTP method**, và chữ ký upload phải chứa cả `contentType` lẫn `sizeBytes` (R2 ký `content-length` y như vậy, nên URL chỉ nhận body đúng độ dài đã khai):
 
 ```ts
 const hmac = (message: string) =>
   createHmac('sha256', process.env.AUTH_JWT_SECRET!).update(message).digest('base64url');
 
 const downloadMessage = (key: string, exp: number) => `local-file:GET:${key}:${exp}`;
-const uploadMessage = (key: string, contentType: string, exp: number) =>
-  `local-file:PUT:${key}:${contentType}:${exp}`;
+const uploadMessage = (key: string, contentType: string, sizeBytes: number, exp: number) =>
+  `local-file:PUT:${key}:${contentType}:${sizeBytes}:${exp}`;
 ```
 
 Nếu chuỗi ký không chứa method thì hai method sinh ra **đúng cùng một chữ ký**, và mọi signed download URL mà học viên hợp lệ đang cầm cho một file PDF cũng là chữ ký `PUT` hợp lệ cho chính key đó: học viên `PUT` đè lên tài liệu của khóa học trong suốt TTL. R2 ký HTTP method trong SigV4 và bind `Content-Type` khi được ký, nên bản thật không có lỗ này — bỏ hai thứ đó làm driver demo **lỏng hơn** bản thật ở đúng khía cạnh mà mục 9 tuyên bố là mô phỏng trung thực.
@@ -410,13 +414,13 @@ Bước 1–3 giống hệt đường đọc, nhưng **không** có ngoại lệ
    | `public/courses/*/cover/` | `image/jpeg`, `image/png`, `image/webp` |
    | `lessons/*/resources/` | `application/pdf`, `application/zip`, `image/png`, `image/jpeg`, `text/plain` — đúng năm giá trị của DATA_MODEL.md §LessonResource |
 
-5. So sánh `hmac(uploadMessage(k, req.get('content-type'), exp))` với `sig` bằng `timingSafeEqual`. Sai → `403 SIGNATURE_INVALID`. Vì `contentType` nằm trong chuỗi ký, gửi kiểu khác kiểu đã xin URL là chữ ký sai — không cần so sánh riêng.
-6. `Content-Length` thiếu, không phải số nguyên, hoặc `> MAX_UPLOAD_BYTES` → `413`.
+5. `Content-Length` thiếu, không phải số nguyên, hoặc `> MAX_UPLOAD_BYTES` → `413`.
+6. So sánh `hmac(uploadMessage(k, req.get('content-type'), req.get('content-length'), exp))` với `sig` bằng `timingSafeEqual`. Sai → `403 SIGNATURE_INVALID`. Vì `contentType` và độ dài nằm trong chuỗi ký, gửi kiểu khác hoặc số byte khác lúc xin URL là chữ ký sai — không cần so sánh riêng.
 7. `mkdir -p` thư mục cha, ghi file, trả `204` với body rỗng.
 
 Hai allowlist khác nhau vì hai luồng khác nhau: ảnh bìa được nhúng trong `<img>` trên trang công khai nên chỉ nhận ảnh raster; tài liệu bài học được phát lại cho học viên từ một URL đã ký, nên `text/html` hay `image/svg+xml` lọt vào là một trang chạy script trên chính origin của mình.
 
-Bước 6 là kiểm tra thứ hai, không phải kiểm tra duy nhất. Body parser phải tự chặn trước: `express.raw({ type: '*/*', limit: MAX_UPLOAD_BYTES })` chỉ cho route này. Không có nó thì toàn bộ body đã nằm trong RAM trước khi handler chạy, và bước 6 chỉ báo lỗi sau khi thiệt hại đã xảy ra.
+Bước 5 là kiểm tra thứ hai, không phải kiểm tra duy nhất. Body parser phải tự chặn trước: `express.raw({ type: '*/*', limit: MAX_UPLOAD_BYTES })` chỉ cho route này. Không có nó thì toàn bộ body đã nằm trong RAM trước khi handler chạy, và bước 5 chỉ báo lỗi sau khi thiệt hại đã xảy ra.
 
 Ghi đè key đã tồn tại là **cho phép** và có chủ ý: admin thay ảnh bìa bằng cách upload lại. `objectKey` do server sinh và chứa một UUID (xem template key ở trên), nên client không chọn được key của người khác — API_CONTRACT.md §5.6 ràng buộc điều đó.
 
@@ -570,6 +574,7 @@ export const ZALOPAY_CLIENT = Symbol('ZALOPAY_CLIENT');
 
 export type CreateOrderInput = {
   appTransId: string;      // do CheckoutService sinh, KHÔNG do client sinh
+  appUser: string;         // `app_user`: học viên đang trả tiền (id người dùng); nhà cung cấp từ chối giá trị rỗng
   amountVnd: number;       // = PaymentAttempt.amountVnd
   description: string;     // hiện trong app ZaloPay
   embedData: { courseId: string; purchaseId: string };
@@ -687,13 +692,13 @@ Mỗi lượt chạy làm hai việc, theo đúng thứ tự này:
 1. Quét `PaymentAttempt` `status = PENDING` cũ hơn `RECONCILE_MIN_AGE` → gọi `queryOrder`; `returnCode = 1` → dựng payload và gọi `confirmPayment`; `= 2` → `status = FAILED`; `= 3` → để nguyên.
 2. Attempt còn `PENDING` mà `expiresAt < now()` → ghi `EXPIRED`. Một câu `UPDATE` có điều kiện, dùng đúng index `(status, expiresAt)` đã có trong DATA_MODEL.md.
 
-Đặt việc 2 **sau** việc 1 trong cùng một lượt: nếu đảo lại, một attempt vừa được provider báo `1` có thể bị đánh `EXPIRED` trước khi kịp đối soát.
+Đặt việc 2 **sau** việc 1 trong cùng một lượt: nếu đảo lại, một attempt vừa được provider báo `1` có thể bị đánh `EXPIRED` trước khi kịp đối soát. Cùng lý do, attempt mà việc 1 gặp lỗi (gọi `queryOrder` ném ngoại lệ, hoặc `confirmPayment` ném — ví dụ transaction quá 5 s khi DB tải nặng) **không** bị việc 2 đóng trong lượt đó: nó vẫn `PENDING` và được hỏi lại ở lượt sau. Đóng nó ngay thì provider đã thu tiền mà lượt sau (chỉ hỏi `PENDING`) không bao giờ thấy nó nữa. Vì attempt đó vẫn `PENDING`, đơn của nó cũng không bị việc hủy đơn bỏ dở chạm tới.
 
 Vòng lặp chạy trên **mọi** instance. Ở một instance — cấu hình hiện tại — điều đó không có nghĩa gì. Từ hai instance trở lên vẫn an toàn vì `confirmPayment` đã idempotent và việc 2 là một `UPDATE` có điều kiện, nhưng sẽ tốn gấp đôi lượt gọi ZaloPay. Đó là lúc thêm advisory lock của PostgreSQL, không phải bây giờ.
 
 ### Endpoint confirm dev
 
-`POST /api/v1/dev/payments/:appTransId/confirm` — `@UseGuards(AdminGuard)`, giống mọi route `/dev/*`.
+`POST /api/v1/dev/payments/:appTransId/confirm` — `@UseGuards(SessionAuthGuard, AuthRateLimitGuard)`, 10 lần/phút mỗi người dùng. Người gọi phải là **chính người mua** của đơn (attempt → purchase → `userId`) hoặc `ADMIN`; ai khác nhận `404` y như `appTransId` không tồn tại, nên mã đơn của người khác không lộ gì. Đây là route `/dev/*` duy nhất không dùng `AdminGuard`.
 
 Nó **không** tự cấp `Enrollment`. Nó đặt `Map` của `DemoZaloPayClient` sang `SUCCEEDED`, dựng payload callback đúng schema của ZaloPay (ký MAC bằng `ZALOPAY_KEY2` demo) rồi gọi:
 
@@ -703,15 +708,15 @@ await this.checkout.confirmPayment(payload);
 
 Đúng hàm mà callback thật gọi và tác vụ reconcile gọi. Nghĩa là xác minh MAC, xác minh số tiền, idempotency, chuyển trạng thái `PaymentAttempt`, transaction PostgreSQL và `enrollment.grant()` đều được chạy thật. Bấm confirm hai lần vẫn chỉ ra một `Enrollment` — và đó là test có ý nghĩa.
 
-Học viên **không** bấm được nút này, và điều đó không cản trở gì: người đang chạy demo là developer, và developer có tài khoản admin từ seed. Từ `/admin/orders`, chọn attempt đang `PENDING`, bấm xác nhận. Không có trang HTML không guard, không có QR quét được bằng điện thoại — cả hai chỉ tồn tại để tiết kiệm một lần đăng nhập và đổi lại một endpoint mở trên máy có người khác truy cập được.
+Học viên bấm nút **"Thanh toán"** ngay trên trang `/checkout/[courseSlug]`: màn hình vẫn y như hiện tại (QR, tóm tắt đơn, đồng hồ đếm ngược), chỉ thêm ghi chú "không trừ tiền thật" và nút này thay cho việc quét mã. Bấm xong, trang đọc lại đơn đã lưu và chuyển sang kết quả "Thanh toán thành công" → "Vào học". Không cần admin, không có tiền thật. Admin vẫn xác nhận được mọi đơn từ `/admin/orders` (chọn attempt đang `PENDING`, bấm xác nhận). Không có trang HTML không guard, không có QR quét được bằng điện thoại: route vẫn cần phiên đăng nhập và CSRF như mọi mutation khác.
 
 ### Ba lớp chặn ở production
 
 1. `DevModule` chỉ được import khi có ít nhất một driver ở chế độ demo. Ở production route **không tồn tại** → 404.
 2. Kiểm tra ở mục 6 làm app không khởi động nổi với bất kỳ driver demo nào ở production.
-3. `@UseGuards(AdminGuard)` — một guard duy nhất — trên toàn bộ `DevModule` (API_CONTRACT.md §3.1–§3.2), phòng trường hợp ai đó chạy demo mode trên một máy có người khác truy cập được.
+3. `@UseGuards(AdminGuard)` trên các route `/dev/*` (API_CONTRACT.md §3.1–§3.2), phòng trường hợp ai đó chạy demo mode trên một máy có người khác truy cập được. Ngoại lệ duy nhất là endpoint confirm thanh toán ở trên: nó cần phiên đăng nhập và chỉ chạy cho người mua của đơn hoặc admin.
 
-Lớp 1 là lớp thật sự có tác dụng. Hai lớp còn lại là để phòng cấu hình sai. Lớp 3 không có ngoại lệ nào — kể cả hộp thư dev, xem mục 4.
+Lớp 1 là lớp thật sự có tác dụng. Hai lớp còn lại là để phòng cấu hình sai. Hộp thư dev vẫn chỉ admin xem được, xem mục 4.
 
 ## 6. Chặn demo driver ở production
 
@@ -886,8 +891,6 @@ CLOUDFLARE_STREAM_API_TOKEN=""
 CLOUDFLARE_STREAM_SIGNING_KEY_ID=""
 # [PROD] Private key PEM (base64) tương ứng signing key ở trên.
 CLOUDFLARE_STREAM_SIGNING_KEY_PEM=""
-# [PROD] Danh sách origin được phép nhúng player, phân tách bằng dấu phẩy.
-CLOUDFLARE_STREAM_ALLOWED_ORIGINS="https://your-domain.com"
 # Hạn playback token. Ngắn thôi; token rò rỉ chỉ sống được chừng này.
 PLAYBACK_TOKEN_TTL_SECONDS=3600
 
@@ -1023,7 +1026,7 @@ Bảng đầy đủ ở DATA_MODEL.md §Tài khoản demo. Bốn tài khoản, m
 
 | Vai trò | Email | Mật khẩu | Vì sao tồn tại |
 |---|---|---|---|
-| Quản trị | `admin@elearning.local` | `Demo!Admin123` | Soạn nội dung, hộp thư dev, confirm thanh toán dev. `emailVerifiedAt` đã đặt. |
+| Quản trị | `admin@elearning.local` | `Demo!Admin123` | Soạn nội dung, hộp thư dev, confirm thanh toán dev cho mọi đơn. `emailVerifiedAt` đã đặt. |
 | Học viên đang học | `student1@elearning.local` | `Demo!Student123` | Có quyền học C1 + C2, có 9 hàng `LessonProgress` — trạng thái "tiếp tục học" có dữ liệu thật ngay |
 | Học viên mới | `student2@elearning.local` | `Demo!Student123` | Có quyền học C1, chưa có tiến độ — trạng thái rỗng của trang học |
 | Khách chưa mua | `student3@elearning.local` | `Demo!Student123` | **Đường từ chối**: playback token phải `403 NOT_ENROLLED`, khóa `DRAFT` phải `404` |
@@ -1048,7 +1051,7 @@ Ba điều chỉ liên quan tới demo mode, và chỉ có ở đây:
 | Xem hộp thư dev (layout HTML, dấu tiếng Việt) | Đăng nhập admin rồi mở `http://localhost:3001/api/v1/dev/mail` |
 | Cấp quyền học thủ công | Đăng nhập admin → `/admin/users/[id]` → `ManualGrantDialog` |
 | Thu hồi quyền học | `/admin/enrollments` → `RevokeDialog`. Đặt `status = REVOKED`, không xóa hàng. |
-| Xác nhận thanh toán giả | Đăng nhập admin → `/admin/orders` → chọn attempt `PENDING` → xác nhận |
+| Xác nhận thanh toán giả | Học viên đã xác minh email → `/checkout/[courseSlug]` → bấm **"Thanh toán"**. Hoặc admin → `/admin/orders` → chọn attempt `PENDING` → xác nhận |
 | Reset sạch | `corepack pnpm --filter api prisma migrate reset` rồi `Remove-Item -Recurse apps/api/.storage, apps/api/.mail` |
 | Đổi sang video thật | Đặt `VIDEO_DRIVER=cloudflare` + 5 biến `CLOUDFLARE_*`, restart API. Không sửa code. |
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Cover } from "@/components/catalog/course-card";
+import { CourseMeta, Cover, Rating } from "@/components/catalog/course-card";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/feedback";
@@ -23,7 +23,7 @@ export function CourseProgressCard({
 }) {
   const { course, progress } = enrollment;
   return (
-    <li className="panel relative grid grid-rows-[auto_1fr]">
+    <li className="panel relative grid grid-rows-[auto_1fr_auto]">
       <Cover course={course} />
       {/* Over the cover, so the badge never costs a row on the other cards. */}
       {course.status === "ARCHIVED" && (
@@ -32,9 +32,20 @@ export function CourseProgressCard({
         </span>
       )}
       <div className="grid content-start gap-3 p-4">
-        <h2 className="line-clamp-2 min-h-14 text-xl font-semibold">
-          {course.title}
-        </h2>
+        <h2 className="line-clamp-2 text-xl font-semibold">{course.title}</h2>
+        {course.subtitle && (
+          <p className="line-clamp-2 text-sm text-muted-foreground">
+            {course.subtitle}
+          </p>
+        )}
+        <Rating
+          average={course.ratingAverage}
+          count={course.ratingCount}
+          demoStats={course.demoStats}
+        />
+        <CourseMeta course={course} />
+      </div>
+      <div className="grid gap-3 border-t border-border p-4">
         <div className="grid gap-2">
           <p className="text-sm text-muted-foreground tabular-nums">
             {progress.completedLessons} / {progress.totalLessons} bài đã hoàn
@@ -63,7 +74,11 @@ export function CourseProgressCardSkeleton() {
     <li className="panel">
       <Skeleton className="aspect-video w-full rounded-b-none" />
       <div className="grid gap-3 p-4">
-        <Skeleton className="h-14 w-4/5" />
+        <Skeleton className="h-7 w-4/5" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-5 w-40" />
+      </div>
+      <div className="grid gap-3 border-t border-border p-4">
         <div className="grid gap-2">
           <Skeleton className="h-[1.375rem] w-32" />
           <Skeleton className="h-1 w-full" />

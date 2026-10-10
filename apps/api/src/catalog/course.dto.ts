@@ -277,6 +277,10 @@ export class UpdateCourseDto {
   categoryId?: string | null;
 
   @IsOptional()
+  @IsUUID('4')
+  instructorId?: string | null;
+
+  @IsOptional()
   @compactStrings()
   @IsArray()
   @ArrayMaxSize(12)
@@ -393,6 +397,9 @@ export class CreateVideoDto {
   @trim()
   @IsString()
   @Length(1, 120)
+  // Spliced into a Cloudflare API path, so no dot, query or fragment; `/` is
+  // there for the demo ids (`demo/c1-s1-l1`) and the client encodes it.
+  @Matches(/^[A-Za-z0-9][A-Za-z0-9_/-]*$/)
   externalId: string;
 }
 
@@ -404,4 +411,14 @@ export class ReportRangeQuery {
   @IsOptional()
   @IsISO8601()
   to?: string;
+}
+
+export class CourseReportQuery extends ReportRangeQuery {
+  @IsOptional()
+  @IsString()
+  page?: string;
+
+  @IsOptional()
+  @IsString()
+  pageSize?: string;
 }

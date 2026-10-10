@@ -13,12 +13,11 @@ import {
 } from "@/lib/catalog";
 import { formatNumber } from "@/lib/format";
 
-export const revalidate = 300;
-
-export async function generateStaticParams() {
-  const categories = await publicFetch<{ items: Category[] }>("/categories");
-  return categories.items.map((category) => ({ slug: category.slug }));
-}
+// The page reads `searchParams`, so it is only ever rendered per request.
+// Saying so here matters: with no prerendered params Next never discovers it at
+// build, and the first visit would fail with DYNAMIC_SERVER_USAGE. It also
+// keeps `next build` off the API. `publicFetch` still caches each response.
+export const revalidate = 0;
 
 export async function generateMetadata({
   params,
@@ -73,6 +72,8 @@ export default async function CategoryPage({
           query={search}
         />
       </div>
+      {/* The cards are h3: without this level the outline skips h2 (WCAG 1.3.1). */}
+      <h2 className="sr-only">Danh sách khóa học</h2>
       <CourseGrid courses={courses.items} />
       <Pagination
         basePath={`/categories/${slug}`}

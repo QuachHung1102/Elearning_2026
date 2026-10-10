@@ -20,6 +20,7 @@ import { SkipCsrf } from '../auth/csrf.guard.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
 import { config } from '../config.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { attachment } from './content-disposition.js';
 import { LocalDiskStorage } from './local-disk.storage.js';
 import {
   COVER_CONTENT_TYPES,
@@ -183,15 +184,6 @@ export class LocalFileController {
       );
     }
 
-    // The content type is inside the signed message, so uploading a different
-    // type than the one the URL was issued for fails as a bad signature.
-    if (
-      typeof sig !== 'string' ||
-      !signatureMatches(uploadMessage(key, contentType, expiry), sig)
-    ) {
-      invalidSignature();
-    }
-
     const body = request.body as unknown;
     const bytes = Buffer.isBuffer(body) ? body : Buffer.alloc(0);
     const declared = Number(request.get('content-length'));
@@ -206,6 +198,16 @@ export class LocalFileController {
         ERROR_CODE.PAYLOAD_TOO_LARGE,
         'Upload exceeds the maximum size',
       );
+    }
+
+    // The content type and length are inside the signed message, so a type or
+    // a length other than the one the URL was issued for fails as a bad
+    // signature. The raw body parser already holds the body to Content-Length.
+    if (
+      typeof sig !== 'string' ||
+      !signatureMatches(uploadMessage(key, contentType, declared, expiry), sig)
+    ) {
+      invalidSignature();
     }
 
     await mkdir(dirname(absolute), { recursive: true });
@@ -304,7 +306,7 @@ export class LocalFileController {
       : null;
     return {
       contentType: resource?.contentType ?? 'application/octet-stream',
-      disposition: `attachment; filename="${(resource?.filename ?? 'tai-lieu').replace(/["\\]/g, '')}"`,
+      disposition: attachment(resource?.filename ?? 'tai-lieu'),
     };
   }
 }

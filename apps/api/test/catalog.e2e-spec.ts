@@ -6,9 +6,11 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { AUDIT_VOCABULARY } from '../src/audit/actions.js';
 import { configureApp } from '../src/app.setup.js';
+import { config } from '../src/config.js';
 import { hashPassword } from '../src/auth/password.js';
 import { EnrollmentService } from '../src/enrollment/enrollment.service.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+import { untilBlockedOnLock } from './support.js';
 
 const PASSWORD = 'correct horse battery staple';
 const LONG_DESCRIPTION = 'Mô tả đủ dài để vượt ngưỡng hai trăm ký tự. '.repeat(6);
@@ -146,7 +148,7 @@ describe('Phase 2 catalog (e2e)', () => {
     }).compile();
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureApp(app);
-    await app.init();
+    await app.listen(0, '127.0.0.1');
     prisma = app.get(PrismaService);
   });
 
@@ -297,6 +299,19 @@ describe('Phase 2 catalog (e2e)', () => {
       .expect(404);
     expect(asStudent.body).toEqual(anonymous.body);
     expect(asStudent.body).toEqual(unknownPath.body);
+
+    // Express routes without regard to case, so `/API/V1/ADMIN/...` is the
+    // same surface: it must keep the 404 and the `no-store` (REVIEW F-26).
+    const shouting = await request(app.getHttpServer())
+      .post('/API/V1/ADMIN/courses')
+      .send({ title: 'Thử tạo khóa' })
+      .expect(404);
+    expect(shouting.body).toEqual(anonymous.body);
+    const cased = await request(app.getHttpServer())
+      .get('/API/V1/ADMIN/courses')
+      .set(as(admin))
+      .expect(200);
+    expect(cased.headers['cache-control']).toBe('no-store');
   });
 
   it('lists drafts for an admin and hides lesson content from the admin outline', async () => {
@@ -360,8 +375,8 @@ describe('Phase 2 catalog (e2e)', () => {
       where: { id: videoAssetId },
       data: { status: 'PENDING' },
     });
-    const { CatalogService } = await import('../src/catalog/catalog.service.js');
-    const service = app.get(CatalogService);
+    const { CourseService } = await import('../src/catalog/course.service.js');
+    const service = app.get(CourseService);
     const stream = (service as unknown as { stream: { getStatus: unknown } })
       .stream;
     const original = stream.getStatus;
@@ -598,7 +613,8 @@ describe('Phase 2 catalog (e2e)', () => {
           actorId: actor.id,
         })
         .catch((error: HttpException) => error.getStatus());
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // The grant is really waiting on the lock now, not merely given time to.
+      await untilBlockedOnLock(prisma);
     });
 
     expect(await grant).toBe(404);
@@ -649,6 +665,15 @@ describe('Phase 2 catalog (e2e)', () => {
       new RegExp(`^lessons/${lessonId}/resources/`),
     );
     expect(signed.body.method).toBe('PUT');
+
+    // The URL is signed for one exact length, so the size must be declared.
+    for (const sizeBytes of [undefined, 0, config.maxUploadBytes + 1, 1.5]) {
+      await request(app.getHttpServer())
+        .post(`/api/v1/admin/lessons/${lessonId}/resources/upload-url`)
+        .set(as(admin))
+        .send({ filename: 'a.pdf', contentType: 'application/pdf', sizeBytes })
+        .expect(400);
+    }
 
     // A2.13
     await request(app.getHttpServer())
@@ -794,8 +819,16 @@ describe('Phase 2 catalog (e2e)', () => {
     const courseId = randomUUID();
     const key = `public/courses/${courseId}/cover/${randomUUID()}.png`;
     const upload = new URL(
-      await storage.signedUploadUrl(key, 'image/png', 300),
+      await storage.signedUploadUrl(key, 'image/png', 4, 300),
     );
+
+    // A body of any other length than the signed one is a bad signature.
+    await request(app.getHttpServer())
+      .put(`/api/v1/media/local/${key}${upload.search}`)
+      .set('Content-Type', 'image/png')
+      .send(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d]))
+      .expect(403)
+      .expect(({ body }) => expect(body.code).toBe('SIGNATURE_INVALID'));
 
     await request(app.getHttpServer())
       .put(`/api/v1/media/local/${key}${upload.search}`)
@@ -812,7 +845,7 @@ describe('Phase 2 catalog (e2e)', () => {
 
     // N2.14 — a valid signature does not buy a write outside the cover shape.
     const rogue = new URL(
-      await storage.signedUploadUrl('public/x.svg', 'image/png', 300),
+      await storage.signedUploadUrl('public/x.svg', 'image/png', 6, 300),
     );
     await request(app.getHttpServer())
       .put(`/api/v1/media/local/public/x.svg${rogue.search}`)
@@ -868,8 +901,8 @@ describe('Phase 2 catalog (e2e)', () => {
     const { categoryId, courseId, lessonId, videoAssetId } =
       await buildCourse(admin);
 
-    // buildCourse: category, course, section, video (not an audited action),
-    // lesson, the lesson PATCH that attaches the video, the course PATCH.
+    // buildCourse: category, course, section, video, lesson, the lesson PATCH
+    // that attaches the video, the course PATCH.
     const built = await prisma.auditLog.findMany();
     expect(built.map((row) => row.action).sort()).toEqual([
       'category.created',
@@ -878,6 +911,7 @@ describe('Phase 2 catalog (e2e)', () => {
       'lesson.created',
       'section.created',
       'video.attached',
+      'video.registered',
     ]);
 
     const archive = () =>
@@ -938,7 +972,7 @@ describe('Phase 2 catalog (e2e)', () => {
     expect(await prisma.lessonProgress.count({ where: { lessonId } })).toBe(0);
 
     const rows = await prisma.auditLog.findMany();
-    expect(rows).toHaveLength(12);
+    expect(rows).toHaveLength(13);
     for (const row of rows) {
       const entry =
         AUDIT_VOCABULARY[row.action as keyof typeof AUDIT_VOCABULARY];
@@ -1037,6 +1071,231 @@ describe('Phase 2 catalog (e2e)', () => {
       data: { status: 'ACTIVE', revokedAt: null },
     });
     expect(await overview()).toBe(1);
+  });
+
+  // REVIEW F-06 / F-13: positions, id sets and the lesson counter were read
+  // outside the transaction, so two writers picked the same position and the
+  // loser hit the unique index (or the counter drifted).
+  it('takes eight simultaneous new lessons in one section without a collision', async () => {
+    const admin = await signIn('ADMIN');
+    const { courseId, sectionId } = await buildCourse(admin);
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        request(app.getHttpServer())
+          .post(`/api/v1/admin/sections/${sectionId}/lessons`)
+          .set(as(admin))
+          .send({ title: `Bài song song ${index + 1}`, type: 'ARTICLE' }),
+      ),
+    );
+
+    expect(results.map((response) => response.status)).toEqual(
+      Array(8).fill(201),
+    );
+    const course = await request(app.getHttpServer())
+      .get(`/api/v1/admin/courses/${courseId}`)
+      .set(as(admin))
+      .expect(200);
+    const positions = course.body.sections[0].lessons.map(
+      (lesson: { position: number }) => lesson.position,
+    );
+    expect(positions).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(course.body.lessonCount).toBe(9);
+  });
+
+  it('takes eight simultaneous new sections in one course without a collision', async () => {
+    const admin = await signIn('ADMIN');
+    const { courseId } = await buildCourse(admin);
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        request(app.getHttpServer())
+          .post(`/api/v1/admin/courses/${courseId}/sections`)
+          .set(as(admin))
+          .send({ title: `Chương song song ${index + 1}` }),
+      ),
+    );
+
+    expect(results.map((response) => response.status)).toEqual(
+      Array(8).fill(201),
+    );
+    const course = await request(app.getHttpServer())
+      .get(`/api/v1/admin/courses/${courseId}`)
+      .set(as(admin))
+      .expect(200);
+    expect(
+      course.body.sections.map((section: { position: number }) => section.position),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  });
+
+  // T2.13: the last resource position was read outside the transaction, so
+  // two uploads to one lesson picked the same position and one hit the index.
+  it('takes eight simultaneous resources on one lesson without a collision', async () => {
+    const admin = await signIn('ADMIN');
+    const { lessonId } = await buildCourse(admin);
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        request(app.getHttpServer())
+          .post(`/api/v1/admin/lessons/${lessonId}/resources`)
+          .set(as(admin))
+          .send({
+            objectKey: `lessons/${lessonId}/resources/${randomUUID()}-bai-${index + 1}.pdf`,
+            filename: `bai-${index + 1}.pdf`,
+            contentType: 'application/pdf',
+            sizeBytes: 1024,
+          }),
+      ),
+    );
+
+    expect(results.map((response) => response.status)).toEqual(
+      Array(8).fill(201),
+    );
+    const list = await request(app.getHttpServer())
+      .get(`/api/v1/admin/lessons/${lessonId}/resources`)
+      .set(as(admin))
+      .expect(200);
+    expect(
+      list.body.items.map((item: { position: number }) => item.position),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  });
+
+  // T2.13: the same race across categories. Category.position has no unique
+  // index, so the loser does not fail: two categories share a position.
+  it('takes eight simultaneous new categories at distinct positions', async () => {
+    const admin = await signIn('ADMIN');
+
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        request(app.getHttpServer())
+          .post('/api/v1/admin/categories')
+          .set(as(admin))
+          .send({ name: `Danh mục song song ${index + 1}` }),
+      ),
+    );
+
+    expect(results.map((response) => response.status)).toEqual(
+      Array(8).fill(201),
+    );
+    const categories = await prisma.category.findMany({
+      orderBy: { position: 'asc' },
+      select: { position: true },
+    });
+    expect(categories.map((row) => row.position)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8,
+    ]);
+  });
+
+  // T2.13: updateLesson and deleteLesson wrote the lesson row first and took
+  // the course lock only in `recompute`, while a reorder holds the course lock
+  // and then writes the same lesson rows: a deadlock, answered with a 500.
+  it('runs lesson updates, deletes and reorders side by side without a deadlock', async () => {
+    const admin = await signIn('ADMIN');
+    const { courseId, sectionId, lessonId } = await buildCourse(admin);
+    const created = [];
+    for (let index = 0; index < 6; index += 1) {
+      created.push(
+        await request(app.getHttpServer())
+          .post(`/api/v1/admin/sections/${sectionId}/lessons`)
+          .set(as(admin))
+          .send({ title: `Bài ${index + 2}`, type: 'VIDEO' })
+          .expect(201),
+      );
+    }
+    const ids = [lessonId, ...created.map((response) => response.body.id as string)];
+    const updated = ids.slice(0, 4);
+    const deleted = ids.slice(4);
+
+    const reorders = Array.from({ length: 6 }, (_, round) =>
+      request(app.getHttpServer())
+        .put(`/api/v1/admin/sections/${sectionId}/lessons/order`)
+        .set(as(admin))
+        .send({ lessonIds: round % 2 ? [...ids].reverse() : ids }),
+    );
+    const updates = updated.map((id, index) =>
+      request(app.getHttpServer())
+        .patch(`/api/v1/admin/lessons/${id}`)
+        .set(as(admin))
+        .send({ title: `Đổi tên ${index + 1}`, type: 'ARTICLE' }),
+    );
+    const deletes = deleted.map((id) =>
+      request(app.getHttpServer())
+        .delete(`/api/v1/admin/lessons/${id}`)
+        .set(as(admin)),
+    );
+    const [reordered, updatedResults, deletedResults] = await Promise.all([
+      Promise.all(reorders),
+      Promise.all(updates),
+      Promise.all(deletes),
+    ]);
+
+    expect(updatedResults.map((response) => response.status)).toEqual(
+      Array(updated.length).fill(200),
+    );
+    expect(deletedResults.map((response) => response.status)).toEqual(
+      Array(deleted.length).fill(204),
+    );
+    // A reorder that runs after a delete no longer names the current lessons.
+    for (const response of reordered) {
+      if (response.status !== 204) {
+        expect([response.status, response.body.code]).toEqual([
+          400,
+          'ORDER_MISMATCH',
+        ]);
+      }
+    }
+
+    const course = await prisma.course.findUniqueOrThrow({
+      where: { id: courseId },
+    });
+    const lessons = await prisma.lesson.findMany({
+      where: { section: { courseId } },
+    });
+    expect(lessons).toHaveLength(updated.length);
+    expect(course.lessonCount).toBe(lessons.length);
+    expect(course.totalDurationSeconds).toBe(
+      lessons.reduce((sum, lesson) => sum + lesson.durationSeconds, 0),
+    );
+  });
+
+  it('deletes a draft course for good and frees its slug', async () => {
+    const admin = await signIn('ADMIN');
+    const { courseId, slug } = await buildCourse(admin);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/admin/courses/${courseId}`)
+      .set(as(admin))
+      .expect(204);
+    await request(app.getHttpServer())
+      .get(`/api/v1/admin/courses/${courseId}`)
+      .set(as(admin))
+      .expect(404);
+
+    const recreated = await request(app.getHttpServer())
+      .post('/api/v1/admin/courses')
+      .set(as(admin))
+      .send({ title: 'Lập trình JavaScript' })
+      .expect(201);
+    expect(recreated.body.slug).toBe(slug);
+  });
+
+  // REVIEW F-08 / DATA_MODEL.md §Xóa: only a draft may be deleted. A published
+  // course with no students used to go too, freeing a slug that shared links
+  // and the sitemap already point at.
+  it('refuses to delete a published course even when nobody has enrolled', async () => {
+    const admin = await signIn('ADMIN');
+    const { courseId, slug } = await buildCourse(admin);
+    await request(app.getHttpServer())
+      .post(`/api/v1/admin/courses/${courseId}/publish`)
+      .set(as(admin))
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/admin/courses/${courseId}`)
+      .set(as(admin))
+      .expect(409)
+      .expect(({ body }) => expect(body.code).toBe('CONFLICT'));
+    await request(app.getHttpServer()).get(`/api/v1/courses/${slug}`).expect(200);
   });
 
   it('rate limits admin mutations per admin but never admin reads', async () => {

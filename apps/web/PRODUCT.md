@@ -8,7 +8,7 @@ web
 
 ## Users
 
-Vietnamese-speaking adults who want to discover, purchase, and complete practical online courses. A single owner teaches and administers the catalog.
+Vietnamese-speaking adults who want to discover, purchase, and complete practical online courses. A site owner administers the catalog; instructors author and publish their own courses within it.
 
 ## Product Purpose
 
@@ -20,14 +20,14 @@ A focused, single-owner course business with marketplace-grade discovery but no 
 
 ## Operating Context
 
-Learners use public catalog pages, account settings, and lesson pages. One administrator manages content and grants access manually until checkout ships. Vietnamese UI and Asia/Ho_Chi_Minh time are mandatory.
+Learners use public catalog pages, account settings, and lesson pages. An administrator manages the catalog, grants access manually until checkout ships, and assigns instructor roles and course ownership; instructors manage the content of the courses they own. Vietnamese UI and Asia/Ho_Chi_Minh time are mandatory.
 
 ## Capabilities and Constraints
 
 - The five-phase scope, sequence, acceptance criteria, API contract, data model, demo seams, and UX behavior are owned by `../../docs/ROADMAP.md`, `../../docs/API_CONTRACT.md`, `../../docs/DATA_MODEL.md`, `../../docs/DEMO_MODE.md`, and `../../docs/UX_PLAN.md`.
 - Next.js App Router talks to the NestJS API through same-origin `/api/*` rewrites in the browser and `API_ORIGIN` on the server.
 - Session authentication uses HttpOnly cookies and all mutations use double-submit CSRF.
-- The product has one owner. Instructor content is static web content, not a database relation.
+- Courses can have an `INSTRUCTOR` owner (`Course.instructorId`) or `null`, meaning the site owner's own course. There is still one economic owner — no revenue share, no instructor marketplace. An instructor's bio, photo, and social links remain static web content, not a database relation; only their display name comes from `User`.
 - Owner identity, portrait, final biography, and legal copy remain open decisions. Do not fabricate them.
 
 ## Brand Commitments

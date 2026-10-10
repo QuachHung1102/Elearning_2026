@@ -26,7 +26,7 @@ export default function Loading() {
       </div>
       <div className="grid gap-3 md:hidden">
         {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="h-[16.75rem] w-full" />
+          <Skeleton key={index} className="h-[17rem] w-full" />
         ))}
       </div>
     </div>

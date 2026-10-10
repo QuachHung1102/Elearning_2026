@@ -32,7 +32,8 @@ export function TagListInput({
       <textarea
         id={id}
         name={id}
-        className="control min-h-32"
+        rows={4}
+        className="control"
         value={value}
         onChange={(event) => setValue(event.target.value)}
         aria-invalid={filled > max}

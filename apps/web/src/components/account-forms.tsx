@@ -3,18 +3,14 @@
 import { LogOut, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch, errorMessage } from "@/lib/api";
+import { passwordError } from "@/lib/password";
 import type { SessionRow, User } from "@/lib/session";
-import { t } from "@/messages/vi";
 import { Button } from "./ui/button";
 import { ConfirmDialog } from "./ui/confirm-dialog";
 import { Alert, ErrorSummary, focusValidation } from "./ui/feedback";
 import { Field, PasswordInput } from "./ui/field";
 import { showToast } from "./ui/toast";
-
-function message(error: unknown): string {
-  return error instanceof ApiError ? t(error.code) : t("NETWORK_ERROR");
-}
 
 const passwordFields = {
   current: { id: "current-password", label: "Mật khẩu hiện tại" },
@@ -48,7 +44,7 @@ export function ProfileForm({ user }: { user: User }) {
       setSavedName(name);
       setStatus("Đã lưu thay đổi.");
     } catch (caught) {
-      setStatus(message(caught));
+      setStatus(errorMessage(caught));
     } finally {
       setBusy(false);
     }
@@ -88,7 +84,7 @@ export function ProfileForm({ user }: { user: User }) {
         />
       </Field>
       <div>
-        <Button type="submit" loading={busy} disabled={!changed}>
+        <Button type="submit" loading={busy} disabled={!changed} className="w-full">
           Lưu thay đổi
         </Button>
         {!changed && (
@@ -114,10 +110,8 @@ export function PasswordForm() {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
     if (!currentPassword) nextErrors.current = "Nhập mật khẩu hiện tại.";
-    if (newPassword.length < 8)
-      nextErrors.next = "Mật khẩu cần ít nhất 8 ký tự.";
-    else if (newPassword.length > 128)
-      nextErrors.next = "Mật khẩu không được quá 128 ký tự.";
+    const passwordProblem = passwordError(newPassword);
+    if (passwordProblem) nextErrors.next = passwordProblem;
     if (confirm !== newPassword) nextErrors.confirm = "Hai mật khẩu chưa khớp.";
     setErrors(nextErrors);
     setStatus("");
@@ -134,7 +128,7 @@ export function PasswordForm() {
       router.replace("/login?passwordChanged=1");
       router.refresh();
     } catch (caught) {
-      setStatus(message(caught));
+      setStatus(errorMessage(caught));
     } finally {
       setBusy(false);
     }
@@ -204,7 +198,7 @@ export function SessionsTable({
       setItems((current) => current.filter((session) => session.id !== id));
       showToast("Đã đăng xuất phiên đó.", "success");
     } catch (error) {
-      showToast(message(error), "error");
+      showToast(errorMessage(error), "error");
     } finally {
       setBusyId("");
     }
@@ -218,7 +212,7 @@ export function SessionsTable({
       setItems((current) => current.filter(({ isCurrent }) => isCurrent));
       showToast(`Đã đăng xuất ${count} phiên khác.`, "success");
     } catch (error) {
-      showToast(message(error), "error");
+      showToast(errorMessage(error), "error");
     } finally {
       setBusyId("");
     }
@@ -234,7 +228,7 @@ export function SessionsTable({
         busy={busyId === session.id}
         onConfirm={() => revoke(session.id)}
         trigger={
-          <Button variant="ghost" size="sm">
+          <Button variant="outline" size="sm">
             <LogOut aria-hidden="true" className="size-4" strokeWidth={1.75} />
             Thu hồi
           </Button>
@@ -324,7 +318,7 @@ export function SessionsTable({
           busy={busyId === "all"}
           onConfirm={revokeOthers}
           trigger={
-            <Button variant="outline">
+            <Button variant="outline" className="w-full sm:w-auto">
               <ShieldCheck
                 aria-hidden="true"
                 className="size-4"

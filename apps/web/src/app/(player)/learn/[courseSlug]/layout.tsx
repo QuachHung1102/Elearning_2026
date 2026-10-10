@@ -5,8 +5,10 @@ import { CurriculumDrawer } from "@/components/learning/curriculum-drawer";
 import { PlayerCurriculum } from "@/components/learning/player-curriculum";
 import { ProgressBar } from "@/components/learning/progress-bar";
 import { OfflineBanner, SyncChip } from "@/components/learning/sync-status";
+import { buttonClass } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { progressText, type CourseProgress } from "@/lib/learning";
+import { getSession } from "@/lib/session";
 import { getLearnContext } from "./context";
 
 function CourseProgressSummary({
@@ -55,11 +57,16 @@ export default async function PlayerLayout({
   const { shell, mode } = await getLearnContext(courseSlug);
   const { course, progress, completedLessonIds } = shell;
   const tracked = mode === "ENROLLED";
+  // Same cached session read the context already made.
+  const instructor = (await getSession())?.role === "INSTRUCTOR";
   const back =
     mode === "PREVIEW"
       ? { href: `/courses/${course.slug}`, label: course.title }
       : mode === "ADMIN"
-        ? { href: `/admin/courses/${course.id}`, label: course.title }
+        ? {
+            href: `${instructor ? "/instructor" : "/admin"}/courses/${course.id}`,
+            label: course.title,
+          }
         : { href: "/my-courses", label: "Khóa học của tôi" };
 
   return (
@@ -73,9 +80,17 @@ export default async function PlayerLayout({
             <ArrowLeft aria-hidden="true" className="size-5" strokeWidth={1.75} />
             <span className="sr-only">Quay lại {back.label}</span>
           </Link>
-          <p className="min-w-0 flex-1 truncate font-heading font-semibold">
+          <p className="min-w-0 flex-1 truncate font-heading font-semibold md:text-xl">
             {course.title}
           </p>
+          {mode === "ENROLLED" && (
+            <Link
+              href={back.href}
+              className={buttonClass("outline", "md", "min-w-48 max-lg:hidden")}
+            >
+              {back.label}
+            </Link>
+          )}
           {tracked && (
             // Next to the thin bar under this row; from 1024px the sidebar
             // shows its own.
@@ -112,7 +127,7 @@ export default async function PlayerLayout({
           {mode === "ADMIN" && (
             <Alert
               variant="warning"
-              title="Bạn đang xem trước với quyền quản trị. Tiến độ học không được ghi lại."
+              title={`Bạn đang xem trước với quyền ${instructor ? "giảng viên" : "quản trị"}. Tiến độ học không được ghi lại.`}
             />
           )}
           {course.status === "ARCHIVED" && (

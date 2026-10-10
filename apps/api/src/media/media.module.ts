@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuditModule } from '../audit/audit.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { config } from '../config.js';
 import { EnrollmentModule } from '../enrollment/enrollment.module.js';
@@ -24,14 +25,12 @@ import { STREAM_CLIENT } from './stream.client.js';
  * registers it for the demo video alone; every other key is a 404 there.
  */
 @Module({
-  imports: [PrismaModule, AuthModule, EnrollmentModule],
+  imports: [PrismaModule, AuthModule, AuditModule, EnrollmentModule],
   controllers: [
     AdminMediaController,
     AdminVideoController,
     PlaybackController,
-    ...(config.storageDriver === 'r2' && config.videoDriver === 'cloudflare'
-      ? []
-      : [LocalFileController]),
+    ...(config.servesLocalFiles ? [LocalFileController] : []),
   ],
   providers: [
     LocalDiskStorage,

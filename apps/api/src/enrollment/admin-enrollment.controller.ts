@@ -24,17 +24,18 @@ import {
 import type { Response } from 'express';
 import { AuditActor } from '../audit/audit-actor.decorator.js';
 import type { AuditActorContext } from '../audit/audit.service.js';
-import { AdminGuard } from '../auth/admin.guard.js';
 import { AuthRateLimitGuard } from '../auth/auth-rate-limit.guard.js';
 import { AdminMutationRateLimit } from '../auth/rate-limit.decorator.js';
+import { OwnerScope, StaffAccess, StaffGuard } from '../auth/staff.guard.js';
 import { csv, PageQuery, trim } from '../catalog/course.dto.js';
 import { paginated, resolvePage } from '../common/pagination.js';
-import type { Prisma } from '../generated/prisma/client.js';
+import { Prisma } from '../generated/prisma/client.js';
 import {
   EnrollmentSource,
   EnrollmentStatus,
 } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { courseProgress, PROGRESS_STATS } from './course-progress.js';
 import {
   ADMIN_ENROLLMENT_SELECT,
   EnrollmentService,
@@ -75,7 +76,7 @@ export class GrantEnrollmentDto {
 const uuid = () => new ParseUUIDPipe({ version: '4' });
 
 @Controller('admin/enrollments')
-@UseGuards(AdminGuard, AuthRateLimitGuard)
+@UseGuards(StaffGuard, AuthRateLimitGuard)
 export class AdminEnrollmentController {
   constructor(
     private readonly prisma: PrismaService,
@@ -83,12 +84,17 @@ export class AdminEnrollmentController {
   ) {}
 
   @Get()
-  async list(@Query() query: AdminEnrollmentListQuery) {
+  @StaffAccess('scoped')
+  async list(
+    @Query() query: AdminEnrollmentListQuery,
+    @OwnerScope() ownerId: string | null,
+  ) {
     const page = resolvePage(query);
     const where: Prisma.EnrollmentWhereInput = {
       courseId: query.courseId,
       userId: query.userId,
       status: query.status && { in: query.status },
+      ...(ownerId && { course: { instructorId: ownerId } }),
     };
     const [items, total] = await Promise.all([
       this.prisma.enrollment.findMany({
@@ -101,7 +107,19 @@ export class AdminEnrollmentController {
       }),
       this.prisma.enrollment.count({ where }),
     ]);
-    return paginated(items, total, page);
+    // One statement for the whole page's progress, not two per row (REVIEW F-14).
+    const stats = items.length
+      ? await this.prisma.$queryRaw<{ id: string; total: number; completed: number }[]>`
+          SELECT e.id, stats.total, stats.completed
+          FROM enrollments e ${PROGRESS_STATS}
+          WHERE e.id IN (${Prisma.join(items.map(({ id }) => Prisma.sql`${id}::uuid`))})`
+      : [];
+    const byId = new Map(stats.map((row) => [row.id, row]));
+    const withProgress = items.map((item) => {
+      const row = byId.get(item.id);
+      return { ...item, progress: courseProgress(row?.completed ?? 0, row?.total ?? 0) };
+    });
+    return paginated(withProgress, total, page);
   }
 
   /** `201` when this call changed access, `200` when it was already ACTIVE. */

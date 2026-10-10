@@ -1,3 +1,5 @@
+import { isProductionEnv } from './production.js';
+
 export const REAL_DRIVER = {
   VIDEO_DRIVER: 'cloudflare',
   STORAGE_DRIVER: 'r2',
@@ -32,10 +34,7 @@ export function assertDriverValuesAreKnown(
 export function assertNoDemoDriversInProduction(
   env: NodeJS.ProcessEnv,
 ): void {
-  const isProduction =
-    env.NODE_ENV === 'production' ||
-    env.RAILWAY_ENVIRONMENT_NAME === 'production';
-  if (!isProduction) return;
+  if (!isProductionEnv(env)) return;
 
   const demo = DRIVER_NAMES.filter((name) => env[name] !== REAL_DRIVER[name]);
   if (demo.length > 0) {

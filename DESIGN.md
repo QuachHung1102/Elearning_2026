@@ -22,7 +22,7 @@ colors:
   primary-on-subtle: "#0f766e"
   secondary: "#2dd4bf"
   accent: "#d97706"
-  accent-hover: "#b45309"
+  accent-hover: "#f59e0b"
   accent-foreground: "#431407"
   accent-subtle: "#fef3c7"
   on-accent-subtle: "#431407"
@@ -175,7 +175,7 @@ The palette pairs cool slate neutrals with trustworthy teal and a deliberately s
 
 ### Tertiary
 
-- **Decision Amber:** `accent` is the conversion color for purchase and enrollment actions, ratings, and price emphasis. `accent-hover` is `#b45309`.
+- **Decision Amber:** `accent` is the conversion color for purchase and enrollment actions, ratings, and price emphasis. `accent-hover` is `#f59e0b`: lighter, not darker, because the dark `accent-foreground` text drops to 3.12:1 on `#b45309`.
 - **Status Colors:** success, warning, destructive, and info stay semantic. They always pair with their corresponding subtle surface and `on-*-subtle` text token when used as an alert or badge.
 
 ### Neutral

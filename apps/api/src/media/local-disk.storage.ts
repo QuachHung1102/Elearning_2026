@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { rm } from 'node:fs/promises';
-import { join, resolve, sep } from 'node:path';
+import { resolve, sep } from 'node:path';
 import { config } from '../config.js';
 import {
   downloadMessage,
@@ -26,10 +26,15 @@ export class LocalDiskStorage implements ObjectStorage {
   async signedUploadUrl(
     key: string,
     contentType: string,
+    sizeBytes: number,
     ttl: number,
   ): Promise<string> {
     const exp = Math.floor(Date.now() / 1000) + ttl;
-    return this.url(key, exp, sign(uploadMessage(key, contentType, exp)));
+    return this.url(
+      key,
+      exp,
+      sign(uploadMessage(key, contentType, sizeBytes, exp)),
+    );
   }
 
   async signedDownloadUrl(key: string, ttl: number): Promise<string> {
@@ -50,13 +55,5 @@ export class LocalDiskStorage implements ObjectStorage {
   absolutePath(key: string): string | null {
     const absolute = resolve(this.root, key);
     return absolute.startsWith(this.root + sep) ? absolute : null;
-  }
-
-  get storageRoot(): string {
-    return this.root;
-  }
-
-  directoryOf(key: string): string {
-    return join(this.root, key, '..');
   }
 }

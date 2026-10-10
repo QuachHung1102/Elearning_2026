@@ -21,7 +21,7 @@
   --color-primary-on-subtle: #0f766e;
   --color-secondary: #2dd4bf;
   --color-accent: #d97706;
-  --color-accent-hover: #b45309;
+  --color-accent-hover: #f59e0b;
   --color-accent-foreground: #431407;
   --color-accent-subtle: #fef3c7;
   --color-on-accent-subtle: #431407;
@@ -135,14 +135,26 @@ h4 {
   text-wrap: balance;
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
+/* In the base layer, so a control's own `text-sm` or `font-semibold` wins:
+   unlayered, this beat every utility and a <Button> rendered bigger and
+   lighter than the same `buttonClass` on a <Link>. */
+@layer base {
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
 }
 
 :focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* A visually hidden file input styled through its label: the label shows the
+   ring the input cannot (WCAG 2.4.7). */
+input.sr-only:focus-visible + label {
   outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }
@@ -184,34 +196,39 @@ select {
   color: var(--color-card-foreground);
 }
 
-.control {
-  width: 100%;
-  min-height: calc(var(--spacing) * 12);
-  border: 1px solid var(--color-input);
-  border-radius: var(--radius-md);
-  background: var(--color-card);
-  color: var(--color-card-foreground);
-  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
-  transition: border-color var(--duration-fast) var(--ease-standard);
-}
+/* In the components layer, so a control's own utilities win: unlayered, its
+   min-height and width beat `min-h-40` on a textarea, `w-auto` and `min-h-11`
+   on the catalog sort, and the password field's `pr-12`. */
+@layer components {
+  .control {
+    width: 100%;
+    min-height: calc(var(--spacing) * 12);
+    border: 1px solid var(--color-input);
+    border-radius: var(--radius-md);
+    background: var(--color-card);
+    color: var(--color-card-foreground);
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+    transition: border-color var(--duration-fast) var(--ease-standard);
+  }
 
-.control::placeholder {
-  color: var(--color-muted-foreground);
-  opacity: 1;
-}
+  .control::placeholder {
+    color: var(--color-muted-foreground);
+    opacity: 1;
+  }
 
-.control:hover:not(:disabled) {
-  border-color: var(--color-primary);
-}
+  .control:hover:not(:disabled) {
+    border-color: var(--color-primary);
+  }
 
-.control[aria-invalid="true"] {
-  border-color: var(--color-destructive);
-}
+  .control[aria-invalid="true"] {
+    border-color: var(--color-destructive);
+  }
 
-.control:disabled {
-  cursor: not-allowed;
-  background: var(--color-muted);
-  color: var(--color-muted-foreground-strong);
+  .control:disabled {
+    cursor: not-allowed;
+    background: var(--color-muted);
+    color: var(--color-muted-foreground-strong);
+  }
 }
 
 .skeleton {

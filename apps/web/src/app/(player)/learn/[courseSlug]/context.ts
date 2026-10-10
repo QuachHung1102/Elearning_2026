@@ -61,10 +61,10 @@ export const getLearnContext = cache(
     }
     const shell = (await response.json()) as LearnShell;
 
-    // An admin reaches every course; only an ACTIVE enrollment makes the visit
-    // a learner's one that records progress.
+    // An admin reaches every course, an instructor their own; only an ACTIVE
+    // enrollment makes the visit a learner's one that records progress.
     let mode: LearnMode = "ENROLLED";
-    if (user.role === "ADMIN") {
+    if (user.role !== "STUDENT") {
       const mine = await serverFetch(
         `/enrollments/me?courseId=${shell.course.id}&status=ACTIVE&pageSize=1`,
       );

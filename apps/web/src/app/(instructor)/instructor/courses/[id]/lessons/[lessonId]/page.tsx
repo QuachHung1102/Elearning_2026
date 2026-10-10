@@ -1,0 +1,4 @@
+// Same page as the admin area; the area is read from the URL (`staffBase`).
+export { default } from "@/app/(admin)/admin/courses/[id]/lessons/[lessonId]/page";
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Soạn bài học" };

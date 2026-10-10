@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Lexend } from "next/font/google";
 import { RouteAnnouncer } from "@/components/route-announcer";
 import { Toaster } from "@/components/ui/toast";
+import { OPEN_GRAPH_DEFAULTS, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const lexend = Lexend({
@@ -19,11 +20,14 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  // Resolves the relative image and canonical URLs of every page to this site.
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "E-learning",
     template: "%s · E-learning",
   },
   description: "Nền tảng khóa học trực tuyến.",
+  openGraph: { ...OPEN_GRAPH_DEFAULTS, type: "website" },
 };
 
 const designContract = `<!--

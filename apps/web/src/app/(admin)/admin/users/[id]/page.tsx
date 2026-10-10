@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { BlockUserDialog } from "@/components/admin/block-user-dialog";
 import { ManualGrantDialog } from "@/components/admin/manual-grant-dialog";
 import { RevokeEnrollmentDialog } from "@/components/admin/revoke-enrollment-dialog";
+import { RoleDialog } from "@/components/admin/role-dialog";
 import { StatTile } from "@/components/admin/shell";
-import { StatusBadge } from "@/components/ui/badge";
+import { RoleBadge, StatusBadge } from "@/components/ui/badge";
 import {
   adminFetch,
   grantableCourses,
@@ -13,6 +14,7 @@ import {
   type AdminUserDetail,
 } from "@/lib/admin";
 import { formatDate } from "@/lib/format";
+import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Hồ sơ người dùng" };
@@ -25,9 +27,10 @@ export default async function AdminUserPage({
   const { id } = await params;
   // The API answers a malformed id with 400; to a reader it is simply absent.
   if (!UUID_V4.test(id)) notFound();
-  const [{ user, enrollments }, courses] = await Promise.all([
+  const [{ user, enrollments }, courses, viewer] = await Promise.all([
     adminFetch<AdminUserDetail>(`/admin/users/${id}`),
     grantableCourses(),
+    getSession(),
   ]);
 
   return (
@@ -41,13 +44,14 @@ export default async function AdminUserPage({
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="grid min-w-0 gap-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1
-                tabIndex={-1}
-                className="text-3xl font-bold [overflow-wrap:anywhere]"
-              >
-                {user.displayName}
-              </h1>
+            <h1
+              tabIndex={-1}
+              className="text-3xl font-bold [overflow-wrap:anywhere]"
+            >
+              {user.displayName}
+            </h1>
+            <div className="flex flex-wrap gap-2">
+              <RoleBadge role={user.role} />
               <StatusBadge status={user.status} />
             </div>
             <p className="text-muted-foreground [overflow-wrap:anywhere]">
@@ -57,14 +61,17 @@ export default async function AdminUserPage({
               Ngày đăng ký: {formatDate(user.createdAt)}
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
+          {/* Full-width buttons on a phone rather than three ragged widths;
+              the confirm dialogs wrap their trigger in a span. */}
+          <div className="grid w-full gap-3 sm:flex sm:w-auto sm:flex-wrap [&>span>button]:w-full sm:[&>span>button]:w-auto">
             {courses && <ManualGrantDialog user={user} courses={courses} />}
+            {user.id !== viewer?.id && <RoleDialog user={user} />}
             <BlockUserDialog user={user} />
           </div>
         </div>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatTile label="Quyền học đang hiệu lực" value={user.enrollmentCount} />
         <StatTile
           label="Phiên đăng nhập đang mở"
@@ -77,7 +84,7 @@ export default async function AdminUserPage({
           Khóa học được cấp quyền
         </h2>
         {enrollments.length === 0 ? (
-          <p className="text-muted-foreground">
+          <p className="rounded-lg bg-muted p-6 text-muted-foreground-strong">
             Người dùng này chưa có quyền học khóa nào.
           </p>
         ) : (

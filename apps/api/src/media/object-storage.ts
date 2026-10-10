@@ -5,9 +5,11 @@ import { normalize } from '../catalog/search-text.js';
 export const OBJECT_STORAGE = Symbol('OBJECT_STORAGE');
 
 export interface ObjectStorage {
+  /** The URL accepts a body of exactly `sizeBytes`, no other length. */
   signedUploadUrl(
     key: string,
     contentType: string,
+    sizeBytes: number,
     ttl: number,
   ): Promise<string>;
   signedDownloadUrl(key: string, ttl: number): Promise<string>;
@@ -50,10 +52,39 @@ export const COVER_KEY_PATTERN = new RegExp(
 
 export const RESOURCE_KEY_PREFIX = /^lessons\/[^/]+\/resources\//;
 
+/** Every cover key for a course lives under this prefix — the only shape `updateCourse` accepts. */
+export function coverKeyPrefix(courseId: string): string {
+  return `public/courses/${courseId}/cover/`;
+}
+
+/** Every resource key for a lesson lives under this prefix — the only shape `addResource` accepts. */
+export function resourceKeyPrefix(lessonId: string): string {
+  return `lessons/${lessonId}/resources/`;
+}
+
+/**
+ * `startsWith(prefix)` alone lets `lessons/<own>/resources/../<victim>/resources/x`
+ * pass the prefix check and then resolve outside it on disk (`LocalDiskStorage`
+ * only rejects the *final* resolved path escaping the storage root, not a `..`
+ * segment inside an owned prefix). These two match the exact shape `coverKey()`
+ * and `resourceKey()` generate, so nothing but their own output is ever accepted.
+ * `courseId`/`lessonId` are route params already validated as UUIDs by
+ * `ParseUUIDPipe`/`StaffGuard`, so they carry no regex metacharacters.
+ */
+export function isCoverKeyFor(courseId: string, key: string): boolean {
+  return new RegExp(`^${coverKeyPrefix(courseId)}${UUID}\\.(jpg|png|webp)$`).test(key);
+}
+
+export function isResourceKeyFor(lessonId: string, key: string): boolean {
+  return new RegExp(
+    `^${resourceKeyPrefix(lessonId)}${UUID}-[a-z0-9-]{1,80}(\\.[a-z0-9]+)?$`,
+  ).test(key);
+}
+
 export function coverKey(courseId: string, contentType: string): string {
   const extension = COVER_EXTENSION[contentType];
   if (!extension) throw new Error(`Unsupported cover type ${contentType}`);
-  return `public/courses/${courseId}/cover/${randomUUID()}.${extension}`;
+  return `${coverKeyPrefix(courseId)}${randomUUID()}.${extension}`;
 }
 
 export function resourceKey(lessonId: string, filename: string): string {
@@ -66,7 +97,7 @@ export function resourceKey(lessonId: string, filename: string): string {
       .replace(/^-+|-+$/g, '')
       .slice(0, 80) || 'tai-lieu';
   const safeExtension = normalize(extension).replace(/[^a-z0-9]/g, '');
-  return `lessons/${lessonId}/resources/${randomUUID()}-${safeStem}${safeExtension ? `.${safeExtension}` : ''}`;
+  return `${resourceKeyPrefix(lessonId)}${randomUUID()}-${safeStem}${safeExtension ? `.${safeExtension}` : ''}`;
 }
 
 /**
@@ -87,8 +118,13 @@ export const downloadMessage = (key: string, exp: number) =>
 export const playbackMessage = (key: string, exp: number, viewerId: string) =>
   `local-file:GET:${key}:${exp}:${viewerId}`;
 
-export const uploadMessage = (key: string, contentType: string, exp: number) =>
-  `local-file:PUT:${key}:${contentType}:${exp}`;
+/** The length is signed as R2 signs `content-length`, so demo and real agree. */
+export const uploadMessage = (
+  key: string,
+  contentType: string,
+  sizeBytes: number,
+  exp: number,
+) => `local-file:PUT:${key}:${contentType}:${sizeBytes}:${exp}`;
 
 export function sign(message: string): string {
   return createHmac('sha256', config.jwtSecret).update(message).digest('base64url');

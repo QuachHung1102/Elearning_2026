@@ -9,6 +9,7 @@ datasource db {
 
 enum UserRole {
   STUDENT
+  INSTRUCTOR
   ADMIN
 }
 
@@ -39,6 +40,9 @@ model User {
   grantedEnrollments Enrollment[]     @relation("EnrollmentGrantedBy")
   lessonProgress     LessonProgress[]
   auditLogs          AuditLog[]
+  taughtCourses      Course[]         @relation("CourseInstructor")
+  videoAssets        VideoAsset[]     @relation("VideoAssetInstructor")
+  purchases          Purchase[]
 
   @@map("users")
 }
@@ -124,6 +128,7 @@ model Category {
 model Course {
   id                   String           @id @default(uuid()) @db.Uuid
   categoryId           String?          @map("category_id") @db.Uuid
+  instructorId         String?          @map("instructor_id") @db.Uuid
   slug                 String           @unique @db.VarChar(120)
   title                String           @db.VarChar(160)
   subtitle             String?          @db.VarChar(240)
@@ -151,11 +156,14 @@ model Course {
   updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   category    Category?    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  instructor  User?        @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
   sections    Section[]
   enrollments Enrollment[]
+  purchases   Purchase[]
 
   @@index([status, publishedAt])
   @@index([categoryId, status])
+  @@index([instructorId])
   @@map("courses")
 }
 
@@ -202,11 +210,15 @@ model VideoAsset {
   status          VideoAssetStatus @default(PENDING)
   durationSeconds Int              @default(0) @map("duration_seconds")
   thumbnailUrl    String?          @map("thumbnail_url") @db.VarChar(500)
+  // Who registered it; null = the site owner (an admin). Like `Course.instructorId`.
+  instructorId    String?          @map("instructor_id") @db.Uuid
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
   lesson          Lesson?
+  instructor      User?            @relation("VideoAssetInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
 
   @@unique([provider, externalId])
+  @@index([instructorId])
   @@map("video_assets")
 }
 
@@ -238,13 +250,12 @@ enum EnrollmentSource {
   MANUAL_GRANT
 }
 
-// `purchaseId` / `purchase` arrive with the add_payment migration, together
-// with the `purchases` table they point at (DATA_MODEL.md §Chiến lược migration).
 model Enrollment {
   id          String           @id @default(uuid()) @db.Uuid
   userId      String           @map("user_id") @db.Uuid
   courseId    String           @map("course_id") @db.Uuid
   grantedById String?          @map("granted_by_id") @db.Uuid
+  purchaseId  String?          @unique @map("purchase_id") @db.Uuid
   status      EnrollmentStatus @default(ACTIVE)
   source      EnrollmentSource
   grantedAt   DateTime         @default(now()) @map("granted_at") @db.Timestamptz(3)
@@ -252,9 +263,10 @@ model Enrollment {
   createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user      User   @relation("EnrollmentStudent", fields: [userId], references: [id], onDelete: Restrict)
-  course    Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
-  grantedBy User?  @relation("EnrollmentGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+  user      User      @relation("EnrollmentStudent", fields: [userId], references: [id], onDelete: Restrict)
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  grantedBy User?     @relation("EnrollmentGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+  purchase  Purchase? @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
 
   @@unique([userId, courseId])
   @@index([courseId])
@@ -275,6 +287,7 @@ model LessonProgress {
 
   @@unique([userId, lessonId])
   @@index([userId, updatedAt])
+  @@index([lessonId])
   @@map("lesson_progress")
 }
 
@@ -292,4 +305,79 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+enum PurchaseStatus {
+  PENDING
+  PAID
+  REFUND_REQUESTED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentProvider {
+  DEMO
+  ZALOPAY
+}
+
+enum PaymentAttemptStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
+// One row per intent to buy a course; the price is snapshotted at creation.
+// Hand-written in migration.sql (Prisma cannot express them): the partial
+// unique `purchases_user_course_open_key` and the two price CHECKs.
+model Purchase {
+  id               String         @id @default(uuid()) @db.Uuid
+  userId           String         @map("user_id") @db.Uuid
+  courseId         String         @map("course_id") @db.Uuid
+  status           PurchaseStatus @default(PENDING)
+  priceVnd         Int            @map("price_vnd")
+  paidAt           DateTime?      @map("paid_at") @db.Timestamptz(3)
+  refundedAt       DateTime?      @map("refunded_at") @db.Timestamptz(3)
+  buyerName        String?        @map("buyer_name") @db.VarChar(120)
+  buyerEmail       String?        @map("buyer_email") @db.VarChar(320)
+  buyerTaxCode     String?        @map("buyer_tax_code") @db.VarChar(20)
+  buyerAddress     String?        @map("buyer_address") @db.VarChar(300)
+  invoiceRequested Boolean        @default(false) @map("invoice_requested")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user       User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  course     Course           @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  attempts   PaymentAttempt[]
+  enrollment Enrollment?
+
+  @@index([userId, courseId])
+  @@index([status, createdAt])
+  @@map("purchases")
+}
+
+// One QR / one call to the provider. `appTransId` is generated by
+// CheckoutService before the provider is called (DEMO_MODE.md §5).
+model PaymentAttempt {
+  id              String               @id @default(uuid()) @db.Uuid
+  purchaseId      String               @map("purchase_id") @db.Uuid
+  provider        PaymentProvider      @default(DEMO)
+  appTransId      String               @unique @map("app_trans_id") @db.VarChar(64)
+  providerTransId String?              @unique @map("provider_trans_id") @db.VarChar(64)
+  amountVnd       Int                  @map("amount_vnd")
+  status          PaymentAttemptStatus @default(PENDING)
+  qrCode          String?              @map("qr_code") @db.Text
+  orderUrl        String?              @map("order_url") @db.VarChar(1000)
+  expiresAt       DateTime             @map("expires_at") @db.Timestamptz(3)
+  paidAt          DateTime?            @map("paid_at") @db.Timestamptz(3)
+  failureReason   String?              @map("failure_reason") @db.VarChar(200)
+  providerPayload Json?                @map("provider_payload") @db.JsonB
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  purchase        Purchase             @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseId])
+  @@index([status, expiresAt])
+  @@map("payment_attempts")
 }

@@ -1,10 +1,19 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import nodemailer from 'nodemailer';
+import { config } from '../config.js';
 import type { Mailer, MailMessage } from './mailer.js';
 
 @Injectable()
 export class SmtpMailer implements Mailer {
-  async send(_message: MailMessage): Promise<void> {
-    // ponytail: SMTP transport is a Phase 5 concern; add it when SMTP is enabled.
-    throw new ServiceUnavailableException('SMTP delivery is not configured');
+  private readonly transport = nodemailer.createTransport(config.smtpUrl);
+
+  async send(message: MailMessage): Promise<void> {
+    await this.transport.sendMail({
+      from: config.mailFrom,
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+    });
   }
 }

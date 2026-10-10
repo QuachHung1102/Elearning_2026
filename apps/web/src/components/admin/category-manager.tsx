@@ -3,27 +3,14 @@
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch, errorMessage } from "@/lib/api";
 import type { Category } from "@/lib/catalog";
 import { formatNumber } from "@/lib/format";
 import { Button, buttonClass } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
 import { Alert, EmptyState } from "@/components/ui/feedback";
 import { showToast } from "@/components/ui/toast";
-
-const ERROR_MESSAGE: Record<string, string> = {
-  SLUG_TAKEN: "Đường dẫn này đã có danh mục khác dùng.",
-  CATEGORY_NOT_EMPTY:
-    "Danh mục vẫn còn khóa học. Chuyển các khóa sang danh mục khác trước khi xóa.",
-  VALIDATION_FAILED: "Kiểm tra lại thông tin đã nhập.",
-};
-
-function messageOf(error: unknown): string {
-  if (error instanceof ApiError) {
-    return ERROR_MESSAGE[error.code] ?? "Không lưu được. Thử lại sau ít phút.";
-  }
-  return "Không lưu được. Thử lại sau ít phút.";
-}
 
 export function CategoryManager({ categories }: { categories: Category[] }) {
   const router = useRouter();
@@ -36,6 +23,11 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
     setEditing(category);
     setError(null);
     dialog.current?.showModal();
+    // The re-keyed form remounts after showModal and takes the focused field
+    // with it, leaving focus on <body> (WCAG 2.4.3): focus the new one.
+    requestAnimationFrame(() =>
+      dialog.current?.querySelector<HTMLElement>("input")?.focus(),
+    );
   }
 
   async function run(action: () => Promise<unknown>, done: string) {
@@ -46,7 +38,7 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
       showToast(done, "success");
       startTransition(() => router.refresh());
     } catch (caught) {
-      setError(messageOf(caught));
+      setError(errorMessage(caught));
     }
   }
 
@@ -82,14 +74,6 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
     );
   }
 
-  async function remove(category: Category) {
-    await run(
-      () =>
-        apiFetch(`/admin/categories/${category.id}`, { method: "DELETE" }),
-      "Đã xóa danh mục",
-    );
-  }
-
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -113,10 +97,12 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
           {categories.map((category, index) => (
             <li
               key={category.id}
-              className="panel flex flex-wrap items-center gap-3 p-3"
+              className="panel flex flex-wrap items-center gap-x-3 gap-y-1 p-3"
             >
-              {/* Buttons, not drag and drop: a keyboard can press a button. */}
-              <div className="flex flex-col">
+              {/* Buttons, not drag and drop: a keyboard can press a button.
+                  On a phone the name takes the first line and every control
+                  shares the second, in the same order as the tab order. */}
+              <div className="order-2 flex sm:order-none sm:flex-col">
                 <button
                   type="button"
                   className="flex size-11 items-center justify-center rounded-md hover:bg-muted disabled:opacity-40"
@@ -144,30 +130,47 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
                   />
                 </button>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold">{category.name}</p>
-                <p className="truncate text-sm text-muted-foreground">
+              <div className="order-1 min-w-0 flex-1 basis-full px-2 pt-1 sm:order-none sm:basis-48 sm:px-0 sm:pt-0">
+                <p className="font-semibold [overflow-wrap:anywhere]">
+                  {category.name}
+                </p>
+                <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
                   /{category.slug} · {formatNumber(category.courseCount)} khóa
                   học
                 </p>
               </div>
-              <button
-                type="button"
-                className={buttonClass("outline")}
-                onClick={() => open(category)}
-              >
-                <Pencil aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                Sửa
-              </button>
-              <button
-                type="button"
-                className={buttonClass("ghost")}
-                onClick={() => remove(category)}
-                disabled={busy}
-              >
-                <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                Xóa
-              </button>
+              <div className="order-3 ml-auto flex gap-2 sm:order-none">
+                <button
+                  type="button"
+                  className={buttonClass("outline")}
+                  onClick={() => open(category)}
+                >
+                  <Pencil aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                  Sửa
+                </button>
+                <ConfirmDialog
+                  title="Xóa danh mục"
+                  description={`Xóa danh mục "${category.name}"? Danh mục còn khóa học thì không xóa được.`}
+                  confirmLabel="Xóa danh mục"
+                  onConfirm={async () => {
+                    await apiFetch(`/admin/categories/${category.id}`, {
+                      method: "DELETE",
+                    });
+                    showToast("Đã xóa danh mục", "success");
+                    startTransition(() => router.refresh());
+                  }}
+                  trigger={
+                    <button
+                      type="button"
+                      className={buttonClass("ghost")}
+                      disabled={busy}
+                    >
+                      <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                      Xóa
+                    </button>
+                  }
+                />
+              </div>
             </li>
           ))}
         </ul>

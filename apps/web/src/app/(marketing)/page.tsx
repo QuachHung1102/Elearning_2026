@@ -12,7 +12,10 @@ import { buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { publicFetch, type Category, type CourseCard, type Paginated } from "@/lib/catalog";
 
-export const revalidate = 300;
+// Rendered per request so `next build` needs no API; `publicFetch` still keeps
+// every API response in the Data Cache for 300 s, which `revalidate = 0` leaves
+// alone.
+export const revalidate = 0;
 
 export default async function HomePage() {
   const [featured, categories, all] = await Promise.all([

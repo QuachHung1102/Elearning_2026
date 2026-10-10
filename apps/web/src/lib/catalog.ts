@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { API_ORIGIN } from "./site";
 
 export type Category = {
   id: string;
@@ -37,6 +38,8 @@ export type CourseCard = {
   ratingCount: number;
   demoStats: boolean;
   category: Category | null;
+  /** `null` for a site-owner course; shown with `SITE_OWNER` as the fallback. */
+  instructorName: string | null;
 };
 
 export type LessonOutline = {
@@ -68,6 +71,7 @@ export type CourseDetail = CourseCard & {
 export type AdminCourseRow = CourseCard & {
   status: CourseStatus;
   updatedAt: string;
+  instructorId: string | null;
 };
 
 export type VideoAssetStatus = "PENDING" | "PROCESSING" | "READY" | "ERRORED";
@@ -75,6 +79,7 @@ export type VideoAssetStatus = "PENDING" | "PROCESSING" | "READY" | "ERRORED";
 export type AdminCourseDetail = CourseDetail & {
   status: CourseStatus;
   archivedAt: string | null;
+  instructorId: string | null;
   videoAssets: {
     lessonId: string;
     provider: string;
@@ -106,11 +111,6 @@ export type PublishIssue = {
   lessonId?: string;
 };
 
-const API_ORIGIN = (process.env.API_ORIGIN ?? "http://localhost:3001").replace(
-  /\/$/,
-  "",
-);
-
 /**
  * Cookie-free fetch for the public catalog. Reading cookies would opt the whole
  * route out of static rendering, and the catalog is deliberately identical for
@@ -120,6 +120,10 @@ export async function publicFetch<T>(
   path: string,
   revalidate = 300,
 ): Promise<T> {
+  // ponytail: no `forwardVisitor` here. Headers are part of the data-cache key,
+  // so naming the visitor would cache per visitor; the API counts these cache
+  // misses (one per URL per `revalidate`) against this server's own bucket.
+  // Exempt trusted no-visitor calls in `clientIp` if that bucket ever fills.
   const response = await fetch(`${API_ORIGIN}/api/v1${path}`, {
     next: { revalidate },
     signal: AbortSignal.timeout(10_000),

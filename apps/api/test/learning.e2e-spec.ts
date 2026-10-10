@@ -169,7 +169,7 @@ describe('Phase 3 learning (e2e)', () => {
     }).compile();
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureApp(app);
-    await app.init();
+    await app.listen(0, '127.0.0.1');
     prisma = app.get(PrismaService);
 
     [admin, student1, student2, student3] = await Promise.all([
@@ -289,6 +289,7 @@ describe('Phase 3 learning (e2e)', () => {
    */
   const hlsStream: StreamClient = {
     getStatus: async () => ({ ready: true, durationSeconds: 60 }),
+    register: async () => ({ ready: true, durationSeconds: 60 }),
     signPlayback: async (uid, ttlSeconds) => ({
       playbackUrl: `https://stream.example.test/${uid}/manifest/video.m3u8`,
       kind: 'hls',
@@ -608,8 +609,17 @@ describe('Phase 3 learning (e2e)', () => {
     await saveProgress(previewVideo(c5).id, student3, {
       lastPositionSeconds: 10,
     }).expect(404);
+    // Scoped to the lessons tried: the seed upserts, so progress another file
+    // gave student3 (checkout-flow buys a course) survives into this one.
     expect(
-      await prisma.lessonProgress.count({ where: { userId: me.id } }),
+      await prisma.lessonProgress.count({
+        where: {
+          userId: me.id,
+          lessonId: {
+            in: [paidVideo(c1).id, previewVideo(c1).id, previewVideo(c5).id],
+          },
+        },
+      }),
     ).toBe(0);
   });
 
@@ -637,7 +647,7 @@ describe('Phase 3 learning (e2e)', () => {
       .expect('Content-Type', /application\/pdf/)
       .expect(
         'Content-Disposition',
-        `attachment; filename="${resource.filename}"`,
+        `attachment; filename="${resource.filename}"; filename*=UTF-8''${resource.filename}`,
       );
 
     await http()

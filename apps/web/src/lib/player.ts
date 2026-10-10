@@ -147,6 +147,18 @@ export function stepRate(current: number, step: -1 | 1): number {
   return PLAYBACK_RATES[next];
 }
 
+/**
+ * Who plays the URL: the `<video>` element itself, or hls.js feeding it
+ * through Media Source when the element cannot play HLS (Chrome, Firefox).
+ * `nativeHls` is `canPlayType("application/vnd.apple.mpegurl")`.
+ */
+export function playbackEngine(
+  kind: "hls" | "mp4",
+  nativeHls: string,
+): "native" | "hls.js" {
+  return kind === "hls" && nativeHls === "" ? "hls.js" : "native";
+}
+
 /** `1,25x` — Vietnamese decimal comma. */
 export const rateLabel = (rate: number) =>
   `${String(rate).replace(".", ",")}x`;

@@ -69,7 +69,7 @@ describe('LocalFileController write path', () => {
 
   it('accepts an upload URL used exactly as issued', async () => {
     const { key, exp, sig } = queryOf(
-      await storage.signedUploadUrl(RESOURCE_KEY, 'application/pdf', 300),
+      await storage.signedUploadUrl(RESOURCE_KEY, 'application/pdf', 10, 300),
     );
     await expect(
       controller.upload(key, exp, sig, putRequest('application/pdf')),
@@ -77,9 +77,18 @@ describe('LocalFileController write path', () => {
     await storage.delete(RESOURCE_KEY);
   });
 
+  it('rejects an upload whose length differs from the signed one', async () => {
+    const { key, exp, sig } = queryOf(
+      await storage.signedUploadUrl(RESOURCE_KEY, 'application/pdf', 10, 300),
+    );
+    await expect(
+      controller.upload(key, exp, sig, putRequest('application/pdf', 11)),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
   it('rejects an upload sent with a different content type than it was signed for', async () => {
     const { key, exp, sig } = queryOf(
-      await storage.signedUploadUrl(RESOURCE_KEY, 'application/pdf', 300),
+      await storage.signedUploadUrl(RESOURCE_KEY, 'application/pdf', 10, 300),
     );
     await expect(
       controller.upload(key, exp, sig, putRequest('text/plain')),
@@ -88,7 +97,7 @@ describe('LocalFileController write path', () => {
 
   it('rejects a content type outside the allowlist with 415', async () => {
     const { key, exp, sig } = queryOf(
-      await storage.signedUploadUrl(RESOURCE_KEY, 'image/svg+xml', 300),
+      await storage.signedUploadUrl(RESOURCE_KEY, 'image/svg+xml', 10, 300),
     );
     await expect(
       controller.upload(key, exp, sig, putRequest('image/svg+xml')),
@@ -98,7 +107,7 @@ describe('LocalFileController write path', () => {
   it('rejects a public key that does not match the cover template', async () => {
     const key = 'public/x.svg';
     const { exp, sig } = queryOf(
-      await storage.signedUploadUrl(key, 'image/png', 300),
+      await storage.signedUploadUrl(key, 'image/png', 10, 300),
     );
     await expect(
       controller.upload(key, exp, sig, putRequest('image/png')),
@@ -107,7 +116,7 @@ describe('LocalFileController write path', () => {
 
   it('accepts a cover key that does match the template', async () => {
     const { key, exp, sig } = queryOf(
-      await storage.signedUploadUrl(COVER_KEY, 'image/jpeg', 300),
+      await storage.signedUploadUrl(COVER_KEY, 'image/jpeg', 10, 300),
     );
     await expect(
       controller.upload(key, exp, sig, putRequest('image/jpeg')),
@@ -118,7 +127,7 @@ describe('LocalFileController write path', () => {
   it('rejects a traversal key even with a valid signature', async () => {
     const key = '../../.env';
     const { exp, sig } = queryOf(
-      await storage.signedUploadUrl(key, 'text/plain', 300),
+      await storage.signedUploadUrl(key, 'text/plain', 10, 300),
     );
     await expect(
       controller.upload(key, exp, sig, putRequest('text/plain')),
@@ -127,7 +136,7 @@ describe('LocalFileController write path', () => {
 
   it('rejects a body larger than the upload limit', async () => {
     const { key, exp, sig } = queryOf(
-      await storage.signedUploadUrl(RESOURCE_KEY, 'application/pdf', 300),
+      await storage.signedUploadUrl(RESOURCE_KEY, 'application/pdf', 10, 300),
     );
     const oversized = putRequest('application/pdf', 1);
     (oversized.get as unknown) = (name: string) =>
@@ -143,7 +152,7 @@ describe('LocalFileController write path', () => {
 describe('LocalFileController read path', () => {
   it('serves a public cover key with no exp or sig', async () => {
     const { key, exp, sig } = queryOf(
-      await storage.signedUploadUrl(COVER_KEY, 'image/jpeg', 300),
+      await storage.signedUploadUrl(COVER_KEY, 'image/jpeg', 10, 300),
     );
     await controller.upload(key, exp, sig, putRequest('image/jpeg'));
 
@@ -163,7 +172,7 @@ describe('LocalFileController read path', () => {
 
   it('serves a resource as an attachment named after the stored filename', async () => {
     const { key, exp, sig } = queryOf(
-      await storage.signedUploadUrl(RESOURCE_KEY, 'application/pdf', 300),
+      await storage.signedUploadUrl(RESOURCE_KEY, 'application/pdf', 10, 300),
     );
     await controller.upload(key, exp, sig, putRequest('application/pdf'));
 
@@ -177,7 +186,7 @@ describe('LocalFileController read path', () => {
     );
     expect(response.headers['Content-Type']).toBe('application/pdf');
     expect(response.headers['Content-Disposition']).toBe(
-      'attachment; filename="bai-tap.pdf"',
+      `attachment; filename="bai-tap.pdf"; filename*=UTF-8''bai-tap.pdf`,
     );
     await storage.delete(RESOURCE_KEY);
   });
@@ -194,7 +203,7 @@ describe('LocalFileController read path', () => {
 
   it('joins the segment array Express 5 hands back before checking anything', async () => {
     const { key, exp, sig } = queryOf(
-      await storage.signedUploadUrl(COVER_KEY, 'image/jpeg', 300),
+      await storage.signedUploadUrl(COVER_KEY, 'image/jpeg', 10, 300),
     );
     await controller.upload(key, exp, sig, putRequest('image/jpeg'));
 

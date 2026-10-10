@@ -1,5 +1,12 @@
+import { headers } from "next/headers";
 import { notFound, redirect, unstable_rethrow } from "next/navigation";
-import type { AdminCourseRow, CourseStatus, Paginated } from "./catalog";
+import { cache } from "react";
+import type {
+  AdminCourseDetail,
+  AdminCourseRow,
+  CourseStatus,
+  Paginated,
+} from "./catalog";
 import { getSession, serverFetch, type User } from "./session";
 
 /**
@@ -8,20 +15,47 @@ import { getSession, serverFetch, type User } from "./session";
  * `GET /auth/me` first and splits the two cases here.
  */
 export async function requireAdmin(): Promise<User> {
+  return requireRole("ADMIN", "/admin");
+}
+
+/** Staff area base path: admin and instructor share the course editor pages. */
+export type StaffBase = "/admin" | "/instructor";
+
+/** `/instructor/*` follows the same 404-for-everyone-else rule as `/admin/*`. */
+export async function requireInstructor(): Promise<User> {
+  return requireRole("INSTRUCTOR", "/instructor");
+}
+
+async function requireRole(role: User["role"], base: StaffBase): Promise<User> {
   // Only a real 401 means "not signed in" — `getSession` returns null for that
   // and throws for anything else. Catching everything here would turn an API
   // outage into a login screen, which sends the admin chasing the wrong
   // problem; letting it throw shows the error boundary instead.
   const user = await getSession();
-  if (!user) redirect("/login?next=/admin");
-  if (user.role !== "ADMIN") notFound();
+  if (!user) redirect(`/login?next=${base}`);
+  if (user.role !== role) notFound();
   return user;
 }
 
-export async function adminFetch<T>(path: string): Promise<T> {
+/**
+ * The course pages are shared by both areas, so links and the sign-in redirect
+ * follow the URL. `proxy.ts` puts it in `x-elearning-path` for server components.
+ */
+export async function staffBase(): Promise<StaffBase> {
+  const path = (await headers()).get("x-elearning-path") ?? "";
+  return path.startsWith("/instructor") ? "/instructor" : "/admin";
+}
+
+/** `base` only picks where an expired session signs back in to; default: this URL's area. */
+export async function adminFetch<T>(
+  path: string,
+  base?: StaffBase,
+): Promise<T> {
   const response = await serverFetch(path);
   if (response.status === 404) notFound();
-  if (response.status === 401) redirect("/login?next=/admin");
+  if (response.status === 401) {
+    redirect(`/login?next=${base ?? (await staffBase())}`);
+  }
   if (!response.ok) {
     throw new Error(`API ${path} answered ${response.status}`);
   }
@@ -39,14 +73,32 @@ export type ReportOverview = {
   series: { date: string; revenueVnd: number; purchases: number }[];
 };
 
-export const CHECKOUT_ENABLED =
-  process.env.NEXT_PUBLIC_CHECKOUT_ENABLED === "true";
+export { CHECKOUT_ENABLED } from "./orders";
 
 /** `AdminUserRow` (API_CONTRACT.md §4). */
 export type AdminUserRow = User & {
   enrollmentCount: number;
   purchaseCount: number;
   activeSessionCount: number;
+};
+
+/** Answer of `GET /admin/reports/instructor-overview` (API_CONTRACT.md §5.7). */
+export type InstructorOverview = {
+  publishedCourses: number;
+  draftCourses: number;
+  activeEnrollments: number;
+  newEnrollments30d: number;
+};
+
+/** Same course, read by the layout and every tab: one request per render. */
+export const getAdminCourse = cache((id: string) =>
+  adminFetch<AdminCourseDetail>(`/admin/courses/${id}`),
+);
+
+export type EnrollmentProgress = {
+  completedLessons: number;
+  totalLessons: number;
+  percent: number;
 };
 
 export type EnrollmentSource = "PURCHASE" | "MANUAL_GRANT";
@@ -60,6 +112,8 @@ export type AdminEnrollment = {
   grantedAt: string;
   revokedAt: string | null;
   grantedById: string | null;
+  /** Only the list carries it (`GET /admin/enrollments`), not a grant's answer. */
+  progress?: EnrollmentProgress;
 };
 
 export type AdminUserDetail = {

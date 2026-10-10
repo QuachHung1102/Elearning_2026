@@ -110,7 +110,14 @@ export function TrustStats({
   );
 }
 
-export function InstructorCard({ variant = "compact" }: { variant?: "compact" | "full" }) {
+export function InstructorCard({
+  variant = "compact",
+  name,
+}: {
+  variant?: "compact" | "full";
+  /** The course's own instructor; absent, the site owner who writes every course. */
+  name?: string;
+}) {
   return (
     <section className="panel grid gap-3 p-6" aria-labelledby="owner-heading">
       <GraduationCap
@@ -122,10 +129,11 @@ export function InstructorCard({ variant = "compact" }: { variant?: "compact" | 
         Người đứng lớp
       </h2>
       <p className="text-muted-foreground">
-        {SITE_OWNER.name} tự biên soạn và giảng toàn bộ khóa học trên nền tảng
-        này. Mỗi bài học đi ra từ một tình huống làm việc thật.
+        {name
+          ? `${name} soạn và giảng khóa học này.`
+          : `${SITE_OWNER.name} tự biên soạn và giảng toàn bộ khóa học trên nền tảng này. Mỗi bài học đi ra từ một tình huống làm việc thật.`}
       </p>
-      {variant === "full" && (
+      {variant === "full" && !name && (
         <p className="text-muted-foreground">
           Thông tin chi tiết về người dạy đang được cập nhật. Trong lúc chờ, bạn
           có thể gửi câu hỏi qua trang liên hệ.

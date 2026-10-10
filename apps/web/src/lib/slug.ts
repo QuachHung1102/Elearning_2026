@@ -15,3 +15,9 @@ export function slugify(title: string, maxLength = 120): string {
     .slice(0, maxLength)
     .replace(/-+$/g, "");
 }
+
+/** The slug the API starts from: a result under three characters gets its prefix. */
+export function baseSlug(title: string): string {
+  const stem = slugify(title);
+  return stem.length >= 3 ? stem : ["khoa-hoc", stem].filter(Boolean).join("-");
+}

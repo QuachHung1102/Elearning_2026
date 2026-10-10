@@ -1,15 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
+import type { StaffBase } from "@/lib/admin";
+import { apiFetch, errorMessage } from "@/lib/api";
 import type { Category, CourseDetail } from "@/lib/catalog";
-import { slugify } from "@/lib/slug";
-import { Button } from "@/components/ui/button";
+import { baseSlug } from "@/lib/slug";
+import { Button, buttonClass } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Alert } from "@/components/ui/feedback";
 
-export function CourseCreateForm({ categories }: { categories: Category[] }) {
+export function CourseCreateForm({
+  categories,
+  base = "/admin",
+}: {
+  categories: Category[];
+  /** Web area the new course opens in; the API path stays `/admin/*`. */
+  base?: StaffBase;
+}) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,26 +35,17 @@ export function CourseCreateForm({ categories }: { categories: Category[] }) {
           categoryId: String(form.get("categoryId") ?? "") || undefined,
         }),
       });
-      router.push(`/admin/courses/${course.id}`);
+      router.push(`${base}/courses/${course.id}`);
     } catch (caught) {
-      setError(
-        caught instanceof ApiError && caught.code === "SLUG_TAKEN"
-          ? "Đã có khóa học dùng đường dẫn này."
-          : "Không tạo được khóa học. Thử lại sau ít phút.",
-      );
+      setError(errorMessage(caught));
       setSaving(false);
     }
   }
 
   return (
-    <form action={create} className="grid max-w-xl gap-6">
+    <form action={create} className="panel grid max-w-2xl gap-6 p-4 sm:p-6">
       {error && <Alert variant="destructive" title={error} />}
-      <Field
-        id="title"
-        label="Tiêu đề khóa học"
-        required
-        hint="Bạn có thể sửa lại sau."
-      >
+      <Field id="title" label="Tiêu đề khóa học" required>
         <input
           id="title"
           name="title"
@@ -61,7 +61,7 @@ export function CourseCreateForm({ categories }: { categories: Category[] }) {
       <div className="grid gap-1">
         <p className="text-sm font-semibold">Đường dẫn</p>
         <p className="rounded-md bg-muted px-3 py-2 font-mono text-sm text-muted-foreground-strong">
-          /courses/{slugify(title) || "…"}
+          /courses/{title.trim() ? baseSlug(title) : "…"}
         </p>
         <p className="text-sm text-muted-foreground">
           Sửa được khi khóa học còn là bản nháp. Sau lần xuất bản đầu tiên,
@@ -71,7 +71,7 @@ export function CourseCreateForm({ categories }: { categories: Category[] }) {
 
       <Field id="categoryId" label="Danh mục">
         <select id="categoryId" name="categoryId" className="control">
-          <option value="">Chọn sau</option>
+          <option value="">Chọn danh mục</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
@@ -80,9 +80,18 @@ export function CourseCreateForm({ categories }: { categories: Category[] }) {
         </select>
       </Field>
 
-      <Button type="submit" size="lg" loading={saving} className="w-fit">
-        Tạo bản nháp
-      </Button>
+      <Alert variant="info" title="Bắt đầu bằng bản nháp">
+        Bạn có thể bổ sung nội dung, giá và ảnh bìa ở bước tiếp theo.
+      </Alert>
+
+      <div className="grid gap-4">
+        <Button type="submit" size="lg" loading={saving}>
+          Tạo bản nháp
+        </Button>
+        <Link href={`${base}/courses`} className={buttonClass("outline", "lg")}>
+          Hủy
+        </Link>
+      </div>
     </form>
   );
 }

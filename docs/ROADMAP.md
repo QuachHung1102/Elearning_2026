@@ -4,6 +4,11 @@ Tài liệu này chỉ mô tả **thứ tự thi công và điều kiện nghi�
 
 Không có lịch, không có ngày. Ước lượng bằng đơn vị tương đối S/M/L/XL.
 
+> **Trạng thái và thứ tự thi công hiện hành nằm ở [_PLAN.md](./_PLAN.md).** Tài liệu này giữ
+> đặc tả từng phase và mã acceptance (`A*`, `N*`). Các bảng trạng thái ở §1, §2.1 và §10 là
+> mốc lúc lập roadmap, không được cập nhật; phần acceptance/demo của Phase 4 (§8) có tên
+> endpoint lỗi thời, danh sách và cách sửa ở `_PLAN.md` mục 3 (P4-1…P4-9).
+
 ## 1. Trạng thái nền khi lập roadmap
 
 Trạng thái triển khai mới nhất xem [_STATUS.md](./_STATUS.md). Bảng dưới giữ
@@ -260,7 +265,7 @@ Một file `prisma/seed.ts`, idempotent bằng `upsert` theo khoá tự nhiên (
 
 Bản đầu của roadmap này chốt một seed hai nhánh bật bằng `SEED_DEMO_DATA=true` dựng đúng một course `khoa-hoc-demo`. Bộ đó bị bỏ vì ba lý do đo được: `.env.example` thật **không có biến `SEED_*` nào** (DEMO_MODE.md §7 — mật khẩu demo ghi thẳng trong seed và README, và thứ thật sự chặn là seed tự thoát ở production); một course duy nhất không chứng minh được bộ lọc catalog, tường paywall và ca `ARCHIVED` mà chính A3.12 và N2.2 của roadmap này đòi; và bộ 6 khóa là thứ duy nhất làm hai màn hình `EmptyState` khác nhau ở UX_PLAN.md §6.2 có dữ liệu để phân biệt.
 
-`test/learning.e2e-spec.ts` và `test/checkout.e2e-spec.ts` dùng **chính seed này** làm fixture, không tự dựng course riêng: khóa flagship `lap-trinh-web-voi-react-va-nextjs` (C1) cho luồng đã có quyền học, `student3@elearning.local` cho đường từ chối, và C6 `lap-trinh-di-dong-voi-react-native` cho ca `ARCHIVED`.
+`test/learning.e2e-spec.ts` và ca demo của `test/checkout-flow.e2e-spec.ts` dùng **chính seed này** làm fixture, không tự dựng course riêng: khóa flagship `lap-trinh-web-voi-react-va-nextjs` (C1) cho luồng đã có quyền học, `student3@elearning.local` cho đường từ chối, và C6 `lap-trinh-di-dong-voi-react-native` cho ca `ARCHIVED`. Ca demo của checkout mua C2 `typescript-cho-nguoi-da-biet-javascript` (499.000 ₫) bằng `student3@elearning.local`, người mua chưa có quyền học nào.
 
 Prisma 7 **không đọc lệnh seed từ `package.json`** — đã kiểm chứng trong `apps/api/node_modules/prisma/build/cli.js`: thân lệnh `db seed` là `let i = n.migrations?.seed; if (!i) return <cảnh báo>`, tức thiếu khoá đó thì `prisma db seed` in cảnh báo, thoát `0` và **không tạo admin**, kéo theo A1.4/A1.5 fail. Nên `prisma.config.ts` phải có:
 
@@ -623,6 +628,7 @@ Luồng, bất biến và các yêu cầu bảo mật đã được đặc tả 
 - `confirmPayment` chạy trong một `$transaction` mở đầu bằng **ghi có điều kiện**: `updateMany({ where: { appTransId, status: 'PENDING' } })`, `count === 0` thì dừng và trả `200`. Unique **không** phải cơ chế idempotency — ghi lại cùng `providerTransId` lên chính hàng đang giữ nó không vi phạm unique (DATA_MODEL.md §PaymentAttempt). Rồi mới `Purchase` → `enrollmentService.grant({ source: 'PURCHASE' })` → `enrollmentCount` → `AuditLog purchase.paid`. Không giữ transaction mở trong lúc gọi mạng.
 - Driver `demo`: `CheckoutService` sinh `appTransId` đúng định dạng `yymmdd_{seq}` theo giờ Việt Nam (**không** dùng `toISOString()` — server chạy UTC và từ 00:00 tới 07:00 giờ VN tiền tố ngày sẽ sai), `DemoZaloPayClient` giữ một `Map` riêng và **không** đọc `PaymentAttempt`; nút xác nhận gọi `POST /dev/payments/{appTransId}/confirm`.
 - Reconcile: **một** vòng `setInterval` khởi động trong `OnModuleInit`, huỷ trong `OnModuleDestroy`, `RECONCILE_INTERVAL=60` giây, bỏ qua attempt trẻ hơn `RECONCILE_MIN_AGE=120` giây. Đối soát trước, đóng attempt quá hạn sau, trong cùng một lượt. Không thêm `@nestjs/schedule`, không chuỗi cron.
+- Thanh toán đến muộn: callback đúng MAC và đúng số tiền cho attempt đã `EXPIRED` vẫn được xác nhận (`EXPIRED → SUCCEEDED`, ghi `payment.reconciled` với `metadata.late = true`) vì tiền đã thu thì phải có quyền học; attempt `FAILED`/`CANCELLED` thì không, và một đơn đã `CANCELLED`/`REFUNDED` bị từ chối kèm `payment.callback_rejected`.
 - Trang checkout `/checkout/[courseSlug]` polling `GET /purchases/{id}`; không bao giờ tự kết luận thành công từ redirect. Client tự so `attempts[0].expiresAt` với đồng hồ của mình để chuyển `QrPanel` sang `expired` — **không** đợi server đổi `status`, vì `GET /purchases/{id}` đọc trạng thái đã lưu chứ không tính lại tại chỗ.
 - Lịch sử mua của học viên (`/account/orders`, `/account/orders/[id]`); màn hình đối soát và hoàn tiền của admin (`/admin/orders`).
 - Email xác nhận mua hàng gửi sau khi transaction commit, qua mail seam (`tag: 'purchase-receipt'`).
@@ -683,11 +689,14 @@ Ràng buộc chặn trùng đơn là một **unique một phần viết tay** tr
 | File | Nội dung |
 |---|---|
 | `src/checkout/zalopay-signature.spec.ts` | HMAC `key2` đúng → chấp nhận; sai một ký tự → từ chối; thiếu field → từ chối. Dùng vector cố định, không gọi mạng |
-| `src/checkout/confirm-payment.spec.ts` | gọi hai lần cùng `appTransId` → `updateMany` lần hai trả `count = 0`, chỉ một `Enrollment`, `paidAt` **không** bị ghi đè, `enrollmentCount` **không** tăng lần hai, và vẫn trả thành công; số tiền lệch so với snapshot → từ chối, không cấp quyền, ghi `payment.callback_rejected`; `appTransId` không tồn tại → từ chối |
+| `test/confirm-payment.e2e-spec.ts` (Postgres thật, gọi `CheckoutService.confirmPayment` trực tiếp; thay cho `src/checkout/confirm-payment.spec.ts` vì thứ cần kiểm là điều kiện ghi của chính Postgres, mà bản mock không chứng minh được) | gọi hai lần cùng `appTransId` → lần hai trả `ALREADY_PROCESSED`, chỉ một `Enrollment`, `paidAt` **không** bị ghi đè, `enrollmentCount` **không** tăng lần hai, và vẫn trả thành công; bốn lời gọi đồng thời → đúng một `PAID`; số tiền lệch so với snapshot → từ chối, không cấp quyền, ghi `payment.callback_rejected`; `appTransId` không tồn tại → từ chối; attempt `FAILED`/`CANCELLED` nhận báo thu tiền → từ chối `attempt_closed` (không được trả "đã xử lý"); attempt `EXPIRED` → vẫn xác nhận, ghi `payment.reconciled` với `late = true`; Purchase `CANCELLED`/`REFUNDED` → từ chối nhưng attempt vẫn `SUCCEEDED`; khóa đã gỡ xuất bản (`DRAFT`) sau khi hiện QR vẫn được cấp quyền; attempt thứ hai của cùng Purchase → `DUPLICATE_PAID` và `payment.duplicate_paid` |
 | `src/checkout/app-trans-id.spec.ts` | lúc `2026-09-01T20:00:00Z`, tiền tố ngày là `260902` (giờ Việt Nam) chứ không phải `260901` — ca này chỉ fail khi ai đó thay `Intl.DateTimeFormat` bằng `toISOString()` |
 | `src/checkout/checkout.service.spec.ts` | đã có `Enrollment` `ACTIVE` → `409 ALREADY_ENROLLED`, không tạo `PaymentAttempt` mới; còn QR chưa hết hạn → trả lại đúng QR cũ với `200`; hết hạn → tạo attempt mới với `201`; `emailVerifiedAt` null → `403 EMAIL_NOT_VERIFIED` |
 | `src/checkout/reconcile.service.spec.ts` | `Map` của `DemoZaloPayClient` đặt `SUCCEEDED` trong khi `PaymentAttempt` vẫn `PENDING` → chạy reconcile → `Enrollment` được cấp (kịch bản "callback bị mất"); attempt quá `expiresAt` được đóng **sau** bước đối soát trong cùng lượt |
-| `test/checkout.e2e-spec.ts` | Fixture là seed thật (C4 `thiet-ke-giao-dien-voi-figma`, `student3@elearning.local`). Luồng demo đầu-cuối; callback lặp; callback sai MAC; callback sai số tiền; hai attempt cùng `SUCCEEDED` của một `Purchase` → chỉ một `Enrollment`, `GET /admin/payments?duplicatePaid=true` trả đúng đơn đó, `audit_logs` có `payment.duplicate_paid` |
+| `test/checkout.e2e-spec.ts` | Fixture do test dựng (`createCourse`, người dùng mới): mỗi ca cần một khóa và một học viên sạch. Các nhánh của `POST /checkout/:slug`: tạo đơn và QR; gọi lại → cùng QR với `200`; QR hết hạn → QR mới trên cùng đơn; đổi giá trước QR mới thì đơn chưa trả theo giá mới; bấm đồng thời → một đơn; `401`, chưa xác minh email, `404`, `422 COURSE_NOT_PURCHASABLE`, `409 ALREADY_ENROLLED` (kể cả đơn đã `PAID` mà quyền bị gỡ tay); đơn cũ đã hoàn tiền → đơn mới; giới hạn 5 lần / 300 giây; nhà cung cấp lỗi → giữ đơn, lần sau có QR mới |
+| `test/checkout-flow.e2e-spec.ts` | Ca đầu chạy **demo script bước 3–11 trên seed thật** — C2 `typescript-cho-nguoi-da-biet-javascript` (499.000 ₫), `student3@elearning.local`, `admin@elearning.local` — nên seed hỏng demo thì fail ở đây (A4.1–A4.6, A4.11, A4.12). Hai ca sau dùng dữ liệu tạo riêng: đổi giá sau khi có QR → tiền ghi nhận là giá snapshot (A4.7); hai attempt cùng `SUCCEEDED` của một `Purchase` → chỉ một `Enrollment`, một `purchase.paid`, `audit_logs` có `payment.duplicate_paid`, `GET /admin/payments?duplicatePaid=true` trả đúng đơn đó và không trả đơn chỉ thanh toán một lần (N4.10) |
+| `test/payment-callback.e2e-spec.ts` | Callback thật qua HTTP, không cần session và CSRF: mở khóa và trả `return_code` `1`; lặp lại hoặc gửi đồng thời → một lần; chữ ký giả hoặc dữ liệu bị sửa sau khi ký → `-1`, không cấp quyền; đúng chữ ký nhưng lệch số tiền → `-1` và ghi lý do; đơn chưa từng phát hành → `-1`; thân không phải đơn hàng, `type` khác đơn hàng; xác nhận lỗi → `0` để nhà cung cấp gọi lại; route chỉ có với đúng nhà cung cấp đang cấu hình (N4.1–N4.3). Luôn trả HTTP `200` |
+| `src/web-secrets.spec.ts` | quét `apps/web`: `key2` không xuất hiện trong `src` (N4.11); `ZALOPAY_KEY`, `CF_STREAM_TOKEN`, `R2_SECRET`… không xuất hiện ở bất kỳ file văn bản nào của web (N5.1) |
 
 ### Demo script
 
@@ -696,45 +705,45 @@ Chạy với `PAYMENT_DRIVER=demo`.
 1. Đăng nhập bằng một học viên **chưa** có quyền học khóa mục tiêu.
 2. `/courses/[slug]` → giá hiển thị đúng, nút "Đăng ký học" đã thay cho khối liên hệ.
 3. Bấm nút → `/checkout/[slug]` hiện QR giả, trạng thái "Chờ thanh toán", đồng hồ đếm ngược.
-4. Mở tab khác, quay lại `/courses/[slug]`, bấm "Đăng ký học" lần nữa → về đúng trang checkout cũ, **cùng một** `appTransId`, không sinh QR mới.
-5. Bấm nút "Giả lập thanh toán" (chỉ hiện khi `PAYMENT_DRIVER=demo`).
+4. Mở tab khác, quay lại `/courses/[slug]`, bấm "Đăng ký học" lần nữa → về đúng trang checkout cũ, **cùng một** `paymentAttemptId` (cùng mã QR), không sinh QR mới.
+5. Ngay trên trang checkout, học viên bấm "Thanh toán" (chỉ hiện khi `PAYMENT_DRIVER=demo`, kèm ghi chú không trừ tiền thật — `DEMO_MODE.md` §"Endpoint confirm dev"). Không cần admin; admin vẫn xác nhận được từ `/admin/orders` bằng nút "Xác nhận thanh toán".
 6. Trang checkout tự đổi sang "Thành công" nhờ polling, rồi chuyển sang `/learn/[slug]`.
 7. Console `api` in email biên nhận.
-8. `/dashboard` → khóa học nằm trong danh sách. `/purchases` → một dòng `PAID`.
-9. `/admin/purchases` → giao dịch hiện ra; `/admin` có `revenueVnd` bằng `499000`.
-10. Gọi lại `POST /payments/demo/pay` với cùng `appTransId` bằng `curl.exe` → trả `200`, nhưng số enrollment không đổi.
-11. `/admin/purchases/:id/refund` → nhập lý do (bắt buộc) → trạng thái `REFUNDED`, `Enrollment` chuyển `REVOKED`, `AuditLog` có `PURCHASE_REFUNDED` kèm lý do, hàng `lesson_progress` vẫn còn nguyên.
-12. Với một khóa khác: tạo QR, để `PAYMENT_QR_TTL_SECONDS` trôi qua → trang tự chuyển sang "Mã QR đã hết hạn" và hiện nút "Tạo mã QR mới". Bấm nút → `appTransId` mới khác cái cũ.
-13. Kiểm tra ở 375px: QR không tràn, nút "Giả lập thanh toán" và "Tạo mã QR mới" ≥ 44px.
+8. `/my-courses` → khóa học nằm trong danh sách. `/account/orders` → một dòng `PAID`.
+9. `/admin/orders` → giao dịch hiện ra; `/admin` có `revenueVnd` bằng `499000`.
+10. Xác nhận lại cùng `appTransId` (`POST /dev/payments/{appTransId}/confirm`, cookie admin) → trả `200`, nhưng số enrollment không đổi.
+11. `/admin/orders` → hoàn tiền (`POST /admin/purchases/{id}/refund`) → nhập lý do (bắt buộc) → trạng thái `REFUNDED`, `Enrollment` chuyển `REVOKED`, `AuditLog` có `purchase.refunded` kèm lý do, hàng `lesson_progress` vẫn còn nguyên.
+12. Với một khóa khác: tạo QR, để `CHECKOUT_QR_TTL_MINUTES` trôi qua (đặt `1` để thử) → trang tự chuyển sang "Mã QR đã hết hạn" và hiện nút "Tạo mã QR mới". Bấm nút → `paymentAttemptId` mới khác cái cũ (admin thấy thêm một `appTransId` mới ở `/admin/orders`).
+13. Kiểm tra ở 375px: QR không tràn, nút "Thanh toán" và "Tạo mã QR mới" ≥ 44px.
 
 ### Acceptance
 
 | # | Kiểm tra | Kết quả bắt buộc |
 |---|---|---|
-| A4.1 | `POST /checkout/:slug` lần đầu | `201`, body có `qrCode`, `appTransId`, `expiresAt` |
-| A4.2 | `POST /checkout/:slug` lần hai trong TTL | `appTransId` **giống hệt** A4.1; `psql ... "select count(*) from payment_attempts where purchase_id=..."` = `1` |
-| A4.3 | `POST /payments/demo/pay` | `200`; `psql ... "select status from purchases where id=..."` = `PAID` |
-| A4.4 | Sau A4.3 | `psql ... "select source, payment_attempt_id from enrollments where user_id=... and course_id=..."` → `PURCHASE`, id khác `NULL` |
+| A4.1 | `POST /checkout/:slug` lần đầu | `201`, body có `paymentAttemptId`, `appTransId` (mã phía nhà cung cấp, nút "Thanh toán" demo cần nó), `qrCode`, `expiresAt` |
+| A4.2 | `POST /checkout/:slug` lần hai trong TTL | `200` (không phải `201`), `paymentAttemptId` **giống hệt** A4.1; `psql ... "select count(*) from payment_attempts where purchase_id=..."` = `1` |
+| A4.3 | `POST /dev/payments/{appTransId}/confirm` (cookie của chính người mua, hoặc admin) | `200`; `psql ... "select status from purchases where id=..."` = `PAID`. Học viên khác gọi cùng `appTransId` → `404`, không có enrollment |
+| A4.4 | Sau A4.3 | `psql ... "select source, purchase_id from enrollments where user_id=... and course_id=..."` → `PURCHASE`, id khác `NULL` |
 | A4.5 | Lặp lại A4.3 lần hai | `200`, và `select count(*) from enrollments where user_id=... and course_id=...` vẫn `1` |
-| A4.6 | `GET /me/purchases` | 1 dòng, `status` = `PAID`, `amountVnd` = giá đã chụp lúc tạo attempt |
+| A4.6 | `GET /purchases/me` | 1 dòng, `status` = `PAID`, `priceVnd` = giá đã chụp lúc tạo attempt |
 | A4.7 | Đổi `Course.priceVnd` sau khi tạo attempt rồi thanh toán | tiền ghi nhận là giá snapshot, không phải giá mới |
 | A4.8 | Dừng api giữa lúc `PENDING`, chạy lại, chờ một chu kỳ reconcile | attempt được truy vấn lại và kết thúc đúng trạng thái |
 | A4.9 | Với `PAYMENT_DRIVER=zalopay`, sandbox credentials và `ZALOPAY_CALLBACK_URL` là URL HTTPS công khai (staging Railway, hoặc `cloudflared tunnel --url http://localhost:3001`): chạy bộ test sandbox | callback thật mở khóa đúng một `Enrollment` |
-| A4.10 | Để QR hết hạn trên trang checkout | UI chuyển sang "Mã QR đã hết hạn", polling dừng, nút "Tạo mã QR mới" xuất hiện; bấm nút → attempt mới có `appTransId` khác |
-| A4.11 | `GET /admin/stats` sau A4.3 | `revenueVnd` bằng `amountVnd` của purchase, `paidPurchaseCount` = `1` |
+| A4.10 | Để QR hết hạn trên trang checkout | UI chuyển sang "Mã QR đã hết hạn", nút "Tạo mã QR mới" xuất hiện, polling chỉ chậm lại (không dừng) để bắt khoản thanh toán đến muộn; bấm nút → attempt mới có `paymentAttemptId` khác |
+| A4.11 | `GET /admin/reports/overview` sau A4.3 | `revenueVnd` bằng `priceVnd` của purchase, `paidPurchases` = `1` |
 | A4.12 | Sau `POST /admin/purchases/:id/refund` | `psql ... "select count(*) from lesson_progress where user_id=..."` không đổi |
 | N4.1 | `POST /payments/zalopay/callback` với MAC sai | phản hồi từ chối, `select count(*) from enrollments` không đổi |
 | N4.2 | Callback có MAC đúng nhưng `amount` lệch snapshot | từ chối, không cấp quyền, ghi `AuditLog` cảnh báo |
-| N4.3 | Callback với `appTransId` không tồn tại | từ chối, không tạo bản ghi nào |
-| N4.4 | Đặt `PAYMENT_DRIVER=zalopay`, gọi `POST /payments/demo/pay` | `404` — route không được đăng ký |
+| N4.3 | Callback với `appTransId` không tồn tại | từ chối (HTTP `200`, `return_code` `-1`); không tạo `Purchase`, `PaymentAttempt` hay `Enrollment` nào, chỉ ghi một `AuditLog payment.callback_rejected` (`unknown_app_trans_id`) |
+| N4.4 | Đặt `PAYMENT_DRIVER=zalopay`, gọi `POST /dev/payments/{appTransId}/confirm` (cookie admin) | `404` — route không được đăng ký |
 | N4.5 | `POST /checkout/:slug` khi chưa đăng nhập | `401` |
 | N4.6 | `POST /checkout/:slug` khi đã có `Enrollment` `ACTIVE` | `409`, không tạo `PaymentAttempt` |
 | N4.7 | `POST /checkout/:slug` cho course `DRAFT` | `404` |
-| N4.8 | `GET /purchases/:id` của người khác | `403` |
-| N4.9 | `GET /admin/purchases` bằng cookie STUDENT | `403` |
-| N4.10 | Thanh toán hai `PaymentAttempt` khác nhau của cùng `Purchase` | `select count(*) from enrollments where user_id=... and course_id=...` = `1`; attempt thừa có `needs_refund = true` và hiện trong `GET /admin/purchases?needsRefund=true` |
+| N4.8 | `GET /purchases/:id` của người khác | `404` (không lộ đơn của người khác) |
+| N4.9 | `GET /admin/payments` bằng cookie STUDENT | `404` (mọi route `/admin/*` đáp 404 với người không phải admin) |
+| N4.10 | Thanh toán hai `PaymentAttempt` khác nhau của cùng `Purchase` | `select count(*) from enrollments where user_id=... and course_id=...` = `1`; có `AuditLog payment.duplicate_paid` và đơn hiện trong `GET /admin/payments?duplicatePaid=true` |
 | N4.11 | `grep -ri "key2" apps/web/src` | không có kết quả |
-| N4.12 | `POST /checkout/:slug` cho course `ARCHIVED` | `409` (khác `404` của `DRAFT`: khóa này có tồn tại, chỉ là ngừng bán) |
+| N4.12 | `POST /checkout/:slug` cho course `ARCHIVED` (hoặc giá 0) | `422 COURSE_NOT_PURCHASABLE` (khác `404` của `DRAFT`: khóa này có tồn tại, chỉ là ngừng bán) |
 | N4.13 | `POST /admin/purchases/:id/refund` không kèm `reason` | `400`, trạng thái không đổi |
 
 ## 9. Phase 5 — Hardening và mở bán
@@ -746,7 +755,7 @@ Chạy với `PAYMENT_DRIVER=demo`.
 - Lật toàn bộ seam sang driver thật: `MAIL_DRIVER=smtp`, `STORAGE_DRIVER=r2`, `VIDEO_DRIVER=cloudflare`, `PAYMENT_DRIVER=zalopay`. Đây là phép thử cuối cùng cho thiết kế seam ở mục 2.3.
 - Security header viết tay trong `app.setup.ts`: `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Strict-Transport-Security`, `Content-Security-Policy`. Không thêm `helmet` cho năm dòng middleware.
 - Boot guard: từ chối khởi động nếu `NODE_ENV=production` mà còn driver ở giá trị demo hoặc `AUTH_JWT_SECRET` trùng giá trị trong `.env.example`.
-- Rate limit mở rộng cho `POST /checkout/*` (`CHECKOUT_RATE_LIMIT` = 5/60s theo `userId`) và callback bất thường. Bộ đếm vẫn per-process; giữ nguyên `ponytail:` comment đã có trong `auth-rate-limit.guard.ts` và chỉ chuyển sang shared storage khi thực sự chạy nhiều instance.
+- Rate limit mở rộng cho `POST /checkout/*` (5 lần / 300 giây theo `userId`, `API_CONTRACT.md` §8) và callback bất thường. Bộ đếm vẫn per-process; giữ nguyên `ponytail:` comment đã có trong `auth-rate-limit.guard.ts` và chỉ chuyển sang shared storage khi thực sự chạy nhiều instance.
 - Structured logging có `requestId`, `purchaseId`, `appTransId`; không có secret, password hash hay session token.
 - SEO: `app/sitemap.ts`, `app/robots.ts` (API native của Next), JSON-LD `Course` trên trang chi tiết, metadata Open Graph.
 - Trang `/privacy`, `/terms`, `/refund-policy`. `/contact` đã có từ Phase 1 (mục 2.2) vì nó là đích của nút mua suốt Phase 2–3.
@@ -801,7 +810,7 @@ Không có migration mới. Nếu phase này phát sinh migration thì đó là 
 | A5.6 | Gửi 11 request `POST /auth/login` trong 60 giây | request thứ 11 trả `429` kèm `Retry-After` |
 | A5.7 | Đọc log của một request đăng nhập | có `requestId`, không có password/JWT/cookie |
 | A5.8 | `python design/contrast-check.py` | exit 0, mọi cặp pass |
-| A5.9 | Gửi 6 request `POST /checkout/:slug` trong 60 giây bằng cùng cookie | request thứ 6 trả `429` kèm `Retry-After` |
+| A5.9 | Gửi 6 request `POST /checkout/:slug` trong 300 giây bằng cùng cookie | request thứ 6 trả `429` kèm `Retry-After` (`API_CONTRACT.md` §8: 5 lần / 300 giây / user) |
 | N5.1 | `grep -ri "ZALOPAY_KEY\|CF_STREAM_TOKEN\|R2_SECRET" apps/web` | không có kết quả |
 | N5.2 | `NODE_ENV=production` + bất kỳ driver nào ở `demo` | api không khởi động, lỗi nêu đúng tên biến |
 | N5.3 | `AUTH_JWT_SECRET` để nguyên giá trị của `.env.example` với `NODE_ENV=production` | api không khởi động |

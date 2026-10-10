@@ -18,7 +18,7 @@ import {
   SessionAuthGuard,
   type AuthenticatedRequest,
 } from '../auth/session-auth.guard.js';
-import { CatalogService } from '../catalog/catalog.service.js';
+import { CourseService } from '../catalog/course.service.js';
 import { SlugParam } from '../catalog/course.dto.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
 import { config } from '../config.js';
@@ -68,7 +68,7 @@ export class LearningController {
   constructor(
     private readonly enrollments: EnrollmentService,
     private readonly progress: ProgressService,
-    private readonly catalog: CatalogService,
+    private readonly catalog: CourseService,
     private readonly prisma: PrismaService,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
   ) {}

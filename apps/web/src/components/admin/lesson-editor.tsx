@@ -3,7 +3,8 @@
 import { Paperclip, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
+import type { StaffBase } from "@/lib/admin";
+import { apiFetch, errorMessage } from "@/lib/api";
 import type {
   AdminCourseDetail,
   LessonOutline,
@@ -14,6 +15,7 @@ import type {
 import { formatDuration, formatNumber } from "@/lib/format";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button, buttonClass } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
 import { Alert } from "@/components/ui/feedback";
 import { showToast } from "@/components/ui/toast";
@@ -41,18 +43,6 @@ type SignedUpload = {
   maxBytes: number;
 };
 
-function messageOf(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.code === "EXTERNAL_ID_TAKEN")
-      return "Video này đã được đăng ký cho một bài khác.";
-    if (error.code === "VIDEO_ALREADY_ATTACHED")
-      return "Video đang gắn ở bài học khác. Tạo bản ghi video mới nếu muốn dùng lại.";
-    if (error.code === "UNSUPPORTED_MEDIA_TYPE")
-      return "Định dạng tệp không được phép.";
-  }
-  return "Không lưu được. Thử lại sau ít phút.";
-}
-
 export function LessonEditor({
   course,
   lesson,
@@ -60,6 +50,7 @@ export function LessonEditor({
   videoAssetId,
   video,
   resources,
+  base = "/admin",
 }: {
   course: AdminCourseDetail;
   lesson: LessonOutline;
@@ -67,6 +58,7 @@ export function LessonEditor({
   videoAssetId: string | null;
   video: VideoAsset | null;
   resources: Resource[];
+  base?: StaffBase;
 }) {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -92,7 +84,7 @@ export function LessonEditor({
       showToast("Đã lưu bài học", "success");
       router.refresh();
     } catch (caught) {
-      setError(messageOf(caught));
+      setError(errorMessage(caught));
     } finally {
       setBusy(null);
     }
@@ -114,7 +106,7 @@ export function LessonEditor({
       showToast("Đã gắn video vào bài học", "success");
       router.refresh();
     } catch (caught) {
-      setError(messageOf(caught));
+      setError(errorMessage(caught));
     } finally {
       setBusy(null);
     }
@@ -171,7 +163,7 @@ export function LessonEditor({
       showToast("Đã thêm tài liệu", "success");
       router.refresh();
     } catch (caught) {
-      setError(messageOf(caught));
+      setError(errorMessage(caught));
     } finally {
       setBusy(null);
       if (fileInput.current) fileInput.current.value = "";
@@ -219,7 +211,8 @@ export function LessonEditor({
           <textarea
             id="content"
             name="content"
-            className="control min-h-64 font-mono text-sm"
+            rows={12}
+            className="control font-mono text-sm"
             maxLength={50000}
             defaultValue={content ?? ""}
           />
@@ -232,19 +225,19 @@ export function LessonEditor({
             defaultChecked={lesson.isPreview}
             className="size-5 accent-primary-strong"
           />
-          <span className="font-semibold">Cho học thử</span>
+          <span className="font-semibold">Cho phép học thử</span>
           <span className="text-sm text-muted-foreground">
             Bài học thử mở cho mọi tài khoản đã đăng nhập.
           </span>
         </label>
 
-        <div className="sticky bottom-0 -mx-4 flex min-h-16 items-center gap-3 border-t border-border bg-card px-4 py-3">
+        <div className="sticky bottom-0 -mx-4 grid gap-3 border-t border-border bg-card px-4 py-3 sm:grid-cols-2 sm:gap-6">
           <Button type="submit" loading={busy === "save"}>
             Lưu bài học
           </Button>
           <a
-            href={`/admin/courses/${course.id}/curriculum`}
-            className={buttonClass("ghost")}
+            href={`${base}/courses/${course.id}/curriculum`}
+            className={buttonClass("outline")}
           >
             Về chương trình học
           </a>
@@ -253,7 +246,7 @@ export function LessonEditor({
 
       <aside className="grid h-fit content-start gap-6">
         <section className="panel grid gap-3 p-5">
-          <h2 className="text-xl font-semibold">Video</h2>
+          <h2 className="text-xl font-semibold">Video bài học</h2>
           {type === "ARTICLE" ? (
             <p className="text-sm text-muted-foreground">
               Bài đọc không gắn video. Thời lượng luôn là 0.
@@ -274,7 +267,7 @@ export function LessonEditor({
                 onClick={refreshVideo}
               >
                 <RefreshCw aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                Kiểm tra lại trạng thái
+                Kiểm tra video
               </Button>
             </>
           ) : (
@@ -305,7 +298,7 @@ export function LessonEditor({
         </section>
 
         <section className="panel grid gap-3 p-5">
-          <h2 className="text-xl font-semibold">Tài liệu</h2>
+          <h2 className="text-xl font-semibold">Tài liệu đính kèm</h2>
           {resources.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Chưa có tài liệu nào.
@@ -324,20 +317,24 @@ export function LessonEditor({
                   <span className="text-muted-foreground">
                     {formatNumber(Math.round(resource.sizeBytes / 1024))} KB
                   </span>
-                  <button
-                    type="button"
-                    className={buttonClass("ghost", "sm")}
-                    onClick={async () => {
+                  <ConfirmDialog
+                    title="Xóa tài liệu"
+                    description={`Xóa tài liệu "${resource.filename}" khỏi bài học? Học viên sẽ không tải được nữa.`}
+                    confirmLabel="Xóa tài liệu"
+                    onConfirm={async () => {
                       await apiFetch(`/admin/resources/${resource.id}`, {
                         method: "DELETE",
                       });
                       showToast("Đã xóa tài liệu", "success");
                       router.refresh();
                     }}
-                  >
-                    <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
-                    <span className="sr-only">Xóa {resource.filename}</span>
-                  </button>
+                    trigger={
+                      <button type="button" className={buttonClass("ghost", "sm", "min-w-11")}>
+                        <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
+                        <span className="sr-only">Xóa {resource.filename}</span>
+                      </button>
+                    }
+                  />
                 </li>
               ))}
             </ul>
@@ -358,7 +355,7 @@ export function LessonEditor({
             className={buttonClass("outline", "md", "w-fit cursor-pointer")}
           >
             <Paperclip aria-hidden="true" className="size-4" strokeWidth={1.75} />
-            Thêm tài liệu
+            Tải tài liệu lên
           </label>
           <p className="text-sm text-muted-foreground">
             PDF, ZIP, PNG, JPEG hoặc TXT.

@@ -8,7 +8,7 @@ Tài liệu là đầu vào cho hai thứ: file thiết kế `design/elearning.p
 
 | Ràng buộc | Ảnh hưởng giao diện |
 |---|---|
-| Catalog theo hình dáng Udemy nhưng kinh tế một chủ sở hữu | Có tìm kiếm, danh mục, bộ lọc, card có rating và số học viên. Không có trang giảng viên, không có so sánh giảng viên, không có chia doanh thu |
+| Catalog theo hình dáng Udemy nhưng kinh tế một chủ sở hữu | Có tìm kiếm, danh mục, bộ lọc, card có rating và số học viên. Không có trang hồ sơ giảng viên công khai (giảng viên soạn khóa ở khu vực `/instructor`), không có so sánh giảng viên, không có chia doanh thu |
 | Thanh toán dựng sau cùng | Mọi màn hình checkout được thiết kế nhưng không dựng ở vòng đầu. Cờ `NEXT_PUBLIC_CHECKOUT_ENABLED` quyết định CTA trên trang chi tiết khóa học |
 | Seam Enrollment tồn tại từ ngày đầu | `/my-courses` và `/learn/**` chỉ phụ thuộc Enrollment, không phụ thuộc Purchase. Cách duy nhất có Enrollment ở vòng đầu là admin cấp thủ công |
 | Demo-first, không có tài khoản ngoài | Player phải phát được nguồn MP4 cục bộ; màn hình xác minh email phải hiển thị link ở chế độ demo; ảnh bìa upload vào thư mục cục bộ |
@@ -83,7 +83,7 @@ Cột "Vai trò" là quy tắc dùng, không phải mô tả. Vi phạm vai trò
 | `--color-primary-on-subtle` | `#0F766E` | Chữ trên `primary-subtle` |
 | `--color-secondary` | `#2DD4BF` | Trang trí không mang thông tin: gạch chân tiêu đề, đường viền minh họa, cột phụ trong biểu đồ. **Không bao giờ làm màu chữ trên nền sáng** — chỉ đạt 1.86:1 |
 | `--color-accent` | `#D97706` | CTA chuyển đổi (mua/đăng ký học), sao rating, nhấn giá |
-| `--color-accent-hover` | `#B45309` | Hover của `accent` |
+| `--color-accent-hover` | `#F59E0B` | Hover của `accent`. Sáng hơn chứ không tối hơn: chữ `accent-foreground` trên `#B45309` chỉ đạt 3.12:1, trên `#F59E0B` đạt 7.29:1 |
 | `--color-accent-foreground` | `#431407` | Chữ trên `accent`. Chữ tối, không phải trắng — trắng trên `#D97706` chỉ đạt 3.19:1 |
 | `--color-accent-subtle` | `#FEF3C7` | Nền badge giá khuyến mãi |
 | `--color-on-accent-subtle` | `#431407` | Chữ trên `accent-subtle` |
@@ -1123,7 +1123,7 @@ Sàn: WCAG 2.2 AA. Kiểm tra bàn phím trước, chuột sau.
 
 Số đo bằng công thức tương phản WCAG 2.x. Đây là bộ hồi quy — mọi lần đổi token phải chạy lại.
 
-Bộ hồi quy chạy được nằm ở **`design/contrast-check.py`**, và nó đo **đúng bộ token của §1.2 ở tài liệu này**, không phải một bộ nào khác. Chạy `py -3 design/contrast-check.py`: kết quả hiện tại **23/23 pass**, cộng ba cặp bị cấm ở bảng dưới được khẳng định là **vẫn trượt** ngưỡng (nếu một cặp bị cấm bỗng đạt ngưỡng thì ai đó đã đổi palette và script báo đỏ). Bảng 16 dòng dưới đây là phần tối thiểu; script còn đo thêm các cặp `on-*-subtle`, viền và ring.
+Bộ hồi quy chạy được nằm ở **`design/contrast-check.py`**, và nó đo **đúng bộ token của §1.2 ở tài liệu này**, không phải một bộ nào khác. Chạy `py -3 design/contrast-check.py`: kết quả hiện tại **37/37 pass** (T4.13 thêm 14 cặp gặp khi rà từng trang: hover của nút đặc, dòng bài đang học trong player, khung player tối, `foreground`/`muted`, dấu `*` bắt buộc), cộng sáu cặp bị cấm (ba ở bảng dưới, ba cặp đã sửa ở T4.13) được khẳng định là **vẫn trượt** ngưỡng (nếu một cặp bị cấm bỗng đạt ngưỡng thì ai đó đã đổi palette và script báo đỏ). Bảng 16 dòng dưới đây là phần tối thiểu; script còn đo thêm các cặp `on-*-subtle`, viền và ring.
 
 | Cặp | Đo được | Ngưỡng | Kết quả |
 |---|---|---|---|

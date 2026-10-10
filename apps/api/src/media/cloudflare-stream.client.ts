@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable } from '@nestjs/common';
 import { createSign } from 'node:crypto';
 import { config } from '../config.js';
 import type {
@@ -11,20 +11,63 @@ const API = 'https://api.cloudflare.com/client/v4';
 
 @Injectable()
 export class CloudflareStreamClient implements StreamClient {
-  async getStatus(uid: string): Promise<VideoStatus> {
+  getStatus(uid: string): Promise<VideoStatus> {
+    return this.video(uid);
+  }
+
+  /**
+   * By default a Stream video plays for anyone holding its uid — and the uid
+   * is readable in every signed token's `sub`. Edit-video answers with the
+   * video, so this one call both locks it and reports its status.
+   */
+  register(uid: string): Promise<VideoStatus> {
+    return this.video(uid, { uid, requireSignedURLs: true });
+  }
+
+  /** GET the video, or POST `edit` to it; both answer with the video. */
+  private async video(
+    uid: string,
+    edit?: { uid: string; requireSignedURLs: true },
+  ): Promise<VideoStatus> {
     const response = await fetch(
-      `${API}/accounts/${config.cloudflareAccountId}/stream/${uid}`,
+      `${API}/accounts/${config.cloudflareAccountId}/stream/${encodeURIComponent(uid)}`,
       {
+        method: edit ? 'POST' : 'GET',
         headers: {
           authorization: `Bearer ${config.cloudflareStreamApiToken}`,
+          ...(edit ? { 'content-type': 'application/json' } : {}),
         },
+        body: edit ? JSON.stringify(edit) : undefined,
         signal: AbortSignal.timeout(10_000),
       },
     );
-    if (!response.ok) return { ready: false, durationSeconds: 0 };
+    // Deleted, or a uid this account never had: it will not turn ready.
+    if (response.status === 404) {
+      return { ready: false, durationSeconds: 0, errored: true };
+    }
+    // A bad token or an outage is not "still encoding": say so.
+    if (!response.ok) {
+      throw new BadGatewayException(
+        `Cloudflare Stream answered ${response.status}`,
+      );
+    }
     const body = (await response.json()) as {
-      result?: { readyToStream?: boolean; duration?: number };
+      result?: {
+        readyToStream?: boolean;
+        duration?: number;
+        requireSignedURLs?: boolean;
+        status?: { state?: string };
+      };
     };
+    // Never let a video through registration that would still play unsigned.
+    if (edit && body.result?.requireSignedURLs !== true) {
+      throw new BadGatewayException(
+        'Cloudflare Stream did not confirm requireSignedURLs',
+      );
+    }
+    if (body.result?.status?.state === 'error') {
+      return { ready: false, durationSeconds: 0, errored: true };
+    }
     return {
       ready: body.result?.readyToStream === true,
       durationSeconds: Math.max(0, Math.round(body.result?.duration ?? 0)),

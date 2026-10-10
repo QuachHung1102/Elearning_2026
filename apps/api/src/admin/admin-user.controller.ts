@@ -23,6 +23,7 @@ import { AdminGuard } from '../auth/admin.guard.js';
 import { AuthRateLimitGuard } from '../auth/auth-rate-limit.guard.js';
 import { AdminMutationRateLimit } from '../auth/rate-limit.decorator.js';
 import { csv, PageQuery, trim } from '../catalog/course.dto.js';
+import { ROW_SELECT, toRow } from '../checkout/purchase.service.js';
 import { ERROR_CODE, appError } from '../common/error-codes.js';
 import { paginated, resolvePage } from '../common/pagination.js';
 import { ADMIN_ENROLLMENT_SELECT } from '../enrollment/enrollment.service.js';
@@ -78,6 +79,14 @@ export class UpdateUserStatusDto {
   status: UserStatus;
 }
 
+/** ADMIN is seed-only (DATA_MODEL.md §User); the API never mints one. */
+const ASSIGNABLE_ROLES = [UserRole.STUDENT, UserRole.INSTRUCTOR];
+
+export class UpdateUserRoleDto {
+  @IsIn(ASSIGNABLE_ROLES)
+  role: UserRole;
+}
+
 const uuid = () => new ParseUUIDPipe({ version: '4' });
 
 /**
@@ -96,6 +105,8 @@ function adminUserSelect(now: Date) {
     _count: {
       select: {
         enrollments: { where: { status: EnrollmentStatus.ACTIVE } },
+        // Orders that were paid, refunded ones included: "how often did they buy".
+        purchases: { where: { paidAt: { not: null } } },
         sessions: { where: { revokedAt: null, expiresAt: { gt: now } } },
       },
     },
@@ -110,8 +121,7 @@ function toAdminUserRow({ _count, ...user }: AdminUserRecord) {
   return {
     ...user,
     enrollmentCount: _count.enrollments,
-    // Purchases arrive with checkout (phase 4); the key keeps the shape fixed.
-    purchaseCount: 0,
+    purchaseCount: _count.purchases,
     activeSessionCount: _count.sessions,
   };
 }
@@ -170,7 +180,12 @@ export class AdminUserController {
       select: ADMIN_ENROLLMENT_SELECT,
       orderBy: [{ grantedAt: 'desc' }, { id: 'asc' }],
     });
-    return { user, enrollments, purchases: [] };
+    const purchases = await this.prisma.purchase.findMany({
+      where: { userId: id },
+      select: ROW_SELECT,
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+    });
+    return { user, enrollments, purchases: purchases.map(toRow) };
   }
 
   /**
@@ -254,6 +269,83 @@ export class AdminUserController {
       }
     });
 
+    return { user: await this.findRow(id) };
+  }
+
+  @Patch(':id/role')
+  @AdminMutationRateLimit()
+  async updateRole(
+    @Param('id', uuid()) rawId: string,
+    @Body() input: UpdateUserRoleDto,
+    @AuditActor() actor: AuditActorContext,
+  ) {
+    const id = rawId.toLowerCase();
+    if (id === actor.actorId) {
+      throw appError(
+        HttpStatus.CONFLICT,
+        ERROR_CODE.SELF_ACTION_FORBIDDEN,
+        'An admin cannot change their own role',
+      );
+    }
+    await this.prisma.$transaction(async (tx) => {
+      // Every admin row is locked before anything is read, so two admins
+      // demoting each other cannot both pass: whoever locks second finds the
+      // acting admin already demoted and is refused like any non-admin. The
+      // site can never be left without one.
+      await tx.$queryRaw`SELECT id FROM users WHERE role = 'ADMIN' FOR UPDATE`;
+      const acting = actor.actorId
+        ? await tx.user.findUnique({ where: { id: actor.actorId }, select: { role: true } })
+        : null;
+      if (acting?.role !== UserRole.ADMIN) notFound();
+      const current = await tx.user.findUnique({ where: { id }, select: { role: true } });
+      if (!current) notFound();
+      if (current.role === input.role) return;
+      const { count } = await tx.user.updateMany({
+        where: { id, role: current.role },
+        data: { role: input.role },
+      });
+      if (count === 0) return; // lost a race to another admin; their row is the audit
+      // The ids go into the audit row: once released there is no owner left to
+      // read them from, and an accidental demotion is undone by reassigning them.
+      let releasedCourseIds: string[] = [];
+      let releasedVideoAssetIds: string[] = [];
+      if (current.role === UserRole.INSTRUCTOR && input.role !== UserRole.INSTRUCTOR) {
+        const owned = await tx.course.findMany({
+          where: { instructorId: id },
+          select: { id: true },
+        });
+        await tx.course.updateMany({
+          where: { instructorId: id },
+          data: { instructorId: null },
+        });
+        releasedCourseIds = owned.map((course) => course.id);
+        // Locked last (users → courses → video_assets). No explicit lock: no
+        // path locks a video asset and then a course or user row, and the
+        // UPDATE's own row locks are enough.
+        const videos = await tx.videoAsset.updateManyAndReturn({
+          where: { instructorId: id },
+          data: { instructorId: null },
+          select: { id: true },
+        });
+        releasedVideoAssetIds = videos.map((video) => video.id);
+      }
+      await this.audit.record(
+        {
+          ...actor,
+          action: 'user.role_changed',
+          entityType: 'USER',
+          entityId: id,
+          metadata: {
+            fromRole: current.role,
+            toRole: input.role,
+            releasedCourses: releasedCourseIds.length,
+            releasedCourseIds,
+            releasedVideoAssetIds,
+          },
+        },
+        tx,
+      );
+    });
     return { user: await this.findRow(id) };
   }
 

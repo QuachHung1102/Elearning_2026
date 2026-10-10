@@ -25,12 +25,14 @@ export const AUDIT_ACTION_LABEL = {
   "lesson.reordered": "Sắp xếp bài học",
   "resource.created": "Thêm tài liệu",
   "resource.deleted": "Xóa tài liệu",
+  "video.registered": "Đăng ký video",
   "video.attached": "Gắn video",
   "video.detached": "Gỡ video",
   "enrollment.granted": "Cấp quyền học",
   "enrollment.revoked": "Thu hồi quyền học",
   "user.blocked": "Khóa tài khoản",
   "user.unblocked": "Mở khóa tài khoản",
+  "user.role_changed": "Đổi vai trò người dùng",
   "purchase.paid": "Đơn hàng đã thanh toán",
   "purchase.refund_requested": "Yêu cầu hoàn tiền",
   "purchase.refund_approved": "Duyệt hoàn tiền",
@@ -55,9 +57,6 @@ export const AUDIT_ENTITY_LABEL = {
   PAYMENT_ATTEMPT: "Lần thanh toán",
   VIDEO_ASSET: "Video",
 } as const;
-
-export type AuditAction = keyof typeof AUDIT_ACTION_LABEL;
-export type AuditEntityType = keyof typeof AUDIT_ENTITY_LABEL;
 
 /** `AuditLogRow` (API_CONTRACT.md §4). */
 export type AuditLogRow = {

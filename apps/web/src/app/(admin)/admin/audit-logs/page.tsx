@@ -53,7 +53,7 @@ export default async function AdminAuditLogsPage({
         Nhật ký
       </h1>
       <p className="text-muted-foreground">
-        Theo dõi thay đổi về tài khoản, nội dung và quyền học.
+        Theo dõi thay đổi về tài khoản, nội dung và quyền học (chỉ đọc).
       </p>
     </header>
   );
@@ -64,13 +64,13 @@ export default async function AdminAuditLogsPage({
       adminFetch<Paginated<AuditLogRow>>(
         `/admin/audit-logs${auditApiQuery(filters, firstValue(params.page))}`,
       ),
-      // ponytail: every actor today is an admin (or the system); learners join
-      // with refund requests in phase 4, and 100 admins is far past a
+      // ponytail: actors are admins and instructors (or the system); learners
+      // join with refund requests in phase 4, and 100 staff is far past a
       // one-owner site. Swap for an email search box when either changes.
       // Optional extra: if it fails the select keeps "Tất cả" and the applied
       // actor, and the log itself still shows (UX_PLAN.md §6.3).
       adminFetch<Paginated<AdminUserRow>>(
-        "/admin/users?role=ADMIN&sort=email:asc&pageSize=100",
+        "/admin/users?role=ADMIN,INSTRUCTOR&sort=email:asc&pageSize=100",
       ).catch((error: unknown) => {
         unstable_rethrow(error);
         console.error(error);
@@ -106,9 +106,9 @@ export default async function AdminAuditLogsPage({
       method="get"
       action="/admin/audit-logs"
       aria-label="Lọc nhật ký"
-      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:flex xl:flex-wrap xl:items-end"
+      className="grid grid-cols-2 items-end gap-3 lg:grid-cols-3 xl:grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(0,1fr))_auto]"
     >
-      <div className="grid min-w-0 gap-1">
+      <div className="col-span-2 grid min-w-0 gap-1 lg:col-span-1">
         <label className="text-sm font-medium" htmlFor="audit-actor">
           Người thực hiện
         </label>
@@ -186,11 +186,17 @@ export default async function AdminAuditLogsPage({
           className="control"
         />
       </div>
-      <div className="flex items-end">
-        <button id="audit-submit" type="submit" className={buttonClass("outline", "lg")}>
-          Lọc
-        </button>
-      </div>
+      <button
+        id="audit-submit"
+        type="submit"
+        className={buttonClass(
+          "outline",
+          "lg",
+          "col-span-2 lg:col-span-1 lg:justify-self-start",
+        )}
+      >
+        Lọc
+      </button>
     </form>
   );
 
@@ -329,8 +335,6 @@ export default async function AdminAuditLogsPage({
           />
         </>
       )}
-
-      <p className="text-sm text-muted-foreground">Nhật ký chỉ đọc.</p>
     </AdminListRegion>
   );
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { SectionOutline } from "@/lib/catalog";
 import { formatDuration, formatNumber } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
+import { PreviewDialog } from "./preview-dialog";
 
 function lessonLabel(durationSeconds: number): string {
   return durationSeconds === 0 ? "Bài đọc" : formatDuration(durationSeconds);
@@ -36,13 +37,23 @@ function LessonRow({
     </>
   );
 
+  const href = `/learn/${courseSlug}/${lesson.id}`;
+  const linkClass =
+    "flex min-h-11 items-center gap-3 rounded-md px-4 py-2 hover:bg-muted";
+
   return (
     <li>
-      {lesson.isPreview ? (
-        <Link
-          href={`/learn/${courseSlug}/${lesson.id}`}
-          className="flex min-h-11 items-center gap-3 rounded-md px-4 py-2 hover:bg-muted"
+      {lesson.isPreview && lesson.type === "VIDEO" ? (
+        <PreviewDialog
+          href={href}
+          lessonId={lesson.id}
+          title={lesson.title}
+          className={linkClass}
         >
+          {body}
+        </PreviewDialog>
+      ) : lesson.isPreview ? (
+        <Link href={href} className={linkClass}>
           {body}
         </Link>
       ) : (

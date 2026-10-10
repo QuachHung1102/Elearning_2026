@@ -191,7 +191,9 @@ export function LessonActions({
         }
         loading={pending === "toggle"}
         onClick={toggle}
-        className={compact ? "w-12 px-0" : "min-w-0 flex-1 lg:flex-none"}
+        // `px-0!`: the lg size's own padding came later in the CSS and
+        // squeezed the icon to a 6px sliver.
+        className={compact ? "w-12 px-0!" : "min-w-0 flex-1 lg:flex-none"}
       >
         {compact && pending === "toggle" ? null : completed ? (
           <CircleCheck aria-hidden="true" className="size-5 text-primary-text" strokeWidth={1.75} />
@@ -236,7 +238,9 @@ export function LessonActions({
           // One row: the primary CTA plus a square toggle while there is a
           // next lesson to go to, otherwise the full toggle. Both slots keep
           // their position, so the toggle is never remounted.
-          <div className="flex gap-2">
+          // min-w-0: the grid track must not grow to the CTA's full label,
+          // which pushed the toggle past the right edge at 375px.
+          <div className="flex min-w-0 gap-2">
             {advanceButton}
             {toggleButton(Boolean(advanceButton))}
           </div>

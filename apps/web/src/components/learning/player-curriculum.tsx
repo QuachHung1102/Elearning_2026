@@ -137,7 +137,8 @@ export function PlayerCurriculum({
                         <span className={isCurrent ? "font-semibold" : ""}>
                           {lesson.title}
                         </span>
-                        <span className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        {/* muted-foreground is 4.43:1 on the current row's tint (WCAG 1.4.3) */}
+                        <span className={`flex flex-wrap items-center gap-2 text-sm ${isCurrent ? "text-muted-foreground-strong" : "text-muted-foreground"}`}>
                           {lessonLength(lesson.durationSeconds)}
                           {lesson.isPreview && (
                             <Badge variant="info">Học thử</Badge>

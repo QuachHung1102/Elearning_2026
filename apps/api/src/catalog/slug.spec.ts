@@ -57,4 +57,16 @@ describe('uniqueSlug', () => {
   it('falls back to a usable base when the title has no ASCII left', async () => {
     await expect(uniqueSlug('«»', taken([]))).resolves.toBe('khoa-hoc');
   });
+
+  it('prefixes a title that slugifies below the pattern minimum', async () => {
+    await expect(uniqueSlug('C++', taken([]))).resolves.toBe('khoa-hoc-c');
+    await expect(uniqueSlug('Go', taken([]))).resolves.toBe('khoa-hoc-go');
+  });
+
+  it.each(['C++', 'Go', 'R', 'AI', '7', '«»'])(
+    'always returns a slug the route pattern accepts for "%s"',
+    async (title) => {
+      expect(SLUG_PATTERN.test(await uniqueSlug(title, taken([])))).toBe(true);
+    },
+  );
 });

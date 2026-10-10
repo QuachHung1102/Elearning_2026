@@ -2,17 +2,21 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, UserRole, UserStatus } from '../src/generated/prisma/client.js';
 import { hashPassword } from '../src/auth/password.js';
+import { isProductionEnv } from '../src/config/production.js';
+import { PG_SESSION_OPTIONS } from '../src/prisma/pg-session.js';
 import { seedCatalog } from './seed-catalog.js';
 import { seedLearning } from './seed-learning.js';
 
-if (process.env.NODE_ENV === 'production') {
+if (isProductionEnv(process.env)) {
   throw new Error('Refusing to seed a production database');
 }
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required');
 
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString, ...PG_SESSION_OPTIONS }),
+});
 const verifiedAt = new Date('2026-09-01T00:00:00.000Z');
 
 const users = [
@@ -42,7 +46,15 @@ const users = [
     password: 'Demo!Student123',
     displayName: 'Học viên ba',
     role: UserRole.STUDENT,
-    emailVerifiedAt: null,
+    // No enrollment: the demo buyer, and checkout needs a verified email.
+    emailVerifiedAt: verifiedAt,
+  },
+  {
+    email: 'instructor@elearning.local',
+    password: 'Demo!Instructor123',
+    displayName: 'Giảng viên demo',
+    role: UserRole.INSTRUCTOR,
+    emailVerifiedAt: verifiedAt,
   },
 ] as const;
 
@@ -76,6 +88,23 @@ try {
   process.stdout.write(`Seeded ${users.length} demo accounts\n`);
   await seedCatalog(prisma);
   await seedLearning(prisma);
+  const instructor = await prisma.user.findUniqueOrThrow({
+    where: { email: 'instructor@elearning.local' },
+    select: { id: true },
+  });
+  await prisma.course.updateMany({
+    where: {
+      slug: {
+        in: ['kien-truc-backend-voi-nestjs', 'lap-trinh-di-dong-voi-react-native'],
+      },
+    },
+    data: { instructorId: instructor.id },
+  });
+  // A video belongs to whoever registered it; the instructor's lessons' videos are theirs.
+  await prisma.videoAsset.updateMany({
+    where: { lesson: { section: { course: { instructorId: instructor.id } } } },
+    data: { instructorId: instructor.id },
+  });
 } finally {
   await prisma.$disconnect();
 }

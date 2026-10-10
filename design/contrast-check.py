@@ -80,6 +80,28 @@ PAIRS = [
     ("L  input / background",                 "#64748B", "#F8FAFC", 3.0),
     ("L  accent star icon / card",            "#D97706", "#FFFFFF", 3.0),
     ("L  primary / background",               "#0D9488", "#F8FAFC", 3.0),
+    # ---- light: pairs found rendered in the T4.13 sweep ----
+    ("L  foreground / muted",                 "#0F172A", "#F1F5F9", 4.5),
+    ("L  muted-foreground-strong / card",     "#475569", "#FFFFFF", 4.5),
+    ("L  destructive (required *) / background", "#DC2626", "#F8FAFC", 4.5),
+    ("L  foreground / current lesson row",
+     "#0F172A", "rgba(204,251,241,0.6) over #FFFFFF", 4.5),
+    ("L  muted-fg-strong / current lesson row",
+     "#475569", "rgba(204,251,241,0.6) over #FFFFFF", 4.5),
+    ("L  primary-text icon / current lesson row",
+     "#0F766E", "rgba(204,251,241,0.6) over #FFFFFF", 3.0),
+    # ---- light: hover states of solid buttons ----
+    ("L  primary-foreground / primary-hover", "#FFFFFF", "#115E59", 4.5),
+    ("L  accent-foreground / accent-hover",   "#431407", "#F59E0B", 4.5),
+    ("L  destructive-fg / destructive-hover", "#FFFFFF", "#B91C1C", 4.5),
+    # ---- video player chrome: bg-foreground (#0F172A) ----
+    ("P  primary-foreground / foreground",    "#FFFFFF", "#0F172A", 4.5),
+    ("P  white 80% / foreground",
+     "rgba(255,255,255,0.8) over #0F172A", "#0F172A", 4.5),
+    ("P  secondary (pressed, seek fill) / fg", "#2DD4BF", "#0F172A", 3.0),
+    ("P  ring / foreground",                  "#0D9488", "#0F172A", 3.0),
+    ("P  white 40% (seek track, select) / fg",
+     "rgba(255,255,255,0.4) over #0F172A", "#0F172A", 3.0),
 ]
 
 # Pairs UX_PLAN.md section 8.1 forbids. The script asserts they really do fail,
@@ -88,6 +110,12 @@ FORBIDDEN = [
     ("white on primary (use primary-strong)",       "#FFFFFF", "#0D9488", 4.5),
     ("white on accent (use accent-foreground)",     "#FFFFFF", "#D97706", 4.5),
     ("secondary as text on card (use primary-text)", "#2DD4BF", "#FFFFFF", 4.5),
+    # Fixed in T4.13; listed so they do not come back.
+    ("accent-foreground on #B45309 (old accent-hover)", "#431407", "#B45309", 4.5),
+    ("muted-foreground on current lesson row (use -strong)",
+     "#64748B", "rgba(204,251,241,0.6) over #FFFFFF", 4.5),
+    ("white 30% player border/track (use 40%)",
+     "rgba(255,255,255,0.3) over #0F172A", "#0F172A", 3.0),
 ]
 
 

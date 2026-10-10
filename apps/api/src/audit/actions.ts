@@ -55,6 +55,10 @@ export const AUDIT_VOCABULARY = {
     entityType: 'RESOURCE',
     keys: ['lessonId', 'filename'],
   },
+  'video.registered': {
+    entityType: 'VIDEO_ASSET',
+    keys: ['provider', 'externalId'],
+  },
   'video.attached': { entityType: 'LESSON', keys: ['videoAssetId'] },
   'video.detached': { entityType: 'LESSON', keys: ['videoAssetId'] },
   'enrollment.granted': {
@@ -67,6 +71,10 @@ export const AUDIT_VOCABULARY = {
   },
   'user.blocked': { entityType: 'USER', keys: ['reason', 'revokedSessions'] },
   'user.unblocked': { entityType: 'USER', keys: [] },
+  'user.role_changed': {
+    entityType: 'USER',
+    keys: ['fromRole', 'toRole', 'releasedCourses', 'releasedCourseIds', 'releasedVideoAssetIds'],
+  },
   'purchase.paid': {
     entityType: 'PURCHASE',
     keys: ['courseId', 'priceVnd', 'appTransId'],

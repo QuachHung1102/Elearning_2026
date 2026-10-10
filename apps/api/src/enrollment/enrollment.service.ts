@@ -22,7 +22,11 @@ export type AccessMode = 'ENROLLED' | 'ADMIN' | 'PREVIEW';
 
 export type EnrollmentChange = {
   enrollment: Enrollment;
-  /** `false` for an idempotent repeat: no write, no audit row, no count change. */
+  /**
+   * `false` for an idempotent repeat: no write, no audit row, no count change.
+   * `true` means a row was written and audited; the counter moves only when the
+   * row became ACTIVE (a manual grant flipped to a purchase does not).
+   */
   changed: boolean;
 };
 
@@ -32,6 +36,8 @@ export type GrantInput = {
   source: EnrollmentSource;
   /** The granting admin; `null` only for the payment path. */
   actorId: string | null;
+  /** The paid order; required for `PURCHASE`, ignored for `MANUAL_GRANT`. */
+  purchaseId?: string;
   ipAddress?: string | null;
   /** Goes into the audit metadata; there is no column for it. */
   note?: string;
@@ -59,16 +65,16 @@ export type RevokeInput = {
 export function resolveAccess(input: {
   courseStatus: CourseStatus;
   enrolled: boolean;
-  isAdmin: boolean;
+  canManage: boolean;
   isPreview: boolean;
 }): AccessMode | 'NOT_FOUND' | 'NOT_ENROLLED' {
   const visible =
     input.courseStatus === CourseStatus.PUBLISHED ||
-    input.isAdmin ||
+    input.canManage ||
     (input.courseStatus === CourseStatus.ARCHIVED && input.enrolled);
   if (!visible) return 'NOT_FOUND';
   if (input.enrolled) return 'ENROLLED';
-  if (input.isAdmin) return 'ADMIN';
+  if (input.canManage) return 'ADMIN';
   if (input.isPreview) return 'PREVIEW';
   return 'NOT_ENROLLED';
 }
@@ -139,18 +145,22 @@ export class EnrollmentService {
    * row and a conditional `updateMany` for REVOKED → ACTIVE. Both report
    * whether *this* call changed the row, so two concurrent grants can never
    * both increment the counter.
+   *
+   * Which columns a grant writes follows DATA_MODEL.md §Enrollment, "Bảng
+   * chuyển trạng thái": a purchase never overwrites `grantedById` (who once
+   * granted by hand is history), and a manual grant clears the order link.
    */
   async grant(input: GrantInput): Promise<EnrollmentChange> {
-    // DATA_MODEL.md §Enrollment: PURCHASE ⇒ purchaseId, MANUAL_GRANT ⇒
-    // grantedById. `purchaseId` arrives with add_payment, so until then no
-    // PURCHASE grant can satisfy its invariant.
-    if (input.source === EnrollmentSource.PURCHASE) {
+    const { userId, courseId, source, actorId, purchaseId } = input;
+    const bought = source === EnrollmentSource.PURCHASE;
+    // DATA_MODEL.md §Enrollment: PURCHASE ⇒ purchaseId, MANUAL_GRANT ⇒ grantedById.
+    if (bought && !purchaseId) {
       throw new Error('A PURCHASE enrollment requires a purchaseId');
     }
-    if (!input.actorId) {
+    if (!bought && !actorId) {
       throw new Error('A MANUAL_GRANT enrollment requires the granting admin');
     }
-    const { userId, courseId, source, actorId } = input;
+    const link = bought ? { purchaseId } : { purchaseId: null, grantedById: actorId };
 
     return this.inTransaction(input.tx, async (tx) => {
       const user = await tx.user.findUnique({
@@ -162,47 +172,70 @@ export class EnrollmentService {
       // DRAFT or no row). An unlocked read lets the grant land on a draft.
       const [course] = await tx.$queryRaw<{ status: CourseStatus }[]>`
         SELECT status FROM courses WHERE id = ${courseId}::uuid FOR NO KEY UPDATE`;
-      if (!user || !course || course.status === CourseStatus.DRAFT) {
+      // A paid order is exempt from the DRAFT rule: checkout sold it while
+      // PUBLISHED, and refusing now would roll back a payment already taken.
+      if (
+        !user ||
+        !course ||
+        (course.status === CourseStatus.DRAFT && !bought)
+      ) {
         notFound();
       }
 
       const where = { userId_courseId: { userId, courseId } };
       const existing = await tx.enrollment.findUnique({ where });
-      if (existing?.status === EnrollmentStatus.ACTIVE) {
+      // Already ACTIVE and there is nothing to change, except one thing: paying
+      // for a course an admin had granted moves the access onto the order.
+      const flips =
+        bought &&
+        existing?.status === EnrollmentStatus.ACTIVE &&
+        existing.source === EnrollmentSource.MANUAL_GRANT;
+      if (existing?.status === EnrollmentStatus.ACTIVE && !flips) {
         return { enrollment: existing, changed: false };
       }
 
-      const { count } = existing
-        ? // Reactivates the same row. `grantedAt` is never rewritten: it is
-          // the first day of access; later grants are in the audit log.
-          await tx.enrollment.updateMany({
-            where: { id: existing.id, status: EnrollmentStatus.REVOKED },
-            data: {
+      const { count } = flips
+        ? await tx.enrollment.updateMany({
+            where: {
+              id: existing.id,
               status: EnrollmentStatus.ACTIVE,
-              revokedAt: null,
-              source,
-              grantedById: actorId,
+              source: EnrollmentSource.MANUAL_GRANT,
             },
+            data: { source, purchaseId },
           })
-        : await tx.enrollment.createMany({
-            data: [
-              {
-                userId,
-                courseId,
-                source,
-                grantedById: actorId,
+        : existing
+          ? // Reactivates the same row. `grantedAt` is never rewritten: it is
+            // the first day of access; later grants are in the audit log.
+            await tx.enrollment.updateMany({
+              where: { id: existing.id, status: EnrollmentStatus.REVOKED },
+              data: {
                 status: EnrollmentStatus.ACTIVE,
+                revokedAt: null,
+                source,
+                ...link,
               },
-            ],
-            skipDuplicates: true,
-          });
+            })
+          : await tx.enrollment.createMany({
+              data: [
+                {
+                  userId,
+                  courseId,
+                  source,
+                  status: EnrollmentStatus.ACTIVE,
+                  ...link,
+                },
+              ],
+              skipDuplicates: true,
+            });
       const enrollment = await tx.enrollment.findUniqueOrThrow({ where });
       if (count === 0) return { enrollment, changed: false };
 
-      await tx.course.update({
-        where: { id: courseId },
-        data: { enrollmentCount: { increment: 1 } },
-      });
+      if (!flips) {
+        await tx.course.update({
+          where: { id: courseId },
+          data: { enrollmentCount: { increment: 1 } },
+        });
+      }
       await this.audit.record(
         {
           actorId,
@@ -210,7 +243,14 @@ export class EnrollmentService {
           action: 'enrollment.granted',
           entityType: 'ENROLLMENT',
           entityId: enrollment.id,
-          metadata: { courseId, userId, source, note: input.note ?? null },
+          metadata: {
+            courseId,
+            userId,
+            source,
+            note: input.note ?? null,
+            ...(bought ? { purchaseId } : {}),
+            ...(flips ? { previousSource: existing.source } : {}),
+          },
         },
         tx,
       );
@@ -221,14 +261,23 @@ export class EnrollmentService {
   /** ACTIVE → REVOKED. The row is never deleted; revoking twice is a no-op. */
   async revoke(input: RevokeInput): Promise<EnrollmentChange> {
     return this.inTransaction(input.tx, async (tx) => {
+      const found = await tx.enrollment.findUnique({
+        where: { id: input.enrollmentId },
+        select: { courseId: true },
+      });
+      if (!found) notFound();
+      // The course row is the mutex for its enrollments and counter, as in
+      // grant(). Without it, this revoke (row lock, then course lock) and a
+      // grant that flips the same row (course lock, then row lock) deadlock.
+      await tx.$queryRaw`
+        SELECT 1 FROM courses WHERE id = ${found.courseId}::uuid FOR NO KEY UPDATE`;
       const { count } = await tx.enrollment.updateMany({
         where: { id: input.enrollmentId, status: EnrollmentStatus.ACTIVE },
         data: { status: EnrollmentStatus.REVOKED, revokedAt: new Date() },
       });
-      const enrollment = await tx.enrollment.findUnique({
+      const enrollment = await tx.enrollment.findUniqueOrThrow({
         where: { id: input.enrollmentId },
       });
-      if (!enrollment) notFound();
       if (count === 0) return { enrollment, changed: false };
 
       await tx.course.update({
@@ -257,13 +306,15 @@ export class EnrollmentService {
 
   private async decide(
     viewer: Viewer,
-    course: { id: string; status: CourseStatus },
+    course: { id: string; status: CourseStatus; instructorId: string | null },
     isPreview: boolean,
   ): Promise<AccessMode> {
     const decision = resolveAccess({
       courseStatus: course.status,
       enrolled: await this.hasAccess(viewer.id, course.id),
-      isAdmin: viewer.role === UserRole.ADMIN,
+      canManage:
+        viewer.role === UserRole.ADMIN ||
+        (viewer.role === UserRole.INSTRUCTOR && course.instructorId === viewer.id),
       isPreview,
     });
     if (decision === 'NOT_FOUND') notFound();

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Pagination } from "@/components/catalog/pagination";
-import { StatusBadge } from "@/components/ui/badge";
+import { RoleBadge, StatusBadge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { adminFetch, type AdminUserRow } from "@/lib/admin";
@@ -10,12 +10,13 @@ import {
   valueList,
   type Paginated,
 } from "@/lib/catalog";
-import { formatDate, formatNumber, STATUS_LABEL } from "@/lib/format";
+import { formatDate, formatNumber, ROLE_LABEL, STATUS_LABEL } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Người dùng" };
 
-const KEYS = ["q", "status", "page"] as const;
+const KEYS = ["q", "status", "role", "page"] as const;
+const ROLES = Object.keys(ROLE_LABEL) as (keyof typeof ROLE_LABEL)[];
 
 export default async function AdminUsersPage({
   searchParams,
@@ -30,29 +31,35 @@ export default async function AdminUsersPage({
     valueList(params.status).find(
       (value) => value === "ACTIVE" || value === "BLOCKED",
     ) ?? "";
-  const query = { q, status, page: firstValue(params.page) };
+  const role = ROLES.find((value) => value === firstValue(params.role)) ?? "";
+  const query = { q, status, role, page: firstValue(params.page) };
   const users = await adminFetch<Paginated<AdminUserRow>>(
     `/admin/users${toQuery(query, KEYS)}`,
   );
-  const filtered = q !== "" || status !== "";
+  const filtered = q !== "" || status !== "" || role !== "";
 
   return (
     <div className="grid gap-6">
-      <h1 tabIndex={-1} className="text-3xl font-bold">
-        Người dùng
-      </h1>
+      <header className="grid gap-2">
+        <h1 tabIndex={-1} className="text-3xl font-bold">
+          Người dùng
+        </h1>
+        <p className="text-muted-foreground">
+          Mở hồ sơ một người để cấp quyền học, đổi vai trò hoặc khóa tài khoản.
+        </p>
+      </header>
 
       {/* Keyed on the applied filter: a client navigation such as "Xóa bộ
           lọc" reuses this form, and React ignores a new `defaultValue` on a
           mounted <select>, so it would keep and resubmit the old status. */}
       <form
-        key={`${status}:${q}`}
+        key={`${status}:${role}:${q}`}
         method="get"
         action="/admin/users"
         role="search"
-        className="flex flex-wrap items-end gap-3"
+        className="grid grid-cols-2 items-end gap-3 md:grid-cols-[minmax(0,24rem)_minmax(0,12rem)_minmax(0,12rem)_auto] md:justify-start"
       >
-        <div className="grid w-full gap-1 sm:max-w-sm">
+        <div className="col-span-2 grid min-w-0 gap-1 md:col-span-1">
           <label className="text-sm font-medium" htmlFor="users-q">
             Tìm theo tên hoặc email
           </label>
@@ -65,7 +72,7 @@ export default async function AdminUsersPage({
             maxLength={100}
           />
         </div>
-        <div className="grid gap-1">
+        <div className="grid min-w-0 gap-1">
           <label className="text-sm font-medium" htmlFor="users-status">
             Trạng thái
           </label>
@@ -80,7 +87,28 @@ export default async function AdminUsersPage({
             <option value="BLOCKED">{STATUS_LABEL.BLOCKED}</option>
           </select>
         </div>
-        <button type="submit" className={buttonClass("outline", "lg")}>
+        <div className="grid min-w-0 gap-1">
+          <label className="text-sm font-medium" htmlFor="users-role">
+            Vai trò
+          </label>
+          <select
+            id="users-role"
+            name="role"
+            defaultValue={role}
+            className="control"
+          >
+            <option value="">Mọi vai trò</option>
+            {ROLES.map((value) => (
+              <option key={value} value={value}>
+                {ROLE_LABEL[value]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="submit"
+          className={buttonClass("outline", "lg", "col-span-2 md:col-span-1")}
+        >
           Lọc
         </button>
       </form>
@@ -93,7 +121,7 @@ export default async function AdminUsersPage({
             description={`Danh sách chỉ có ${formatNumber(users.totalPages)} trang.`}
             action={
               <Link
-                href={`/admin/users${toQuery({ q, status }, KEYS)}`}
+                href={`/admin/users${toQuery({ q, status, role }, KEYS)}`}
                 className={buttonClass("outline")}
               >
                 Về trang 1
@@ -128,6 +156,7 @@ export default async function AdminUsersPage({
                 <tr>
                   <th className="px-4 py-3 font-semibold">Người dùng</th>
                   <th className="px-4 py-3 font-semibold">Email</th>
+                  <th className="px-4 py-3 font-semibold">Vai trò</th>
                   <th className="hidden px-4 py-3 font-semibold lg:table-cell">
                     Quyền học
                   </th>
@@ -153,6 +182,9 @@ export default async function AdminUsersPage({
                     <td className="px-4 py-2 [overflow-wrap:anywhere]">
                       {user.email}
                     </td>
+                    <td className="px-4 py-2">
+                      <RoleBadge role={user.role} />
+                    </td>
                     <td className="hidden px-4 py-2 tabular-nums lg:table-cell">
                       {formatNumber(user.enrollmentCount)} khóa
                     </td>
@@ -170,20 +202,20 @@ export default async function AdminUsersPage({
           <ul className="grid list-none gap-3 p-0 md:hidden">
             {users.items.map((user) => (
               <li key={user.id} className="panel grid gap-2 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <Link
-                    className="inline-flex min-h-11 min-w-0 items-center text-base font-semibold underline-offset-2 [overflow-wrap:anywhere] hover:underline"
-                    href={`/admin/users/${user.id}`}
-                  >
-                    {user.email}
-                  </Link>
-                  <span className="shrink-0 pt-3">
-                    <StatusBadge status={user.status} />
-                  </span>
+                {/* Full width for the email: beside a badge it broke mid-word. */}
+                <Link
+                  className="inline-flex min-h-11 min-w-0 items-center text-base font-semibold underline-offset-2 [overflow-wrap:anywhere] hover:underline"
+                  href={`/admin/users/${user.id}`}
+                >
+                  {user.email}
+                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <RoleBadge role={user.role} />
+                  <StatusBadge status={user.status} />
                 </div>
                 <dl className="grid gap-1 text-sm">
                   <div className="flex gap-1">
-                    <dt className="text-muted-foreground">Người dùng:</dt>
+                    <dt className="shrink-0 text-muted-foreground">Người dùng:</dt>
                     <dd className="min-w-0 [overflow-wrap:anywhere]">
                       {user.displayName}
                     </dd>
