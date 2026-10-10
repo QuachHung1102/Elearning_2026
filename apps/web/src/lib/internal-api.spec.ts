@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import { forwardVisitor, internalApiSecret } from "./internal-api";
 
 const SECRET = "s".repeat(32);
-const railway = { RAILWAY_ENVIRONMENT_ID: "env", INTERNAL_API_SECRET: SECRET };
+const proxied = { TRUST_X_REAL_IP: "true", INTERNAL_API_SECRET: SECRET };
 
 // T4.17: the API limits each visitor, not this server.
 describe("forwardVisitor", () => {
-  it("names the visitor Railway's edge saw, with the secret", () => {
+  it("names the visitor the reverse proxy saw, with the secret", () => {
     const headers = forwardVisitor(
       new Headers(),
       new Headers({ "x-real-ip": "203.0.113.7" }),
-      railway,
+      proxied,
     );
     expect(headers.get("x-visitor-ip")).toBe("203.0.113.7");
     expect(headers.get("x-internal-api-secret")).toBe(SECRET);
@@ -26,16 +26,16 @@ describe("forwardVisitor", () => {
     expect(headers.has("x-internal-api-secret")).toBe(false);
   });
 
-  it("overwrites a browser-sent visitor IP with the edge's", () => {
+  it("overwrites a browser-sent visitor IP with the proxy's", () => {
     const browser = new Headers({
       "x-visitor-ip": "198.51.100.1",
       "x-real-ip": "203.0.113.7",
     });
-    const headers = forwardVisitor(new Headers(browser), browser, railway);
+    const headers = forwardVisitor(new Headers(browser), browser, proxied);
     expect(headers.get("x-visitor-ip")).toBe("203.0.113.7");
   });
 
-  it("forwards nothing off Railway, where X-Real-IP is client-supplied", () => {
+  it("forwards nothing without a trusted proxy, where X-Real-IP is client-supplied", () => {
     const headers = forwardVisitor(
       new Headers(),
       new Headers({ "x-real-ip": "203.0.113.7" }),
@@ -51,9 +51,9 @@ describe("internalApiSecret", () => {
     expect(internalApiSecret({})).toBe("dev-internal-api-secret-not-a-secret");
   });
 
-  it("is required when Railway names the environment production", () => {
-    expect(() =>
-      internalApiSecret({ RAILWAY_ENVIRONMENT_NAME: "production" }),
-    ).toThrow(/INTERNAL_API_SECRET/);
+  it("is required once X-Real-IP is trusted, the only case it is sent", () => {
+    expect(() => internalApiSecret({ TRUST_X_REAL_IP: "true" })).toThrow(
+      /INTERNAL_API_SECRET/,
+    );
   });
 });

@@ -115,7 +115,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     checkoutQrTtlMinutes: integer(env, 'CHECKOUT_QR_TTL_MINUTES', 15),
     reconcileIntervalSeconds: integer(env, 'RECONCILE_INTERVAL', 60),
     reconcileMinAgeSeconds: integer(env, 'RECONCILE_MIN_AGE', 120),
-    railwayEnvironmentId: env.RAILWAY_ENVIRONMENT_ID ?? '',
+    // Set only behind a reverse proxy that overwrites `X-Real-IP` (`clientIp`).
+    trustXRealIp: env.TRUST_X_REAL_IP === 'true',
     internalApiSecret: internalApiSecret(env),
   });
 }

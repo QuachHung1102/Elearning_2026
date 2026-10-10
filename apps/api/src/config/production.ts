@@ -13,13 +13,7 @@ export function assertNoTestSettingsInProduction(env: NodeJS.ProcessEnv): void {
 /**
  * The one answer to "is this production?" for everything that must not be lax
  * there: the boot guard, the cookie `Secure` flag, HSTS and the seed.
- *
- * `NODE_ENV` alone is not enough: Railway can run a production environment with
- * it unset or set to development, so the environment name counts as well.
  */
 export function isProductionEnv(env: NodeJS.ProcessEnv): boolean {
-  return (
-    env.NODE_ENV === 'production' ||
-    env.RAILWAY_ENVIRONMENT_NAME === 'production'
-  );
+  return env.NODE_ENV === 'production';
 }

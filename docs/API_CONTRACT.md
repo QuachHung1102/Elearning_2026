@@ -70,7 +70,7 @@ Thứ tự guard hiện tại là `@UseGuards(CsrfGuard, AuthRateLimitGuard)`. H
 | Khoá đếm | `${clientIp}:${request.path}` — register và login có quota riêng |
 | Cửa sổ | `60_000` ms, cố định (fixed window) |
 | Giới hạn | `10` request / cửa sổ |
-| Nguồn IP | `clientIp` — xem mục 8.1 (IP khách do máy chủ Next chuyển kèm secret, rồi `X-Real-IP` khi chạy sau reverse proxy đã biết, rồi `request.ip`) |
+| Nguồn IP | `clientIp` — xem mục 8.1 (IP khách do máy chủ Next chuyển kèm secret, rồi `X-Real-IP` khi `TRUST_X_REAL_IP=true`, rồi `request.ip`) |
 | Bộ nhớ | `Map` trong process, xoá sạch khi vượt `10_000` khoá |
 | Khi vượt | Header `Retry-After` (giây) + `429` |
 
@@ -977,14 +977,14 @@ Response khi vượt: `429` với `code: RATE_LIMITED` và header `Retry-After` 
 Mọi request tới API từ máy chủ Next (render phía server, `HEAD` trong `proxy.ts`, rewrite `/api/:path*`) đều xuất phát từ **một** địa chỉ: service `web`. Nếu API đếm theo địa chỉ đó, mọi khách dùng chung một bucket và vài chục người xem cùng lúc là `429`. Vì vậy `clientIp` chọn theo thứ tự:
 
 1. `X-Visitor-Ip`, **chỉ khi** kèm `X-Internal-Api-Secret` khớp `INTERNAL_API_SECRET` (so sánh thời gian hằng trên SHA-256) và là IP hợp lệ. Sai, thiếu secret hay không phải IP thì bỏ qua cả header — không ai tự chọn được bucket.
-2. `X-Real-IP`, chỉ khi chạy sau reverse proxy đã biết (proxy đó ghi đè header này); cần cấu hình lại khi chọn server triển khai.
+2. `X-Real-IP`, chỉ khi `TRUST_X_REAL_IP=true`: biến này khẳng định reverse proxy trước service ghi đè header đó. Không đặt thì header do client tự viết và bị bỏ qua.
 3. `request.ip` (socket).
 
-Phía web (`src/lib/internal-api.ts`, `forwardVisitor`) luôn **xoá** hai header trên khỏi request của trình duyệt (rewrite sao chép mọi header của trình duyệt), rồi chỉ đặt lại khi chạy sau reverse proxy đã biết, lấy IP từ `X-Real-IP` mà proxy trước service `web` đã ghi. Không có proxy đáng tin thì không có header nào đáng tin, nên không chuyển gì: API đếm theo máy chủ Next như trước. Được dùng ở `serverFetch` (`lib/session.ts`), `HEAD` của catalog và nhánh `/api/*` trong `proxy.ts` (request header đặt ở proxy được chuyển tới đích rewrite). `publicFetch` (`lib/catalog.ts`) **không** dùng: header nằm trong khoá data cache của Next, nên gắn IP sẽ cache theo từng khách; các lần cache miss (một lần mỗi URL mỗi `revalidate`) vẫn tính vào bucket của máy chủ Next.
+Phía web (`src/lib/internal-api.ts`, `forwardVisitor`) luôn **xoá** hai header trên khỏi request của trình duyệt (rewrite sao chép mọi header của trình duyệt), rồi chỉ đặt lại khi `TRUST_X_REAL_IP=true`, lấy IP từ `X-Real-IP` mà proxy trước service `web` đã ghi. Không có proxy đáng tin thì không có header nào đáng tin, nên không chuyển gì: API đếm theo máy chủ Next như trước. Được dùng ở `serverFetch` (`lib/session.ts`), `HEAD` của catalog và nhánh `/api/*` trong `proxy.ts` (request header đặt ở proxy được chuyển tới đích rewrite). `publicFetch` (`lib/catalog.ts`) **không** dùng: header nằm trong khoá data cache của Next, nên gắn IP sẽ cache theo từng khách; các lần cache miss (một lần mỗi URL mỗi `revalidate`) vẫn tính vào bucket của máy chủ Next.
 
-`INTERNAL_API_SECRET` bắt buộc ở production trên cả hai service (API: boot guard, ≥ 32 byte; web: `next.config.ts` ở production — cách web nhận biết production cần cấu hình lại khi chọn server triển khai), ngoài production có giá trị mặc định cố định. Không bao giờ đặt tiền tố `NEXT_PUBLIC_`. Nó cũng là IP ghi vào audit log.
+`INTERNAL_API_SECRET` bắt buộc ở production trên cả hai service (API: boot guard khi `NODE_ENV=production`, ≥ 32 byte; web: `next.config.ts` khi `TRUST_X_REAL_IP=true`, tức đúng lúc secret được gửi đi), ngoài ra có giá trị mặc định cố định. Không bao giờ đặt tiền tố `NEXT_PUBLIC_`. Nó cũng là IP ghi vào audit log.
 
-Chưa chọn server triển khai. Khi chọn, phải xác nhận reverse proxy trước service ghi đè `X-Real-IP` bằng IP client (client không tự đặt được), rồi kiểm bằng log sau lần deploy đầu: gửi `X-Real-IP` giả tới web và xem audit log/`429` có theo IP thật không.
+Chưa chọn server triển khai. Khi chọn, trước khi đặt `TRUST_X_REAL_IP=true` cho cả hai service, phải xác nhận reverse proxy trước service ghi đè `X-Real-IP` bằng IP client (client không tự đặt được), rồi kiểm bằng log sau lần deploy đầu: gửi `X-Real-IP` giả tới web và xem audit log/`429` có theo IP thật không.
 
 ## 9. Điểm cần chủ sở hữu xác nhận
 

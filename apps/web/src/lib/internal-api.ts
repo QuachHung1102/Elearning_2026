@@ -10,8 +10,10 @@ const DEV_SECRET = "dev-internal-api-secret-not-a-secret";
 export function internalApiSecret(env: Env = process.env): string {
   const secret = env.INTERNAL_API_SECRET;
   if (secret) return secret;
-  if (env.RAILWAY_ENVIRONMENT_NAME === "production") {
-    throw new Error("INTERNAL_API_SECRET is required in production");
+  // The only case where the secret is sent: the fallback would not match a
+  // production API, and every visitor would silently share one bucket again.
+  if (env.TRUST_X_REAL_IP === "true") {
+    throw new Error("INTERNAL_API_SECRET is required with TRUST_X_REAL_IP");
   }
   return DEV_SECRET;
 }
@@ -30,9 +32,11 @@ export function forwardVisitor(
 ): Headers {
   target.delete("x-visitor-ip");
   target.delete("x-internal-api-secret");
-  // Railway's edge overwrites X-Real-IP; anywhere else the client wrote it.
-  // Nothing forwarded means the API limits this server, as before.
-  const ip = env.RAILWAY_ENVIRONMENT_ID ? incoming.get("x-real-ip") : null;
+  // TRUST_X_REAL_IP says a reverse proxy in front of this server overwrites
+  // X-Real-IP; anywhere else the client wrote it. Nothing forwarded means the
+  // API limits this server, as before.
+  const ip =
+    env.TRUST_X_REAL_IP === "true" ? incoming.get("x-real-ip") : null;
   if (ip) {
     target.set("x-visitor-ip", ip);
     target.set("x-internal-api-secret", internalApiSecret(env));
