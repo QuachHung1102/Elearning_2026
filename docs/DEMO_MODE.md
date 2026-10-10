@@ -25,7 +25,7 @@ Ba điểm cần nói rõ vì chúng đi khác kế hoạch gốc.
 |---|---|---|---|
 | Seam nhà cung cấp | “chưa tạo `PaymentProvider` hay `VideoProvider` generic. Chỉ có `ZaloPayClient` và `CloudflareStreamClient`; khi thực sự xuất hiện nhà cung cấp thứ hai mới trích interface” | Trích interface ngay, nhưng interface mang **hình dạng của đúng nhà cung cấp đó** | “Nhà cung cấp thứ hai” đã xuất hiện: nó là bản demo của chính nhà cung cấp đó. Điều kiện của kế hoạch đã thỏa. |
 | Thứ tự phase | Thanh toán ở phase 3, Trải nghiệm học ở phase 4 | Thanh toán làm **cuối cùng** | Quyết định của chủ sở hữu. Seam `Enrollment` có từ ngày đầu nên phase học chạy được trước khi có checkout. |
-| Hạ tầng ngày đầu | Railway + Cloudflare Stream + R2 + dịch vụ email từ đầu | Chỉ PostgreSQL local | Chưa có tài khoản nào. Mở rộng, không mâu thuẫn. |
+| Hạ tầng ngày đầu | Server triển khai + Cloudflare Stream + R2 + dịch vụ email từ đầu | Chỉ PostgreSQL local | Chưa có tài khoản nào. Mở rộng, không mâu thuẫn. |
 
 Điều kế hoạch thật sự cấm là **lớp trừu tượng generic**: một `PaymentProvider` chung cho ZaloPay/MoMo/Stripe, một registry, một factory chọn plugin. Cái đó vẫn không được xây. Xem phần dưới.
 
@@ -643,7 +643,7 @@ const day = new Intl.DateTimeFormat('en-CA', {
 const appTransId = `${day}_${randomBytes(4).toString('hex')}`;
 ```
 
-**Không** dùng `new Date().toISOString()` để lấy `yymmdd`. Server chạy UTC trên Railway; đã kiểm bằng lệnh: lúc `2026-09-01T20:00:00Z`, UTC cho `260901` còn giờ Việt Nam cho `260902`. Nghĩa là từ 00:00 tới 07:00 giờ Việt Nam, tiền tố ngày sẽ là ngày hôm trước và đối soát tìm nhầm ngăn. Thêm `TZ="Asia/Ho_Chi_Minh"` vào khối lõi của `.env.example` (mục 7) cũng không đủ để bỏ `timeZone` tường minh ở đây — biến `TZ` là thứ dễ mất khi đổi nền tảng, còn dòng trên thì không.
+**Không** dùng `new Date().toISOString()` để lấy `yymmdd`. Server triển khai thường chạy UTC; đã kiểm bằng lệnh: lúc `2026-09-01T20:00:00Z`, UTC cho `260901` còn giờ Việt Nam cho `260902`. Nghĩa là từ 00:00 tới 07:00 giờ Việt Nam, tiền tố ngày sẽ là ngày hôm trước và đối soát tìm nhầm ngăn. Thêm `TZ="Asia/Ho_Chi_Minh"` vào khối lõi của `.env.example` (mục 7) cũng không đủ để bỏ `timeZone` tường minh ở đây — biến `TZ` là thứ dễ mất khi đổi nền tảng, còn dòng trên thì không.
 
 `randomBytes(4)` thay vì bộ đếm: một chủ sở hữu bán vài chục đơn mỗi ngày, xác suất trùng trong 4 tỉ giá trị là không đáng kể, và cột `unique` sẽ bắt nốt phần còn lại. Sequence trong PostgreSQL sẽ đúng hơn nhưng thêm một object schema để giải một bài toán chưa tồn tại.
 
@@ -796,14 +796,14 @@ Bốn chi tiết, mỗi cái sửa một lỗi cụ thể:
 
 - **Allowlist, không phải blacklist.** Bản trước lọc `(process.env[name] ?? 'demo') === 'demo'`. `??` chỉ bắt `null`/`undefined`, **không** bắt chuỗi rỗng — mà chính `.env.example` ở mục 7 dạy đúng thói quen viết `VAR=""` cho mọi biến `[PROD]`. Đã chạy thử: với `NODE_ENV=production` và bốn biến driver đặt bằng `""`, danh sách `demo` ra rỗng, kiểm tra **PASS**, app boot bình thường — trong khi mọi biểu thức `useClass` vẫn chọn lớp demo vì `'' !== 'cloudflare'`. Production khởi động thành công với mp4 không bảo vệ trong `public/`, storage ký bằng HMAC tự chế, mailer ghi ra đĩa thay vì gửi, và `DemoZaloPayClient` cấp `Enrollment` mà không có tiền. Allowlist đảo ngược mặc định: thứ gì không **đúng bằng** chuỗi khiến `useClass` chọn lớp thật thì nó là demo. Một nguồn sự thật, cùng một hằng số.
 - **Kiểm giá trị hợp lệ ở mọi môi trường.** `VIDEO_DRIVER=cloudfare` (gõ thiếu chữ) hay `STORAGE_DRIVER=true` trước đây lặng lẽ chọn lớp demo ở local, và developer ngồi debug vì sao Cloudflare không được gọi. Tài liệu này lập luận rằng cấu hình sai phải là "lỗi ồn ào, không phải im lặng" — `assertDriverValuesAreKnown` là chỗ áp dụng nó cho trường hợp xảy ra hằng ngày, chứ không chỉ cho production.
-- **`RAILWAY_ENVIRONMENT_NAME === 'production'`, không phải `Boolean(RAILWAY_ENVIRONMENT_ID)`.** Railway đặt `RAILWAY_ENVIRONMENT_ID` trong **mọi** environment. Dùng nó nghĩa là service staging/sandbox trên Railway không boot nổi với `MAIL_DRIVER=demo` — trong khi PROJECT_PLAN.md §Triển khai đòi một environment ZaloPay sandbox riêng, và mục 1 tách bốn biến độc lập **chính vì** phải lên staging từng phần. Kiểm theo tên environment giữ nguyên ý định đó. (`auth-rate-limit.guard.ts` vẫn dùng `RAILWAY_ENVIRONMENT_ID` và vẫn đúng: ở đó câu hỏi là "có edge proxy Railway phía trước không", và câu trả lời đúng là "có, ở mọi environment".)
+- **`RAILWAY_ENVIRONMENT_NAME === 'production'`, không phải `Boolean(RAILWAY_ENVIRONMENT_ID)`.** Railway đặt `RAILWAY_ENVIRONMENT_ID` trong **mọi** environment. Dùng nó nghĩa là service staging/sandbox trên Railway không boot nổi với `MAIL_DRIVER=demo` — trong khi PROJECT_PLAN.md §Triển khai đòi một environment ZaloPay sandbox riêng, và mục 1 tách bốn biến độc lập **chính vì** phải lên staging từng phần. Kiểm theo tên environment giữ nguyên ý định đó. (`auth-rate-limit.guard.ts` vẫn dùng `RAILWAY_ENVIRONMENT_ID` và vẫn đúng: ở đó câu hỏi là "có edge proxy Railway phía trước không", và câu trả lời đúng là "có, ở mọi environment".) Dự án không còn chọn Railway làm nơi triển khai: ngoài Railway hai biến này không tồn tại nên nhánh kiểm này không có tác dụng, production chỉ được nhận biết qua `NODE_ENV=production`.
 - **Side-effect import, không phải lời gọi hàm trong `bootstrap()`.** `apps/api/package.json` khai `"type": "module"`; toàn bộ đồ thị import được evaluate xong **trước** câu lệnh đầu tiên trong thân `main.ts`. Đã chạy repro: với `import { AppModule }` đứng trước, thứ tự thực tế là `app.module` evaluate (mọi biểu thức `useClass` ở mục 1 chạy ở đây, mảng `controllers` chốt, quyết định import `DevModule` chốt, và `auth.module.ts` có cơ hội ném `AUTH_JWT_SECRET must contain at least 32 bytes` trước — che mất thông báo lỗi driver) rồi mới tới lời gọi kiểm tra. Đặt `import './config/drivers.js'` làm **dòng import đầu tiên** thì ESM evaluate nó trước, đúng theo thứ tự khai báo import.
 
 Điều được đảm bảo là **không provider nào được instantiate và không kết nối nào được mở** — không phải "không module nào được evaluate". Evaluate một file module Nest chỉ chạy decorator và tính metadata; nó không mở socket, không chạm database. Ranh giới đó là ranh giới thật sự quan trọng.
 
-### Sandbox trên Railway
+### Môi trường sandbox
 
-Environment sandbox được phép chạy `MAIL_DRIVER=demo` và `STORAGE_DRIVER=demo` trong khi `PAYMENT_DRIVER=zalopay` trỏ `ZALOPAY_ENDPOINT` vào `https://sb-openapi.zalopay.vn/v2`. Đó chính là hình dạng của giai đoạn chạy bộ test QC của ZaloPay: thanh toán thật với sandbox credentials, mọi thứ còn lại vẫn demo. Chỉ environment đặt tên `production` mới bị chặn.
+Môi trường sandbox được phép chạy `MAIL_DRIVER=demo` và `STORAGE_DRIVER=demo` trong khi `PAYMENT_DRIVER=zalopay` trỏ `ZALOPAY_ENDPOINT` vào `https://sb-openapi.zalopay.vn/v2`. Đó chính là hình dạng của giai đoạn chạy bộ test QC của ZaloPay: thanh toán thật với sandbox credentials, mọi thứ còn lại vẫn demo. Chỉ môi trường được nhận là production mới bị chặn; cách phân biệt sandbox với production cần quyết lại khi chọn server triển khai.
 
 ### Kiểm chứng
 

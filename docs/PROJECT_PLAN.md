@@ -10,7 +10,7 @@ Chọn:
 - **ZaloPay Gateway** với QR động, callback và truy vấn đối soát.
 - **Cloudflare Stream** để lưu trữ, mã hóa và phát video.
 - **Cloudflare R2** cho ảnh bìa (prefix công khai) và cho PDF, tài liệu tải xuống (private bucket + presigned URL).
-- Triển khai ban đầu trên **Railway** dưới dạng modular monolith, chưa dùng microservice.
+- Triển khai ban đầu trên **server công ty (chưa chọn)** dưới dạng modular monolith, chưa dùng microservice; hiện chạy local.
 
 Giả định ban đầu: mỗi lần mua một khóa học, thanh toán VND một lần và được học lâu dài; chưa có subscription, giỏ hàng, nhiều giảng viên hoặc chia doanh thu.
 
@@ -294,7 +294,7 @@ Theo quyết định triển khai hiện tại, dùng JWT trong cookie kết h�
 - Mỗi lần đăng ký hoặc đăng nhập tạo session mới; đăng xuất đánh dấu session hiện tại đã bị thu hồi.
 - Thu hồi toàn bộ session khi đổi mật khẩu hoặc khóa tài khoản.
 - Dùng double-submit CSRF token: lấy token từ `GET /api/v1/auth/csrf`, gửi lại bằng header `X-CSRF-Token` và cookie tương ứng cho các thao tác thay đổi dữ liệu.
-- Giới hạn request đăng ký/đăng nhập theo IP; trên Railway dùng `X-Real-IP` do edge cung cấp và chuyển bộ đếm sang shared storage trước khi chạy nhiều API instance.
+- Giới hạn request đăng ký/đăng nhập theo IP; chỉ tin `X-Real-IP` khi chạy sau reverse proxy đã biết (cần cấu hình lại khi chọn server triển khai) và chuyển bộ đếm sang shared storage trước khi chạy nhiều API instance.
 - Tài khoản admin được tạo bằng seed/CLI có kiểm soát; người đăng ký đầu tiên không tự động thành admin.
 
 Mỗi lần phát video:
@@ -308,25 +308,25 @@ Frontend không được nhận Cloudflare API token hoặc tự quyết định
 
 ## Triển khai
 
-Khuyến nghị ban đầu:
+Hiện chạy local; nơi triển khai là server công ty (chưa chọn). Thành phần cần có:
 
-- Railway service `web`: Next.js.
-- Railway service `api`: NestJS.
-- Railway PostgreSQL.
+- Service `web`: Next.js.
+- Service `api`: NestJS.
+- PostgreSQL.
 - Cloudflare Stream và R2.
 - Cloudflare DNS/domain.
 - Một dịch vụ transactional email qua SMTP/API.
 
 Dùng rewrite `/api/*` của Next.js sang NestJS để trình duyệt thấy cùng origin, giảm vấn đề CORS và cookie. Callback ZaloPay dùng `https://your-domain.com/api/v1/payments/zalopay/callback`.
 
-Railway Hobby hiện có mức tối thiểu `$5/tháng`, phần đó được trừ vào tài nguyên sử dụng, và được mô tả cho personal projects/side hustles. [Railway Pricing](https://docs.railway.com/pricing) Không nên dùng Vercel Hobby cho website bán khóa học vì Vercel giới hạn gói Hobby cho mục đích phi thương mại. [Vercel Hobby](https://vercel.com/docs/plans/hobby)
+Không nên dùng Vercel Hobby cho website bán khóa học vì Vercel giới hạn gói Hobby cho mục đích phi thương mại. [Vercel Hobby](https://vercel.com/docs/plans/hobby)
 
 Production cần:
 
 - Environment riêng cho local, ZaloPay sandbox và production.
 - Daily database backup cùng bản `pg_dump` ngoài project.
 - Thử restore thực tế trước khi mở bán.
-- Railway có volume backup, PITR và logical dump; tài liệu của họ cũng nhấn mạnh backup chưa từng restore là backup chưa được xác minh. [Railway PostgreSQL backup/restore](https://docs.railway.com/guides/postgres-backups-restores)
+- Backup chưa từng restore là backup chưa được xác minh.
 - Structured logs chứa request ID, purchase ID và appTransId nhưng không chứa secret/password/session token.
 - Health endpoint cho app và database.
 - Cảnh báo payment pending quá hạn, callback sai chữ ký, video lỗi và database gần đầy.

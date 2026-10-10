@@ -87,7 +87,7 @@ Sao lưu (định dạng custom, không kèm owner/quyền nên restore được
 ./apps/api/scripts/backup.ps1 -DatabaseUrl "<URL Postgres>"   # bỏ -DatabaseUrl thì dùng $env:DATABASE_URL
 ```
 
-Trên Railway, lấy `DATABASE_PUBLIC_URL` của service Postgres (URL nội bộ `*.railway.internal` không truy cập được từ máy local).
+Database nằm trên server khác thì dùng URL mà máy chạy script truy cập được, không phải URL chỉ dùng trong mạng nội bộ của server.
 
 Diễn tập khôi phục (A5.5) vào một database **trống** có tên chứa `test`/`scratch`/`restore`/`drill`/`tmp`:
 
@@ -98,9 +98,13 @@ Diễn tập khôi phục (A5.5) vào một database **trống** có tên chứa
 
 Script tự `pg_dump` nguồn (nếu không có `-DumpFile`), `pg_restore` vào đích, rồi kiểm tra `_prisma_migrations` so với `apps/api/prisma/migrations` (migration chưa có trong bản dump chỉ cảnh báo) và số dòng từng bảng so với nguồn. Nó từ chối đích trùng tên nguồn, đích đã có bảng, hoặc tên không giống DB nháp — `-Force` để bỏ qua (trùng cả host lẫn tên thì luôn từ chối). `-RunE2e` chạy e2e của API, vốn đọc `apps/api/.env.test`: sửa `DATABASE_URL` trong đó trỏ vào DB đích trước (e2e sẽ xóa dữ liệu và chạy `prisma migrate deploy`). Nguồn đang có người ghi thì số dòng có thể lệch; so trên bản sao chụp hoặc lúc ít truy cập.
 
-## Triển khai trên Railway
+## Triển khai
 
-Hai service `web` và `api` phải có **cùng** `INTERNAL_API_SECRET` (chuỗi ngẫu nhiên ≥ 32 byte, ví dụ `openssl rand -base64 48`; dùng shared variable của Railway). Máy chủ Next gửi nó kèm IP của khách trong mọi request tới API, để rate limit và audit log tính theo từng khách thay vì theo máy chủ Next (API_CONTRACT.md §8.1). Thiếu ở production thì API không boot và `web` không build/start; lệch giá trị thì mọi khách lại dùng chung một bucket. Không bao giờ đặt tên nó với tiền tố `NEXT_PUBLIC_`.
+Hiện dự án chạy local. **Chưa chọn server triển khai**; khi chọn, cần quyết reverse proxy nào được tin header IP: code chỉ tin `X-Real-IP` khi chạy sau reverse proxy đã biết, nên phải cấu hình lại cho server được chọn (API_CONTRACT.md §8.1).
+
+Hai service `web` và `api` phải có **cùng** `INTERNAL_API_SECRET` (chuỗi ngẫu nhiên ≥ 32 byte, ví dụ `openssl rand -base64 48`). Máy chủ Next gửi nó kèm IP của khách trong mọi request tới API, để rate limit và audit log tính theo từng khách thay vì theo máy chủ Next (API_CONTRACT.md §8.1). Thiếu ở production thì API không boot; lệch giá trị thì mọi khách lại dùng chung một bucket. Không bao giờ đặt tên nó với tiền tố `NEXT_PUBLIC_`.
+
+Production từ chối khởi động với driver demo (`docs/DEMO_MODE.md`): triển khai thật cần driver thật.
 
 `web` cần `CSP_MEDIA_ORIGINS` liệt kê mọi host ngoài site mà trình duyệt tải ảnh, video, HLS hoặc `PUT` tải lên tới; thiếu một host thì CSP chặn đúng thứ đó (ảnh bìa trống, "Không phát được video", tải lên lỗi). Ở production (`STORAGE_DRIVER=r2`, `VIDEO_DRIVER=cloudflare`) giá trị là đúng bốn origin, cách nhau bằng dấu cách, không wildcard, không path:
 
