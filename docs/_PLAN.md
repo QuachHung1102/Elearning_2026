@@ -92,7 +92,7 @@ tràn ngang, 0 vùng chạm dưới 44×44, console chỉ có 401 của `/auth/m
 **Chưa** so với khung `.pen` (Pencil không kết nối được) nên các trang giảng viên được dựng
 theo spec và mẫu admin; việc so khung ở T5.1/T5.2.
 
-Spec: `docs/superpowers/specs/2026-09-23-role-ui-redesign-design.md` §4–§6 (phần I) với sửa đổi
+Spec vai trò giảng viên (§4–§6, phần I) với sửa đổi
 Q2. Khung thiết kế: `design/PAGE_INVENTORY.md` (7 trang + 2 trạng thái rỗng + "Đổi vai trò").
 
 | ID | Việc | Cỡ | Sau | Kiểm tra (đã chạy) | Đóng | Trạng thái |
