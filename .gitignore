@@ -17,3 +17,16 @@ backups/
 .claude/worktrees/
 test-results/
 playwright-report/
+
+# AI tooling — never commit
+.claude/
+.serena/
+.superpowers/
+.impeccable/
+.codex/
+.cursor/
+.aider*
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+docs/superpowers/
