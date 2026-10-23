@@ -1,6 +1,5 @@
-import { deflateSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import {
   CourseLevel,
@@ -38,7 +37,6 @@ type CourseSeed = {
   status: CourseStatus;
   ratingAverage: string | null;
   ratingCount: number;
-  color: [number, number, number];
   /** Lessons per section; length is the section count. */
   lessonsPerSection: number[];
   /** The last lesson of the first N sections is an ARTICLE. */
@@ -61,7 +59,6 @@ const COURSES: CourseSeed[] = [
     status: CourseStatus.PUBLISHED,
     ratingAverage: '4.8',
     ratingCount: 312,
-    color: [13, 148, 136],
     lessonsPerSection: [5, 5, 5, 5, 4],
     articleSections: 3,
     previewSections: [1, 2],
@@ -85,7 +82,6 @@ const COURSES: CourseSeed[] = [
     status: CourseStatus.PUBLISHED,
     ratingAverage: '4.6',
     ratingCount: 128,
-    color: [15, 118, 110],
     lessonsPerSection: [4, 4, 4],
     articleSections: 2,
     previewSections: [1],
@@ -103,7 +99,6 @@ const COURSES: CourseSeed[] = [
     status: CourseStatus.PUBLISHED,
     ratingAverage: '4.7',
     ratingCount: 95,
-    color: [3, 105, 161],
     lessonsPerSection: [4, 4, 4],
     articleSections: 2,
     previewSections: [1],
@@ -121,7 +116,6 @@ const COURSES: CourseSeed[] = [
     status: CourseStatus.PUBLISHED,
     ratingAverage: '4.5',
     ratingCount: 64,
-    color: [217, 119, 6],
     lessonsPerSection: [4, 4, 4],
     articleSections: 2,
     previewSections: [1],
@@ -139,7 +133,6 @@ const COURSES: CourseSeed[] = [
     status: CourseStatus.DRAFT,
     ratingAverage: null,
     ratingCount: 0,
-    color: [71, 85, 105],
     lessonsPerSection: [2],
     articleSections: 0,
     previewSections: [],
@@ -157,7 +150,6 @@ const COURSES: CourseSeed[] = [
     status: CourseStatus.ARCHIVED,
     ratingAverage: '4.3',
     ratingCount: 41,
-    color: [124, 45, 18],
     lessonsPerSection: [3, 3],
     articleSections: 1,
     previewSections: [1],
@@ -211,61 +203,6 @@ function requirements(course: CourseSeed): string[] {
   ];
 }
 
-/**
- * Deterministic 16:9 solid-colour PNG so seeded courses have a real cover
- * behind a real object key. A published course with no cover would contradict
- * the publish gate the same seed data is meant to demonstrate.
- */
-function solidPng(width: number, height: number, rgb: [number, number, number]) {
-  const raw = Buffer.alloc(height * (1 + width * 3));
-  for (let y = 0; y < height; y += 1) {
-    const row = y * (1 + width * 3);
-    raw[row] = 0;
-    for (let x = 0; x < width; x += 1) {
-      const shade = 1 - (y / height) * 0.35;
-      raw[row + 1 + x * 3] = Math.round(rgb[0] * shade);
-      raw[row + 2 + x * 3] = Math.round(rgb[1] * shade);
-      raw[row + 3 + x * 3] = Math.round(rgb[2] * shade);
-    }
-  }
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 2;
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw, { level: 9 })),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
-
-function chunk(type: string, data: Buffer): Buffer {
-  const length = Buffer.alloc(4);
-  length.writeUInt32BE(data.length, 0);
-  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(body), 0);
-  return Buffer.concat([length, body, crc]);
-}
-
-const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
-  let value = index;
-  for (let bit = 0; bit < 8; bit += 1) {
-    value = value & 1 ? 0xed_b8_83_20 ^ (value >>> 1) : value >>> 1;
-  }
-  return value >>> 0;
-});
-
-function crc32(buffer: Buffer): number {
-  let crc = 0xff_ff_ff_ff;
-  for (const byte of buffer) {
-    crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
-  }
-  return (crc ^ 0xff_ff_ff_ff) >>> 0;
-}
-
 /** Stable uuid from a string, so re-seeding reuses the same object keys. */
 function stableUuid(seed: string): string {
   const hex = createHash('sha256').update(seed).digest('hex').slice(0, 32);
@@ -297,10 +234,12 @@ export async function seedCatalog(prisma: PrismaClient): Promise<void> {
   let resourceRows = 0;
 
   for (const course of COURSES) {
-    const coverKey = `public/courses/${stableUuid(`course:${course.slug}`)}/cover/${stableUuid(`cover:${course.slug}`)}.png`;
+    const coverKey = `public/courses/${stableUuid(`course:${course.slug}`)}/cover/${stableUuid(`cover:${course.slug}`)}.jpg`;
     const coverPath = resolve(storageRoot, coverKey);
     await mkdir(dirname(coverPath), { recursive: true });
-    await writeFile(coverPath, solidPng(640, 360, course.color));
+    // A published course with no cover would contradict the publish gate this seed demonstrates.
+    // Photos and their licences: prisma/covers/SOURCES.md.
+    await copyFile(resolve(process.cwd(), 'prisma/covers', `${course.slug}.jpg`), coverPath);
 
     const subtitle = `Khóa học ${course.title} dành cho người muốn đi từ nền tảng tới sản phẩm chạy thật.`;
     const data = {
