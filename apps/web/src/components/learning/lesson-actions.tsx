@@ -178,7 +178,8 @@ export function LessonActions({
   const toggleButton = (compact: boolean) =>
     tracked && (
       <Button
-        variant={compact ? "outline" : completed ? "outline" : "primary"}
+        // Outline beside the advance button: one filled action per row.
+        variant={compact || completed || next ? "outline" : "primary"}
         size="lg"
         // The name says what a press does next; the text alone would read
         // "Đã hoàn thành" and hide that pressing it un-marks the lesson.
@@ -209,8 +210,9 @@ export function LessonActions({
     );
 
   const advanceButton = tracked && next && !completed && (
+    // Teal, not amber: amber is reserved for purchase (DESIGN.md).
     <Button
-      variant="accent"
+      variant="primary"
       size="lg"
       loading={pending === "advance"}
       onClick={advance}

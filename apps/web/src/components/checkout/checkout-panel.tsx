@@ -296,14 +296,17 @@ function Blocked({
   );
 
   return (
-    <div className="mx-auto grid w-full max-w-xl gap-4">
+    // Left-aligned under the page title, like every other page body.
+    <div className="grid w-full max-w-xl gap-4">
       {reason === "email" && (
         <>
           <Alert variant="warning" title={message}>
             Chúng tôi cần biết email của bạn là thật trước khi nhận thanh toán.
           </Alert>
-          <ResendVerificationButton />
-          <div>{again("Tôi đã xác minh, thử lại")}</div>
+          <div className="flex flex-wrap items-start gap-3">
+            {again("Tôi đã xác minh, thử lại")}
+            <ResendVerificationButton />
+          </div>
         </>
       )}
       {reason === "unavailable" && (

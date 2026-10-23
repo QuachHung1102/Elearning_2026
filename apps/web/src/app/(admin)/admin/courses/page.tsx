@@ -55,7 +55,7 @@ export default async function AdminCoursesPage({
         method="get"
         action={`${base}/courses`}
         role="search"
-        className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:gap-6"
+        className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:gap-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,12rem)_auto] lg:justify-start lg:gap-3"
       >
         <div className="grid gap-2">
           <label className="text-sm font-medium" htmlFor="admin-q">

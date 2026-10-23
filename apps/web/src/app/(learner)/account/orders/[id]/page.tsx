@@ -1,9 +1,9 @@
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OrderSummary } from "@/components/checkout/order-summary";
 import { RefundRequestDialog } from "@/components/checkout/refund-request-dialog";
+import { BackLink } from "@/components/ui/back-link";
 import { StatusBadge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
@@ -43,16 +43,10 @@ export default async function OrderPage({
   return (
     <div className="grid gap-8">
       <div className="grid justify-items-start gap-2">
+        <BackLink href="/account/orders">Lịch sử đơn hàng</BackLink>
         <h1 tabIndex={-1} className="text-4xl font-bold">
           Đơn hàng {shortId(order.id)}
         </h1>
-        <Link
-          className="inline-flex min-h-11 items-center gap-1 text-sm text-primary-text hover:underline"
-          href="/account/orders"
-        >
-          <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.75} />
-          Lịch sử đơn hàng
-        </Link>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:gap-10">

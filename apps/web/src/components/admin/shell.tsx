@@ -37,7 +37,7 @@ export function AdminShell({
         <div className="flex items-center justify-between gap-3 px-4 py-2 lg:sticky lg:top-0 lg:max-h-dvh lg:flex-col lg:items-stretch lg:gap-6 lg:overflow-y-auto lg:py-6">
           <div className="grid lg:gap-1 lg:px-3">
             <Logo />
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground-strong">
+            <p className="text-sm font-medium text-muted-foreground-strong">
               {AREA_NAME[area]}
             </p>
           </div>

@@ -31,9 +31,12 @@ export default async function HomePage() {
 
   return (
     <>
-      <SearchHero courseCount={featured.total} />
-      <div className="page-shell grid gap-16 pb-20">
+      {/* Both ways in, search and browse, share the first screen from lg. */}
+      <div className="page-shell grid gap-x-16 gap-y-14 pt-14 pb-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:py-20">
+        <SearchHero courseCount={featured.total} />
         <CategoryChips categories={categories.items} />
+      </div>
+      <div className="page-shell grid gap-16 pb-20">
 
         <section className="grid gap-4" aria-labelledby="featured-heading">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -74,8 +77,10 @@ export default async function HomePage() {
           studentLabel="Danh mục"
         />
 
-        <InstructorCard />
-        <FaqAccordion />
+        <div className="grid gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
+          <FaqAccordion />
+          <InstructorCard />
+        </div>
       </div>
     </>
   );

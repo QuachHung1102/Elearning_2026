@@ -86,7 +86,7 @@ function Footer() {
               Học thực tế. Tiến bộ từng ngày.
             </p>
           </div>
-          <nav className="grid gap-2 text-sm" aria-label="Liên kết cuối trang">
+          <nav className="grid gap-2 text-sm lg:gap-0" aria-label="Liên kết cuối trang">
             {FOOTER_LINKS.map((group) => (
               <p key={group[0][1]} className="flex flex-wrap items-center gap-x-2">
                 {group.map(([label, href], index) => (

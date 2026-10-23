@@ -5,6 +5,7 @@ import { ManualGrantDialog } from "@/components/admin/manual-grant-dialog";
 import { RevokeEnrollmentDialog } from "@/components/admin/revoke-enrollment-dialog";
 import { RoleDialog } from "@/components/admin/role-dialog";
 import { StatTile } from "@/components/admin/shell";
+import { BackLink } from "@/components/ui/back-link";
 import { RoleBadge, StatusBadge } from "@/components/ui/badge";
 import {
   adminFetch,
@@ -36,12 +37,7 @@ export default async function AdminUserPage({
   return (
     <div className="grid gap-8">
       <header className="grid gap-3">
-        <Link
-          href="/admin/users"
-          className="inline-flex min-h-11 w-fit items-center text-sm text-muted-foreground hover:text-primary-text"
-        >
-          ← Danh sách người dùng
-        </Link>
+        <BackLink href="/admin/users">Danh sách người dùng</BackLink>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="grid min-w-0 gap-2">
             <h1
@@ -71,7 +67,7 @@ export default async function AdminUserPage({
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatTile label="Quyền học đang hiệu lực" value={user.enrollmentCount} />
         <StatTile
           label="Phiên đăng nhập đang mở"

@@ -91,7 +91,7 @@ export function Alert({
         className="mt-0.5 size-5 shrink-0"
         strokeWidth={1.75}
       />
-      <div className="grid gap-1">
+      <div className="grid min-w-0 flex-1 gap-1">
         <p className="font-semibold">{title}</p>
         {children && <div className="text-sm">{children}</div>}
       </div>

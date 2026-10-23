@@ -556,7 +556,7 @@ export function ResendVerificationButton() {
   }, [remaining]);
 
   return (
-    <div className="grid gap-3">
+    <div className="grid justify-items-start gap-3">
       <Button
         variant="outline"
         loading={busy}

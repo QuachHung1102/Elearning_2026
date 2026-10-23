@@ -467,19 +467,19 @@ export function CourseForm({
 
       {/* Outside the form (the submit button joins it by `form`), so the
           confirm dialogs below never nest one form in another. */}
-      <div className="sticky bottom-0 -mx-4 grid gap-3 border-t border-border bg-card px-4 py-3 sm:auto-cols-fr sm:grid-flow-col sm:gap-6 xl:col-span-2">
+      <div className="sticky bottom-0 -mx-4 grid gap-3 border-t border-border bg-card px-4 py-3 sm:auto-cols-fr sm:grid-flow-col sm:gap-6 lg:flex lg:gap-3 xl:col-span-2">
         <Button
           type="submit"
           form="course-form"
           loading={busy === "save"}
-          className="w-full"
+          className="w-full lg:w-auto"
         >
           Lưu thay đổi
         </Button>
         {course.status !== "PUBLISHED" && (
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full lg:w-auto"
             onClick={() => transition("publish", "Đã xuất bản khóa học")}
             loading={busy === "publish"}
           >
@@ -489,7 +489,7 @@ export function CourseForm({
         {course.status === "PUBLISHED" && (
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full lg:w-auto"
             onClick={() => transition("unpublish", "Đã gỡ xuống bản nháp")}
             loading={busy === "publish"}
           >
@@ -499,7 +499,7 @@ export function CourseForm({
         {course.status === "ARCHIVED" && (
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full lg:w-auto"
             onClick={() => transition("unpublish", "Đã bỏ lưu trữ")}
             loading={busy === "publish"}
           >
@@ -520,7 +520,7 @@ export function CourseForm({
               router.refresh();
             }}
             trigger={
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full lg:w-auto">
                 Lưu trữ khóa học
               </Button>
             }

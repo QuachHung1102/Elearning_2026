@@ -11,7 +11,7 @@ export default function Loading() {
     <div className="grid gap-8" aria-busy="true">
       <span className="sr-only">Đang tải…</span>
       <Skeleton className="h-[22.375rem] w-full max-w-xl sm:h-[15.375rem] md:h-[11.625rem]" />
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Skeleton className="h-[7.125rem] sm:h-[6.625rem]" />
         <Skeleton className="h-[7.125rem] sm:h-[6.625rem]" />
       </div>

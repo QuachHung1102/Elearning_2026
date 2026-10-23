@@ -27,10 +27,11 @@ export default async function LearnerLayout({
       {user && !user.emailVerifiedAt && (
         <div className="page-shell sticky top-16 z-20 pt-3">
           <Alert variant="warning" title="Email của bạn chưa được xác minh">
-            <p>
-              Xác minh để nhận thông báo về khóa học và khôi phục được mật khẩu.
-            </p>
-            <div className="mt-2">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+              <p>
+                Xác minh để nhận thông báo về khóa học và khôi phục được mật
+                khẩu.
+              </p>
               <ResendVerificationButton />
             </div>
           </Alert>

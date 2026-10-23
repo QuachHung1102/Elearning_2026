@@ -309,7 +309,7 @@ export function CurriculumEditor({
                   </div>
                 )}
 
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-3 lg:flex lg:flex-wrap">
                   <Button
                     variant="outline"
                     onClick={() => open({ kind: "lesson", sectionId: section.id, title: "" })}
@@ -338,7 +338,7 @@ export function CurriculumEditor({
                       startTransition(() => router.refresh());
                     }}
                     trigger={
-                      <Button variant="outline" className="w-full" disabled={busy}>
+                      <Button variant="outline" className="w-full lg:w-auto" disabled={busy}>
                         <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.75} />
                         Xóa chương
                       </Button>

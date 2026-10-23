@@ -1,7 +1,7 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { StatusBadge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
+import { CourseTabs } from "@/components/admin/course-tabs";
+import { BackLink } from "@/components/ui/back-link";
 import { getAdminCourse, staffBase } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
@@ -26,32 +26,16 @@ export default async function CourseLayout({
   return (
     <div className="grid gap-6">
       <header className="grid gap-3">
-        <Link
-          href={`${base}/courses`}
-          className="inline-flex min-h-11 w-fit items-center text-sm text-primary-text hover:underline"
-        >
-          {base === "/instructor" ? "← Khóa học của tôi" : "← Danh sách khóa học"}
-        </Link>
+        <BackLink href={`${base}/courses`}>
+          {base === "/instructor" ? "Khóa học của tôi" : "Danh sách khóa học"}
+        </BackLink>
         <div className="flex flex-wrap items-center gap-3">
           <h1 tabIndex={-1} className="text-3xl font-bold">
             {course.title}
           </h1>
           <StatusBadge status={course.status} />
         </div>
-        <nav
-          aria-label="Phần của khóa học"
-          className="grid gap-3 sm:grid-cols-3"
-        >
-          {tabs.map((tab) => (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={buttonClass("outline", "md", "w-full")}
-            >
-              {tab.label}
-            </Link>
-          ))}
-        </nav>
+        <CourseTabs tabs={tabs} />
       </header>
       {children}
     </div>

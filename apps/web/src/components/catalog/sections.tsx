@@ -15,7 +15,7 @@ import { buttonClass } from "@/components/ui/button";
 
 export function SearchHero({ courseCount }: { courseCount: number }) {
   return (
-    <section className="page-shell grid gap-6 py-14 lg:py-20">
+    <section className="grid content-center gap-6">
       <h1 tabIndex={-1} className="max-w-3xl text-4xl font-bold md:text-5xl">
         Học kỹ năng thực tế theo một lộ trình rõ ràng
       </h1>
@@ -52,16 +52,20 @@ export function SearchHero({ courseCount }: { courseCount: number }) {
 export function CategoryChips({ categories }: { categories: Category[] }) {
   if (categories.length === 0) return null;
   return (
-    <nav aria-labelledby="categories-heading" className="grid gap-4">
+    // A side panel beside the hero from lg, a chip row under it below that.
+    <nav
+      aria-labelledby="categories-heading"
+      className="grid content-start gap-4 lg:rounded-lg lg:border lg:border-border lg:bg-card lg:p-5"
+    >
       <h2 id="categories-heading" className="text-2xl font-semibold">
         Danh mục
       </h2>
-      <ul className="flex list-none flex-nowrap gap-3 overflow-x-auto p-0 pb-2 md:flex-wrap md:overflow-visible md:pb-0">
+      <ul className="flex list-none flex-nowrap gap-3 overflow-x-auto p-0 pb-2 md:flex-wrap md:overflow-visible md:pb-0 lg:grid lg:grid-cols-2 lg:gap-2">
         {categories.map((category) => (
           <li key={category.id} className="shrink-0">
             <Link
               href={`/categories/${category.slug}`}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium hover:border-primary hover:text-primary-text"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium hover:border-primary hover:text-primary-text lg:flex lg:justify-between lg:rounded-md lg:px-3"
             >
               {category.name}
               <span className="text-muted-foreground">

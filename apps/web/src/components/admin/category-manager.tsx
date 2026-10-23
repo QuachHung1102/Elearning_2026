@@ -102,7 +102,7 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
               {/* Buttons, not drag and drop: a keyboard can press a button.
                   On a phone the name takes the first line and every control
                   shares the second, in the same order as the tab order. */}
-              <div className="order-2 flex sm:order-none sm:flex-col">
+              <div className="order-2 flex sm:order-none sm:flex-col lg:flex-row">
                 <button
                   type="button"
                   className="flex size-11 items-center justify-center rounded-md hover:bg-muted disabled:opacity-40"

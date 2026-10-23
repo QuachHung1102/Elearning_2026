@@ -152,7 +152,7 @@ export function CourseCard({ course }: { course: Course }) {
     <li className="panel h-full transition-shadow duration-[var(--duration-fast)] hover:shadow-[var(--shadow-overlay)] focus-within:shadow-[var(--shadow-overlay)]">
       <Link
         href={`/courses/${course.slug}`}
-        className="relative grid h-full grid-rows-[auto_1fr] rounded-lg"
+        className="relative grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr] rounded-lg"
       >
         <Cover course={course} />
         <div className="grid content-start gap-2 p-4">

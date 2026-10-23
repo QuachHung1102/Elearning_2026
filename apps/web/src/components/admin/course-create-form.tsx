@@ -84,7 +84,7 @@ export function CourseCreateForm({
         Bạn có thể bổ sung nội dung, giá và ảnh bìa ở bước tiếp theo.
       </Alert>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 sm:flex sm:gap-3">
         <Button type="submit" size="lg" loading={saving}>
           Tạo bản nháp
         </Button>

@@ -83,7 +83,7 @@ export default async function InstructorStudentsPage({
       method="get"
       action="/instructor/students"
       aria-label="Lọc học viên"
-      className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end lg:max-w-3xl"
+      className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end lg:grid-cols-[minmax(0,24rem)_minmax(0,12rem)_auto] lg:justify-start"
     >
       <div className="grid min-w-0 gap-1">
         <label className="text-sm font-medium" htmlFor="students-course">
