@@ -71,8 +71,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     // One line per finished request (`requestLog`); the tests switch it off.
     logRequests: env.LOG_REQUESTS !== 'false',
     timezone: env.TZ ?? 'Asia/Ho_Chi_Minh',
-    webOrigin: env.WEB_ORIGIN ?? 'http://localhost:3000',
-    apiPublicUrl: env.API_PUBLIC_URL ?? 'http://localhost:3001',
+    webOrigin: env.WEB_ORIGIN ?? 'http://localhost:5000',
+    apiPublicUrl: env.API_PUBLIC_URL ?? 'http://localhost:5001',
     jwtSecret,
     videoDriver,
     storageDriver,
