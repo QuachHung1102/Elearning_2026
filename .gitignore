@@ -30,3 +30,10 @@ CLAUDE.md
 AGENTS.md
 GEMINI.md
 docs/superpowers/
+.agents/
+.windsurf/
+skills-lock.json
+
+# Editor-local (.history holds copies of .env files)
+.history/
+.vscode/
