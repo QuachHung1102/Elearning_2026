@@ -33,6 +33,13 @@ docs/superpowers/
 .agents/
 .windsurf/
 skills-lock.json
+.gemini/
+.continue/
+.mcp.json
+.cursorrules
+.windsurfrules
+.clinerules
+.github/copilot-instructions.md
 
 # Editor-local (.history holds copies of .env files)
 .history/
