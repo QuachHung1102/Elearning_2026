@@ -1,3 +1,4 @@
+import { UiText } from "@/components/language-provider";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,7 +13,6 @@ import { formatDateTime, formatPrice } from "@/lib/format";
 import {
   CHECKOUT_ENABLED,
   PROVIDER_LABEL,
-  qrStillLive,
   shortId,
   type PurchaseDetail,
 } from "@/lib/orders";
@@ -33,19 +33,22 @@ export default async function OrderPage({
   // Not a uuid: the same "no such order" as an order that is not yours.
   if (response.status === 400) notFound();
   await requireAuth(response, `/account/orders/${id}`);
-  if (!response.ok) throw new Error(`GET /purchases/${id} answered ${response.status}`);
+  if (!response.ok)
+    throw new Error(`GET /purchases/${id} answered ${response.status}`);
   const order = (await response.json()) as PurchaseDetail;
 
   const newest = order.attempts[0];
-  const liveQr = order.status === "PENDING" && qrStillLive(newest);
   const checkout = `/checkout/${order.courseSlug}`;
 
   return (
     <div className="grid gap-8">
       <div className="grid justify-items-start gap-2">
-        <BackLink href="/account/orders">Lịch sử đơn hàng</BackLink>
+        <BackLink href="/account/orders">
+          <UiText value="Lịch sử đơn hàng" />
+        </BackLink>
         <h1 tabIndex={-1} className="text-4xl font-bold">
-          Đơn hàng {shortId(order.id)}
+          <UiText value="Đơn hàng" />
+          {shortId(order.id)}
         </h1>
       </div>
 
@@ -53,17 +56,21 @@ export default async function OrderPage({
         <div className="grid content-start gap-6">
           {order.status === "PENDING" && (
             <Panel
-              variant={liveQr ? "info" : "warning"}
-              title={liveQr ? "Đơn hàng đang chờ thanh toán" : "Mã QR của đơn hàng đã hết hạn"}
+              variant="info"
+              title="Đơn hàng chưa được xác nhận"
               actions={
                 <Link href={checkout} className={buttonClass("primary")}>
-                  {liveQr ? "Tiếp tục thanh toán" : "Thanh toán lại"}
+                  <UiText
+                    value="Liên hệ Nam về đăng ký"
+                    en="Contact Nam about enrollment"
+                  />
                 </Link>
               }
             >
-              {liveQr
-                ? "Mã QR vẫn còn hiệu lực, bạn có thể quay lại trang thanh toán."
-                : "Tạo mã QR mới để thanh toán. Nếu bạn đã thanh toán bằng mã cũ, đơn hàng sẽ được cập nhật khi chúng tôi nhận được xác nhận."}
+              <UiText
+                value="Đăng ký khóa học hiện được trao đổi trực tiếp với Nam. Gửi tên khóa học và mã đơn này để Nam kiểm tra và hướng dẫn bạn."
+                en="Course enrollment is now arranged directly with Nam. Share the course name and this order reference so Nam can check and guide you."
+              />
             </Panel>
           )}
           {order.status === "PAID" && (
@@ -72,15 +79,17 @@ export default async function OrderPage({
               title="Bạn đã thanh toán đơn hàng này"
               actions={
                 <>
-                  <Link href={`/learn/${order.courseSlug}`} className={buttonClass("primary")}>
-                    Vào học
+                  <Link
+                    href={`/learn/${order.courseSlug}`}
+                    className={buttonClass("primary")}
+                  >
+                    <UiText value="Vào học" />
                   </Link>
                   <RefundRequestDialog purchaseId={order.id} />
                 </>
               }
             >
-              Khóa học đã sẵn sàng để học. Bạn có thể yêu cầu hoàn tiền trong 7
-              ngày kể từ khi thanh toán, khi đã học dưới 20% khóa học.
+              <UiText value="Khóa học đã sẵn sàng để học. Bạn có thể yêu cầu hoàn tiền trong 7 ngày kể từ khi thanh toán, khi đã học dưới 20% khóa học." />
             </Panel>
           )}
           {order.status === "REFUND_REQUESTED" && (
@@ -88,21 +97,31 @@ export default async function OrderPage({
               variant="warning"
               title="Yêu cầu hoàn tiền đang chờ xử lý"
               actions={
-                <Link href={`/learn/${order.courseSlug}`} className={buttonClass("outline")}>
-                  Vào học
+                <Link
+                  href={`/learn/${order.courseSlug}`}
+                  className={buttonClass("outline")}
+                >
+                  <UiText value="Vào học" />
                 </Link>
               }
             >
-              Bạn vẫn học bình thường cho tới khi yêu cầu được duyệt.
+              <UiText value="Bạn vẫn học bình thường cho tới khi yêu cầu được duyệt." />
             </Panel>
           )}
           {(order.status === "REFUNDED" || order.status === "CANCELLED") && (
             <Panel
               variant="info"
-              title={order.status === "REFUNDED" ? "Đơn hàng đã được hoàn tiền" : "Đơn hàng đã bị hủy"}
+              title={
+                order.status === "REFUNDED"
+                  ? "Đơn hàng đã được hoàn tiền"
+                  : "Đơn hàng đã bị hủy"
+              }
               actions={
-                <Link href={`/courses/${order.courseSlug}`} className={buttonClass("outline")}>
-                  Xem khóa học
+                <Link
+                  href={`/courses/${order.courseSlug}`}
+                  className={buttonClass("outline")}
+                >
+                  <UiText value="Xem khóa học" />
                 </Link>
               }
             >
@@ -114,10 +133,12 @@ export default async function OrderPage({
 
           <section aria-labelledby="attempts-title" className="grid gap-3">
             <h2 id="attempts-title" className="text-xl font-semibold">
-              Lịch sử thanh toán
+              <UiText value="Lịch sử thanh toán" />
             </h2>
             {order.attempts.length === 0 ? (
-              <p className="text-muted-foreground">Chưa có lần thanh toán nào.</p>
+              <p className="text-muted-foreground">
+                <UiText value="Chưa có lần thanh toán nào." />
+              </p>
             ) : (
               <ul className="grid list-none gap-3 p-0">
                 {order.attempts.map((attempt) => (
@@ -126,9 +147,12 @@ export default async function OrderPage({
                     className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4"
                   >
                     <div className="grid gap-1 text-sm">
-                      <p className="font-semibold">{formatPrice(attempt.amountVnd)}</p>
+                      <p className="font-semibold">
+                        {formatPrice(attempt.amountVnd)}
+                      </p>
                       <p className="text-muted-foreground">
-                        Tạo lúc {formatDateTime(attempt.createdAt)}
+                        <UiText value="Tạo lúc" />
+                        {formatDateTime(attempt.createdAt)}
                         {attempt.status === "PENDING" &&
                           ` · hết hạn lúc ${formatDateTime(attempt.expiresAt)}`}
                       </p>
@@ -147,12 +171,23 @@ export default async function OrderPage({
           href={`/courses/${order.courseSlug}`}
           priceVnd={order.priceVnd}
           rows={[
-            ["Mã đơn", <span key="id" className="font-mono text-xs">{order.id}</span>],
+            [
+              "Mã đơn",
+              <span key="id" className="font-mono text-xs">
+                {order.id}
+              </span>,
+            ],
             ["Trạng thái", <StatusBadge key="status" status={order.status} />],
             ["Tạo lúc", formatDateTime(order.createdAt)],
-            ...(order.paidAt ? ([["Thanh toán lúc", formatDateTime(order.paidAt)]] as const) : []),
-            ...(order.refundedAt ? ([["Hoàn tiền lúc", formatDateTime(order.refundedAt)]] as const) : []),
-            ...(newest ? ([["Phương thức", PROVIDER_LABEL[newest.provider]]] as const) : []),
+            ...(order.paidAt
+              ? ([["Thanh toán lúc", formatDateTime(order.paidAt)]] as const)
+              : []),
+            ...(order.refundedAt
+              ? ([["Hoàn tiền lúc", formatDateTime(order.refundedAt)]] as const)
+              : []),
+            ...(newest
+              ? ([["Phương thức", PROVIDER_LABEL[newest.provider]]] as const)
+              : []),
           ]}
         />
       </div>

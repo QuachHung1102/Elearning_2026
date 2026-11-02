@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,11 @@ export default function OrdersError({ retry }: { retry: () => void }) {
       heading={heading}
       title="Không tải được đơn hàng"
       description="Đường truyền hoặc máy chủ đang có sự cố."
-      actions={<Button onClick={retry}>Thử lại</Button>}
+      actions={
+        <Button onClick={retry}>
+          <UiText value="Thử lại" />
+        </Button>
+      }
     />
   );
 }

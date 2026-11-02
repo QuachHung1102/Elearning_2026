@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
 
 /**
  * Pure-function specs only. The XSS boundary in `src/lib/markdown.ts` is not a
@@ -6,6 +7,7 @@ import { defineConfig } from "vitest/config";
  * Playwright then.
  */
 export default defineConfig({
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   test: {
     include: ["src/**/*.spec.ts"],
     environment: "node",

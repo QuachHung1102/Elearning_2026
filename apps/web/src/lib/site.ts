@@ -1,5 +1,5 @@
 export const SITE_OWNER = {
-  name: "E-learning",
+  name: "The CodingBuddy",
 } as const;
 
 /** What a page's Open Graph block repeats: a page that sets `openGraph` replaces the layout's whole object. */
@@ -10,7 +10,7 @@ export const OPEN_GRAPH_DEFAULTS = {
 
 /** This site's own origin: canonical links, the sitemap and structured data all name it. */
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:5000"
 ).replace(/\/$/, "");
 
 /** The API as the Next server reaches it (rewrites and server-side fetches). */

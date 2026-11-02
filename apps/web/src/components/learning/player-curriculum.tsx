@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import {
   ChevronDown,
@@ -97,7 +98,8 @@ export function PlayerCurriculum({
                   <span className="flex-1">
                     {section.title}
                     <span className="block text-sm font-normal text-muted-foreground">
-                      {formatNumber(section.lessons.length)} bài học
+                      {formatNumber(section.lessons.length)}
+                      <UiText value="bài học" />
                       {seconds > 0 && ` · ${formatDuration(seconds)}`}
                     </span>
                   </span>
@@ -138,14 +140,22 @@ export function PlayerCurriculum({
                           {lesson.title}
                         </span>
                         {/* muted-foreground is 4.43:1 on the current row's tint (WCAG 1.4.3) */}
-                        <span className={`flex flex-wrap items-center gap-2 text-sm ${isCurrent ? "text-muted-foreground-strong" : "text-muted-foreground"}`}>
+                        <span
+                          className={`flex flex-wrap items-center gap-2 text-sm ${isCurrent ? "text-muted-foreground-strong" : "text-muted-foreground"}`}
+                        >
                           {lessonLength(lesson.durationSeconds)}
                           {lesson.isPreview && (
-                            <Badge variant="info">Học thử</Badge>
+                            <Badge variant="info">
+                              <UiText value="Học thử" />
+                            </Badge>
                           )}
                         </span>
                       </span>
-                      {isDone && <span className="sr-only">Đã hoàn thành</span>}
+                      {isDone && (
+                        <span className="sr-only">
+                          <UiText value="Đã hoàn thành" />
+                        </span>
+                      )}
                     </>
                   );
                   const rowClass = `flex min-h-11 items-start gap-3 rounded-md border-l-[3px] px-3 py-2 ${isCurrent ? "border-primary bg-primary-subtle/60" : "border-transparent"}`;
@@ -157,7 +167,9 @@ export function PlayerCurriculum({
                           className={`${rowClass} text-muted-foreground-strong`}
                         >
                           {body}
-                          <span className="sr-only">(chưa có quyền học)</span>
+                          <span className="sr-only">
+                            <UiText value="(chưa có quyền học)" />
+                          </span>
                         </span>
                       ) : (
                         <Link

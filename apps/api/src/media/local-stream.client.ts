@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { config } from '../config.js';
+import { bookTrialVideo } from './book-trial.js';
 import { playbackMessage, sign } from './object-storage.js';
 import type {
   PlaybackToken,
@@ -14,6 +15,8 @@ import type {
 @Injectable()
 export class LocalStreamClient implements StreamClient {
   async getStatus(_uid: string): Promise<VideoStatus> {
+    const trial = bookTrialVideo(_uid);
+    if (trial) return { ready: true, durationSeconds: trial.durationSeconds };
     return {
       ready: true,
       durationSeconds: config.demoVideoDurationSeconds,
@@ -37,6 +40,14 @@ export class LocalStreamClient implements StreamClient {
     viewerId: string,
   ): Promise<PlaybackToken> {
     const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
+    const trial = bookTrialVideo(uid);
+    if (trial) {
+      return {
+        playbackUrl: `${config.webOrigin.replace(/\/$/, '')}${trial.path}`,
+        kind: 'mp4',
+        expiresAt: new Date(exp * 1000),
+      };
+    }
     const key = `videos/${Buffer.from(uid, 'utf8').toString('base64url')}.mp4`;
     const sig = sign(playbackMessage(key, exp, viewerId));
     return {

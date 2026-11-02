@@ -1,4 +1,5 @@
-import { BookOpen, Clock, Star } from "lucide-react";
+"use client";
+import { ArrowRight, BookOpen, Clock, Star } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CourseCard as Course } from "@/lib/catalog";
@@ -11,9 +12,10 @@ import {
 } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, Skeleton } from "@/components/ui/feedback";
+import { useLanguage } from "@/components/language-provider";
 import { EnrolledBadge } from "./enrolled-badge";
+import { projectCourse, projectCopy } from "@/lib/project-courses";
 
-/** Hidden entirely when there is nothing to rate — never a row of empty stars. */
 export function Rating({
   average,
   count,
@@ -25,34 +27,26 @@ export function Rating({
   demoStats: boolean;
   size?: "sm" | "md";
 }) {
-  if (count === 0 || average === null) return null;
-  const stars = Math.round(average);
+  const { locale } = useLanguage();
+  if (demoStats || !count || average === null) return null;
   return (
     <span
-      className={`inline-flex items-center gap-2 ${size === "md" ? "text-base" : "text-sm"}`}
+      className={
+        "inline-flex items-center gap-2 " +
+        (size === "md" ? "text-base" : "text-sm")
+      }
     >
-      <span className="inline-flex items-center gap-0.5" aria-hidden="true">
-        {[1, 2, 3, 4, 5].map((index) => (
-          <Star
-            key={index}
-            className={`size-4 ${index <= stars ? "fill-accent text-accent" : "text-border"}`}
-            strokeWidth={1.75}
-          />
-        ))}
+      <Star
+        aria-hidden="true"
+        className="size-4 fill-accent text-on-accent-subtle"
+      />
+      <span>
+        {locale === "vi" ? formatRating(average) : average.toFixed(1)}
       </span>
-      <span className="font-semibold">{formatRating(average)}</span>
       <span className="text-muted-foreground">({formatNumber(count)})</span>
-      <span className="sr-only">
-        Điểm đánh giá {formatRating(average)} trên 5, từ {formatNumber(count)}{" "}
-        lượt
-      </span>
-      {demoStats && (
-        <Badge aria-label="Điểm đánh giá là dữ liệu demo">Dữ liệu demo</Badge>
-      )}
     </span>
   );
 }
-
 export function PriceTag({
   priceVnd,
   compareAtPriceVnd,
@@ -62,146 +56,205 @@ export function PriceTag({
   compareAtPriceVnd: number | null;
   size?: "sm" | "md" | "lg";
 }) {
-  const discount =
-    compareAtPriceVnd && compareAtPriceVnd > priceVnd
-      ? Math.floor(((compareAtPriceVnd - priceVnd) / compareAtPriceVnd) * 100)
-      : 0;
-  const scale = { sm: "text-base", md: "text-xl", lg: "text-3xl" }[size];
+  const { locale, text } = useLanguage();
+  const price = (value: number) =>
+    locale === "vi"
+      ? formatPrice(value)
+      : new Intl.NumberFormat("en", {
+          style: "currency",
+          currency: "VND",
+          maximumFractionDigits: 0,
+        }).format(value);
   return (
-    <span
-      className="inline-flex flex-wrap items-baseline gap-2"
-      aria-label={
-        discount >= 5
-          ? `Giá gốc ${formatPrice(compareAtPriceVnd!)}, giá hiện tại ${formatPrice(priceVnd)}, giảm ${discount} phần trăm`
-          : `Giá ${formatPrice(priceVnd)}`
-      }
-    >
-      <span aria-hidden="true" className={`font-heading font-bold ${scale}`}>
-        {formatPrice(priceVnd)}
+    <span className="inline-flex flex-wrap items-baseline gap-2">
+      <span
+        className={
+          "font-heading font-semibold " +
+          { sm: "text-base", md: "text-lg", lg: "text-3xl" }[size]
+        }
+      >
+        {priceVnd === 0 ? text("Miễn phí", "Free") : price(priceVnd)}
       </span>
-      {discount >= 5 && (
-        <>
-          <span
-            aria-hidden="true"
-            className="text-sm text-muted-foreground line-through"
-          >
-            {formatPrice(compareAtPriceVnd!)}
-          </span>
-          <Badge variant="accent">−{discount}%</Badge>
-        </>
-      )}
+      {compareAtPriceVnd && compareAtPriceVnd > priceVnd ? (
+        <span className="text-xs text-muted-foreground line-through">
+          {price(compareAtPriceVnd)}
+        </span>
+      ) : null}
     </span>
   );
 }
-
 export function CourseMeta({ course }: { course: Course }) {
+  const { locale, text } = useLanguage();
+  const planned = projectCourse(course.slug)?.availability === "planned";
+  const levels = {
+    BEGINNER: "Beginner",
+    INTERMEDIATE: "Intermediate",
+    ADVANCED: "Advanced",
+    ALL_LEVELS: "All levels",
+  };
   return (
-    <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-      <span className="inline-flex items-center gap-1">
-        <BookOpen aria-hidden="true" className="size-4" strokeWidth={1.75} />
-        {formatNumber(course.lessonCount)} bài học
+    <p className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5">
+        <BookOpen aria-hidden="true" size={14} />
+        {planned
+          ? text("Đang chuẩn bị", "In preparation")
+          : `${course.lessonCount} ${text("bài học", "lessons")}`}
       </span>
       {course.totalDurationSeconds > 0 && (
-        <span className="inline-flex items-center gap-1">
-          <Clock aria-hidden="true" className="size-4" strokeWidth={1.75} />
-          {formatDuration(course.totalDurationSeconds)} video
+        <span className="inline-flex items-center gap-1.5">
+          <Clock aria-hidden="true" size={14} />
+          {locale === "vi"
+            ? formatDuration(course.totalDurationSeconds)
+            : Math.round(course.totalDurationSeconds / 60) + " min"}
         </span>
       )}
-      <Badge>{LEVEL_LABEL[course.level]}</Badge>
+      <Badge>
+        {locale === "vi" ? LEVEL_LABEL[course.level] : levels[course.level]}
+      </Badge>
     </p>
   );
 }
-
+function subject(title: string) {
+  if (/python|pandas/i.test(title)) return "py";
+  if (/typescript/i.test(title)) return "ts";
+  if (/react|web|html/i.test(title)) return "</>";
+  if (/figma|thiết kế/i.test(title)) return "Aa";
+  return "{ }";
+}
 export function Cover({
   course,
 }: {
-  course: Pick<Course, "title" | "coverUrl">;
+  course: Pick<Course, "title" | "coverUrl"> &
+    Partial<Pick<Course, "demoStats" | "slug">>;
 }) {
-  if (!course.coverUrl) {
-    return (
-      <div
-        aria-hidden="true"
-        className="flex aspect-video items-center justify-center rounded-t-lg bg-muted font-heading text-5xl font-bold text-muted-foreground-strong"
-      >
-        {course.title.slice(0, 1)}
-      </div>
-    );
-  }
+  const project = projectCourse(course.slug);
+  const { locale } = useLanguage();
+  const symbol =
+    project?.symbol ??
+    (project?.theme === "slate"
+      ? "{py}"
+      : project?.theme === "lime"
+        ? "web"
+        : project?.theme === "coral"
+          ? "csv"
+          : subject(course.title));
+  const theme =
+    project?.theme ??
+    (/python|typescript/i.test(course.title)
+      ? "slate"
+      : /web|figma/i.test(course.title)
+        ? "lime"
+        : "coral");
   return (
-    // The API returns an absolute URL from the storage seam, so this stays a
-    // plain <img>: next/image would need every storage host in next.config.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={course.coverUrl}
-      alt=""
-      loading="lazy"
-      width={640}
-      height={360}
-      className="aspect-video w-full rounded-t-lg object-cover"
-    />
+    <div className={`course-visual cover-${theme}`} aria-hidden="true">
+      {course.coverUrl && !course.demoStats ? (
+        // Media-provider URLs are rendered directly; dimensions prevent layout shift.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={course.coverUrl}
+          alt=""
+          loading="lazy"
+          width={640}
+          height={360}
+        />
+      ) : (
+        <>
+          <span className="cover-label">
+            {project
+              ? locale === "vi"
+                ? project.coverLabel
+                : "Python / Practical project"
+              : /python/i.test(course.title)
+                ? "Python"
+                : /typescript/i.test(course.title)
+                  ? "TypeScript"
+                  : "Web / Design"}
+          </span>
+          {symbol === "web" ? (
+            <span className="browser-drawing">
+              <i>
+                <b />
+                <b />
+                <b />
+              </i>
+              <span />
+              <span />
+            </span>
+          ) : symbol === "csv" ? (
+            <span className="data-drawing">
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+          ) : (
+            <span className="cover-subject">{symbol}</span>
+          )}
+        </>
+      )}
+    </div>
   );
 }
-
-/**
- * Fixed row structure so a grid holding both seeded courses (with ratings) and
- * hand-made ones (without) still lines up: the rating row and the badge slot
- * keep their height when empty.
- */
 export function CourseCard({ course }: { course: Course }) {
+  const { text, locale } = useLanguage();
+  const project = projectCourse(course.slug);
+  const copy = projectCopy(course.slug, locale);
   return (
-    <li className="panel h-full transition-shadow duration-[var(--duration-fast)] hover:shadow-[var(--shadow-overlay)] focus-within:shadow-[var(--shadow-overlay)]">
-      <Link
-        href={`/courses/${course.slug}`}
-        className="relative grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr] rounded-lg"
-      >
+    <li className="course-item">
+      <Link href={"/courses/" + course.slug}>
         <Cover course={course} />
-        <div className="grid content-start gap-2 p-4">
-          <h3 className="line-clamp-2 min-h-14 text-xl font-semibold">
-            {course.title}
-          </h3>
-          <p className="line-clamp-2 min-h-10 text-sm text-muted-foreground">
-            {course.subtitle ?? ""}
-          </p>
-          <div className="flex min-h-6 items-center">
-            <Rating
-              average={course.ratingAverage}
-              count={course.ratingCount}
-              demoStats={course.demoStats}
-            />
-          </div>
+        <div className="course-copy">
+          <span className="course-category">
+            {project
+              ? project.publicTrial
+                ? text("Học thử miễn phí · 4 video", "Free trial · 4 videos")
+                : project.availability === "available"
+                  ? text("Đang nhận đăng ký · Bài đọc thực hành", "Enrollment open · Written project lessons")
+                  : text("Dự án Python · Sắp có", "Python project · Upcoming")
+              : course.demoStats
+                ? text("Nội dung mẫu", "Sample content")
+                : (course.category?.name ?? text("Khóa học", "Course"))}
+          </span>
+          <h3>{copy?.title ?? course.title}</h3>
+          {(copy?.subtitle ?? course.subtitle) && (
+            <p>{copy?.subtitle ?? course.subtitle}</p>
+          )}
           <CourseMeta course={course} />
-          <div className="mt-2 flex min-h-8 flex-wrap items-center justify-between gap-2">
+          <Rating
+            average={course.ratingAverage}
+            count={course.ratingCount}
+            demoStats={course.demoStats}
+          />
+          <div className="course-copy-bottom">
             <PriceTag
               priceVnd={course.priceVnd}
               compareAtPriceVnd={course.compareAtPriceVnd}
             />
+            <span>
+              {project?.availability === "planned"
+                ? text("Xem dự án", "Explore project")
+                : text("Xem nội dung", "View course")}
+              <ArrowRight aria-hidden="true" size={17} />
+            </span>
           </div>
         </div>
-        {/* Over the cover: arriving after hydration, it must not move a line
-            of the card. Deviation: UX_PLAN.md §4.5 rule 6 puts it in the footer
-            next to PriceTag, where a long price wraps it onto a new line. Last
-            in the DOM so the link still reads title first. */}
-        <span className="absolute top-3 left-3">
+        <span className="absolute left-3 top-3">
           <EnrolledBadge courseId={course.id} />
         </span>
       </Link>
     </li>
   );
 }
-
 export function CourseCardSkeleton() {
   return (
-    <li className="panel h-full p-0">
-      <Skeleton className="aspect-video w-full rounded-b-none" />
-      <div className="grid gap-3 p-4">
-        <Skeleton className="h-6 w-4/5" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-1/2" />
-      </div>
+    <li className="panel grid gap-4 p-5">
+      <Skeleton className="h-8 w-3/5" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-1/2" />
     </li>
   );
 }
-
 export function CourseGrid({
   courses,
   empty,
@@ -209,21 +262,21 @@ export function CourseGrid({
   courses: Course[];
   empty?: ReactNode;
 }) {
-  if (courses.length === 0) {
+  const { text } = useLanguage();
+  if (!courses.length)
     return (
       empty ?? (
         <EmptyState
-          title="Không tìm thấy khóa học phù hợp"
-          description="Thử bỏ bớt bộ lọc hoặc tìm bằng từ khóa khác."
+          title={text("Chưa có khóa học phù hợp", "No matching courses yet")}
+          description={text(
+            "Bạn có thể bắt đầu với bài thực hành mở.",
+            "You can begin with the open practice lesson.",
+          )}
         />
       )
     );
-  }
   return (
-    // Container driven, not viewport driven: this grid also renders inside a
-    // narrow column next to the filter sidebar, where viewport breakpoints
-    // would ask for three columns in the space for two.
-    <ul className="grid list-none grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-6 p-0">
+    <ul className="course-list">
       {courses.map((course) => (
         <CourseCard key={course.id} course={course} />
       ))}

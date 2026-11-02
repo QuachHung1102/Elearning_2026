@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/feedback";
@@ -21,7 +22,11 @@ export default function LessonError({
       <ErrorState
         title="Không tải được nội dung bài học"
         description="Kiểm tra kết nối rồi thử lại."
-        actions={<Button onClick={retry}>Thử lại</Button>}
+        actions={
+          <Button onClick={retry}>
+            <UiText value="Thử lại" />
+          </Button>
+        }
       />
       {error.digest && (
         <RequestId id={error.digest} className="mx-auto max-w-prose pb-12" />

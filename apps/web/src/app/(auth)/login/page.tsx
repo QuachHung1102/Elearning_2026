@@ -1,3 +1,4 @@
+import { UiText } from "@/components/language-provider";
 import { safeNext } from "@/lib/routes";
 import type { Metadata } from "next";
 import { LoginForm } from "@/components/auth-forms";
@@ -14,10 +15,10 @@ export default async function LoginPage({
     <section className="grid gap-8">
       <div className="grid gap-2">
         <h1 tabIndex={-1} className="text-4xl font-bold">
-          Đăng nhập
+          <UiText value="Đăng nhập" />
         </h1>
         <p className="text-muted-foreground">
-          Tiếp tục từ nơi bạn đã dừng lại.
+          <UiText value="Tiếp tục từ nơi bạn đã dừng lại." />
         </p>
       </div>
       <LoginForm

@@ -1,6 +1,8 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 import {
   cloneElement,
   isValidElement,
@@ -26,6 +28,7 @@ export function Field({
   hint?: string;
   children: ReactNode;
 }) {
+  const { text } = useLanguage();
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
   // Wire a bare input/select/textarea child to the message below it. A wrapper
   // (PasswordInput's) wires its own control.
@@ -46,14 +49,14 @@ export function Field({
   return (
     <div className="grid gap-2">
       <label className="text-sm font-semibold" htmlFor={id}>
-        {label}
+        {text(label)}
         {required && (
           <>
             <span aria-hidden="true" className="text-destructive">
               {" "}
               *
             </span>
-            <span className="sr-only"> bắt buộc</span>
+            <span className="sr-only"> {text("bắt buộc")}</span>
           </>
         )}
       </label>
@@ -68,11 +71,11 @@ export function Field({
             className="mt-0.5 size-4 shrink-0"
             strokeWidth={1.75}
           />
-          {error}
+          {text(error)}
         </p>
       ) : hint ? (
         <p id={`${id}-hint`} className="text-sm text-muted-foreground">
-          {hint}
+          {text(hint)}
         </p>
       ) : null}
     </div>
@@ -93,6 +96,7 @@ export function PasswordInput({
   value,
   ...props
 }: PasswordInputProps) {
+  const { text } = useLanguage();
   const [visible, setVisible] = useState(false);
   const password = typeof value === "string" ? value : "";
   const score = [
@@ -119,7 +123,7 @@ export function PasswordInput({
           type="button"
           className="absolute inset-y-0 right-0 flex min-h-11 min-w-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
           onClick={() => setVisible((current) => !current)}
-          aria-label={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+          aria-label={text(visible ? "Ẩn mật khẩu" : "Hiện mật khẩu")}
         >
           {visible ? (
             <EyeOff aria-hidden="true" className="size-5" strokeWidth={1.75} />
@@ -137,7 +141,7 @@ export function PasswordInput({
             value={score}
           />
           <span className="text-xs text-muted-foreground">
-            Độ mạnh: {strength}
+            <UiText value="Độ mạnh:" /> <UiText value={strength} />
           </span>
         </div>
       )}

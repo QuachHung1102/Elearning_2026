@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { useLanguage } from "./language-provider";
 
 /** A `loading.tsx` skeleton marks itself busy; buttons do too while saving. */
 const LOADING = '#main [aria-busy="true"]:not(button)';
@@ -19,6 +20,7 @@ function sameCourseLesson(from: string | null, to: string): boolean {
 
 export function RouteAnnouncer() {
   const pathname = usePathname();
+  const { locale } = useLanguage();
   const live = useRef<HTMLParagraphElement>(null);
   const previous = useRef<string | null>(null);
   // Where the reader was when they clicked. The loading skeleton is shorter
@@ -68,12 +70,12 @@ export function RouteAnnouncer() {
         window.scrollTo({ top: restoreTo, behavior: "instant" });
       }
       if (live.current) {
-        live.current.textContent = `Đã tới ${target?.textContent?.trim() ?? "trang mới"}`;
+        live.current.textContent = `${locale === "vi" ? "Đã tới" : "Opened"} ${target?.textContent?.trim() ?? (locale === "vi" ? "trang mới" : "a new page")}`;
       }
     };
     frame = window.requestAnimationFrame(settle);
     return () => window.cancelAnimationFrame(frame);
-  }, [pathname]);
+  }, [pathname, locale]);
 
   return <p ref={live} className="sr-only" aria-live="assertive" />;
 }

@@ -29,11 +29,14 @@ test("a new learner without the course is kept out of a paid lesson", async ({
   await page.locator("#register-confirm").fill("E2e!Password123");
   await page.getByRole("button", { name: "Tạo tài khoản" }).click();
   await expect(page).toHaveURL(`/courses/${REACT_COURSE}`);
-  await expect(page.getByRole("button", { name: /^Đăng ký học/ })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Liên hệ đăng ký học" }),
+  ).toBeVisible();
 
   const playbackRequests: string[] = [];
   page.on("request", (sent) => {
-    if (sent.url().includes("/playback-token")) playbackRequests.push(sent.url());
+    if (sent.url().includes("/playback-token"))
+      playbackRequests.push(sent.url());
   });
 
   await page.goto(`/learn/${REACT_COURSE}/${paid.id}`);

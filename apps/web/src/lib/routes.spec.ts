@@ -5,6 +5,7 @@ describe("catalogResource", () => {
   it("maps a course or category page to its API resource", () => {
     expect(catalogResource("/courses/react")).toBe("/courses/react");
     expect(catalogResource("/categories/web")).toBe("/categories/web");
+    expect(catalogResource("/checkout/react")).toBe("/courses/react");
   });
 
   it("ignores the listing, deeper paths and other pages", () => {
@@ -54,10 +55,7 @@ describe("safeNext", () => {
     "/.//evil.com",
     "/a/..//evil.com",
     "/%2e//evil.com",
-  ])(
-    "falls back to the learner home for %j",
-    (value) => {
-      expect(safeNext(value)).toBe(LEARNER_HOME);
-    },
-  );
+  ])("falls back to the learner home for %j", (value) => {
+    expect(safeNext(value)).toBe(LEARNER_HOME);
+  });
 });

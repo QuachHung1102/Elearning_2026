@@ -1,50 +1,55 @@
 @import "tailwindcss";
+@import "./studio.css";
+@import "./course-site.css";
+@import "./direct-enrollment.css";
+@import "./book-trial.css";
+@import "./impact.css";
 
 @theme static {
-  --color-background: #f8fafc;
-  --color-foreground: #0f172a;
-  --color-card: #ffffff;
-  --color-card-foreground: #0f172a;
-  --color-muted: #f1f5f9;
-  --color-muted-foreground: #64748b;
-  --color-muted-foreground-strong: #475569;
-  --color-border: #e2e8f0;
-  --color-input: #64748b;
-  --color-overlay: rgba(15, 23, 42, 0.55);
-  --color-skeleton: #e2e8f0;
-  --color-primary: #0d9488;
-  --color-primary-strong: #0f766e;
-  --color-primary-hover: #115e59;
-  --color-primary-foreground: #ffffff;
-  --color-primary-text: #0f766e;
-  --color-primary-subtle: #ccfbf1;
-  --color-primary-on-subtle: #0f766e;
-  --color-secondary: #2dd4bf;
-  --color-accent: #d97706;
-  --color-accent-hover: #f59e0b;
-  --color-accent-foreground: #431407;
-  --color-accent-subtle: #fef3c7;
-  --color-on-accent-subtle: #431407;
-  --color-ring: #0d9488;
-  --color-ring-offset: #f8fafc;
-  --color-success: #15803d;
-  --color-success-subtle: #dcfce7;
-  --color-on-success-subtle: #166534;
-  --color-warning: #b45309;
-  --color-warning-subtle: #fef3c7;
-  --color-on-warning-subtle: #b45309;
-  --color-destructive: #dc2626;
-  --color-destructive-hover: #b91c1c;
-  --color-destructive-foreground: #ffffff;
-  --color-destructive-subtle: #fee2e2;
-  --color-on-destructive-subtle: #991b1b;
-  --color-info: #0369a1;
-  --color-info-subtle: #e0f2fe;
-  --color-on-info-subtle: #075985;
+  --color-background: #242520;
+  --color-foreground: #f3f1e8;
+  --color-card: #2c2e27;
+  --color-card-foreground: #f3f1e8;
+  --color-muted: #34362f;
+  --color-muted-foreground: #b5b9aa;
+  --color-muted-foreground-strong: #c9cbbf;
+  --color-border: #4b4e43;
+  --color-input: #858978;
+  --color-overlay: rgba(15, 17, 13, 0.75);
+  --color-skeleton: #3b3e34;
+  --color-primary: #ff9674;
+  --color-primary-strong: #ff9674;
+  --color-primary-hover: #ffad93;
+  --color-primary-foreground: #32231a;
+  --color-primary-text: #ff9674;
+  --color-primary-subtle: #41332b;
+  --color-primary-on-subtle: #ffb39a;
+  --color-secondary: #cadc85;
+  --color-accent: #cadc85;
+  --color-accent-hover: #d7e6a5;
+  --color-accent-foreground: #303923;
+  --color-accent-subtle: #35415b;
+  --color-on-accent-subtle: #e0e8fa;
+  --color-ring: #ff9674;
+  --color-ring-offset: #242520;
+  --color-success: #cadc85;
+  --color-success-subtle: #333d29;
+  --color-on-success-subtle: #d8eaa1;
+  --color-warning: #efc884;
+  --color-warning-subtle: #443a28;
+  --color-on-warning-subtle: #f4d49e;
+  --color-destructive: #f08482;
+  --color-destructive-hover: #f59b99;
+  --color-destructive-foreground: #251a1a;
+  --color-destructive-subtle: #472e2d;
+  --color-on-destructive-subtle: #ffc6bd;
+  --color-info: #b8c8eb;
+  --color-info-subtle: #35415b;
+  --color-on-info-subtle: #e0e8fa;
 
-  --font-heading: var(--font-lexend), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  --font-heading: var(--font-vietnam), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-vietnam), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-code), "Cascadia Code", monospace;
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
@@ -86,11 +91,11 @@
 
   --spacing: 0.25rem;
   --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
+  --radius-md: 9px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
-  --container-page: 80rem;
+  --container-page: 78rem;
   --container-prose: 65ch;
   --shadow-overlay: 0 8px 24px rgba(15, 23, 42, 0.12);
   --shadow-modal: 0 16px 48px rgba(15, 23, 42, 0.2);
@@ -106,12 +111,12 @@
   --size-icon-xl: 40px;
 }
 
-
 * {
   box-sizing: border-box;
 }
 
 html {
+  color-scheme: dark;
   background: var(--color-background);
   scroll-behavior: smooth;
 }

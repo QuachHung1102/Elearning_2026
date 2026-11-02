@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import { Download, FileText } from "lucide-react";
 import {
@@ -11,7 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { showToast } from "@/components/ui/toast";
 import { ApiError, apiFetch } from "@/lib/api";
-import { formatBytes, type Resource, type SignedDownload } from "@/lib/learning";
+import {
+  formatBytes,
+  type Resource,
+  type SignedDownload,
+} from "@/lib/learning";
 import { t } from "@/messages/vi";
 
 const WIDE = "(min-width: 1024px)";
@@ -90,7 +95,7 @@ export function LessonBody({
             onClick={() => setActive(tab.key)}
             className={`-mb-px min-h-11 border-b-2 px-4 text-sm font-semibold ${active === tab.key ? "border-primary text-primary-text" : "border-transparent text-muted-foreground-strong hover:text-foreground"}`}
           >
-            {tab.label}
+            <UiText value={tab.label} />
           </button>
         ))}
       </div>
@@ -106,7 +111,9 @@ export function LessonBody({
         id={`${lessonId}-panel-resources`}
         className={`grid gap-3 ${active === "resources" ? "" : "hidden lg:grid"}`}
       >
-        <h2 className="hidden text-xl font-semibold lg:block">Tài liệu bài học</h2>
+        <h2 className="hidden text-xl font-semibold lg:block">
+          <UiText value="Tài liệu bài học" />
+        </h2>
         <ResourceList lessonId={lessonId} resources={resources} />
       </section>
     </div>
@@ -156,7 +163,9 @@ function ResourceList({
             strokeWidth={1.75}
           />
           <span className="min-w-0 flex-1">
-            <span className="block break-all font-medium">{resource.filename}</span>
+            <span className="block break-all font-medium">
+              {resource.filename}
+            </span>
             <span className="text-sm text-muted-foreground">
               {formatBytes(resource.sizeBytes)}
             </span>
@@ -166,8 +175,12 @@ function ResourceList({
             loading={pending === resource.id}
             onClick={() => download(resource)}
           >
-            <Download aria-hidden="true" className="size-4" strokeWidth={1.75} />
-            Tải xuống
+            <Download
+              aria-hidden="true"
+              className="size-4"
+              strokeWidth={1.75}
+            />
+            <UiText value="Tải xuống" />
             <span className="sr-only">: {resource.filename}</span>
           </Button>
         </li>

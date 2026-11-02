@@ -1,5 +1,6 @@
 import { PlaybackController } from './playback.controller.js';
 import type { StreamClient } from './stream.client.js';
+import { config } from '../config.js';
 
 const LESSON_ID = '0b9f5c1e-4d7a-4c1e-9a55-1f2e3d4c5b6a';
 const request = { auth: { user: { id: 'user-a', role: 'STUDENT' } } };
@@ -29,6 +30,38 @@ function setup(
 }
 
 describe('PlaybackController', () => {
+  it.each(['01', '02', '03', '04'])(
+    'serves public book lesson %s independently of the configured streaming provider',
+    async (number) => {
+      const { controller, stream } = setup(false, {
+        provider: 'DEMO',
+        externalId: `books/lesson-${number}`,
+      });
+      const body = await controller.playbackToken(request as never, LESSON_ID);
+      expect(body).toMatchObject({
+        kind: 'mp4',
+        playbackUrl: `${config.webOrigin.replace(/\/$/, '')}/videos/books/lesson-${number}.mp4`,
+      });
+      expect(stream.getStatus).not.toHaveBeenCalled();
+      expect(stream.signPlayback).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { provider: 'CLOUDFLARE', externalId: 'books/lesson-01' },
+    { provider: 'DEMO', externalId: 'books/lesson-05' },
+    { provider: 'DEMO', externalId: '../books/lesson-01' },
+  ])(
+    'keeps other assets on the protected streaming path: %j',
+    async (videoAsset) => {
+      const { controller, stream } = setup(false, videoAsset);
+      await expect(
+        controller.playbackToken(request as never, LESSON_ID),
+      ).rejects.toMatchObject({ status: 409 });
+      expect(stream.getStatus).toHaveBeenCalledWith(videoAsset.externalId);
+    },
+  );
+
   it('answers 409 VIDEO_NOT_READY while the video is processing', async () => {
     const { controller, stream } = setup(false);
     await expect(

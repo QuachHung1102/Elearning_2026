@@ -1,3 +1,4 @@
+import { UiText } from "@/components/language-provider";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -41,7 +42,7 @@ export default async function ResumePage({
           description="Nội dung sẽ có sớm."
           action={
             <Link href="/my-courses" className={buttonClass("outline")}>
-              Khóa học của tôi
+              <UiText value="Khóa học của tôi" />
             </Link>
           }
         />

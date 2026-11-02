@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PRICE_BANDS } from "@/lib/price-bands";
+import { useLanguage } from "@/components/language-provider";
 
 /**
  * A price tier is one choice but two query parameters, which a plain form
@@ -12,10 +13,13 @@ import { PRICE_BANDS } from "@/lib/price-bands";
  */
 export function PriceBand({ defaultIndex }: { defaultIndex: number }) {
   const [index, setIndex] = useState(defaultIndex);
+  const { text } = useLanguage();
   const band = PRICE_BANDS[index];
   return (
     <fieldset className="grid gap-2 border-0 p-0">
-      <legend className="mb-1 text-sm font-semibold">Giá</legend>
+      <legend className="mb-1 text-sm font-semibold">
+        {text("Giá", "Price")}
+      </legend>
       {PRICE_BANDS.map((price, value) => (
         <label
           key={price.label}
@@ -29,7 +33,12 @@ export function PriceBand({ defaultIndex }: { defaultIndex: number }) {
             onChange={() => setIndex(value)}
             className="size-5 accent-primary-strong"
           />
-          {price.label}
+          {text(
+            price.label,
+            ["All prices", "₫100,000", "₫150,000", "₫200,000", "Free courses"][
+              value
+            ],
+          )}
         </label>
       ))}
       {band.min && <input type="hidden" name="priceVndMin" value={band.min} />}

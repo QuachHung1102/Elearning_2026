@@ -1,4 +1,5 @@
 node_modules/
+.local-review/
 .pnpm-store/
 .env
 .env.*
@@ -44,3 +45,8 @@ skills-lock.json
 # Editor-local (.history holds copies of .env files)
 .history/
 .vscode/
+
+# Local teaching-production materials; keep out of the website repository.
+content/recording-kit/
+scripts/check-recording-kit.py
+scripts/localize-interface.cjs

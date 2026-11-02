@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
@@ -81,12 +82,15 @@ export function ContactForm({
 
   if (sent) {
     return (
-      <div className="grid max-w-xl gap-5">
+      <div className="grid max-w-xl self-start gap-5">
         <Alert variant="success" title="Đã gửi liên hệ">
-          Chúng tôi sẽ trả lời qua email trong vòng 24 giờ.
+          <UiText
+            value="Mình sẽ trả lời qua email bạn để lại."
+            en="I’ll reply using the email address you provided."
+          />
         </Alert>
         <Link className={buttonClass("primary", "lg")} href="/">
-          Về trang chủ
+          <UiText value="Về trang chủ" />
         </Link>
       </div>
     );
@@ -96,20 +100,23 @@ export function ContactForm({
     <form className="grid max-w-xl gap-6" onSubmit={submit} noValidate>
       {courseSlug && (
         <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground-strong">
-          Khóa học quan tâm: <strong>{courseSlug}</strong>.{" "}
+          <UiText value="Khóa học quan tâm:" />
+          <strong>{courseSlug}</strong>.{" "}
           <Link
             href="/courses"
             className="inline-flex min-h-11 items-center font-semibold text-primary-text hover:underline"
           >
-            Đổi
+            <UiText value="Đổi" />
           </Link>
         </div>
       )}
       {failure && (
         <Alert variant="destructive" title={failure}>
-          <p>Nội dung bạn đã nhập vẫn được giữ nguyên.</p>
+          <p>
+            <UiText value="Nội dung bạn đã nhập vẫn được giữ nguyên." />
+          </p>
           <Button className="mt-3" type="submit" variant="outline">
-            Thử lại
+            <UiText value="Thử lại" />
           </Button>
         </Alert>
       )}
@@ -162,7 +169,7 @@ export function ContactForm({
         />
       </Field>
       <Button type="submit" size="lg" loading={busy}>
-        Gửi liên hệ
+        <UiText value="Gửi liên hệ" />
       </Button>
     </form>
   );

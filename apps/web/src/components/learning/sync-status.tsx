@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import { CloudOff } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -55,9 +56,13 @@ export function SyncChip({
     <span role="status">
       {unsynced && (
         <span className="inline-flex items-center gap-1 rounded-full bg-warning-subtle px-2 py-0.5 text-xs font-medium text-on-warning-subtle">
-          <CloudOff aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
+          <CloudOff
+            aria-hidden="true"
+            className="size-3.5"
+            strokeWidth={1.75}
+          />
           <span className={compact ? "max-sm:sr-only" : ""}>
-            Chưa đồng bộ tiến độ
+            <UiText value="Chưa đồng bộ tiến độ" />
           </span>
         </span>
       )}

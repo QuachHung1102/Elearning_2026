@@ -5,6 +5,8 @@ import { buttonClass } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/feedback";
 import { progressText, type EnrollmentItem } from "@/lib/learning";
 import { ProgressBar } from "./progress-bar";
+import { getLocale } from "@/lib/locale";
+import { translate } from "@/lib/translations";
 
 /**
  * One enrolled course on `/my-courses` (UX_PLAN.md §3.3). The only link is the
@@ -13,7 +15,7 @@ import { ProgressBar } from "./progress-bar";
  * Progress means completed lessons (§3.3 "bài xong / tổng bài"), so a course
  * with none done is still one to start.
  */
-export function CourseProgressCard({
+export async function CourseProgressCard({
   enrollment,
   primary,
 }: {
@@ -22,6 +24,8 @@ export function CourseProgressCard({
   primary: boolean;
 }) {
   const { course, progress } = enrollment;
+  const locale = await getLocale();
+  const text = (vi: string, en?: string) => translate(locale, vi, en);
   return (
     <li className="panel relative grid grid-rows-[auto_1fr_auto]">
       <Cover course={course} />
@@ -48,20 +52,30 @@ export function CourseProgressCard({
       <div className="grid gap-3 border-t border-border p-4">
         <div className="grid gap-2">
           <p className="text-sm text-muted-foreground tabular-nums">
-            {progress.completedLessons} / {progress.totalLessons} bài đã hoàn
-            thành
+            {progress.completedLessons} / {progress.totalLessons}{" "}
+            {text("bài đã hoàn thành", "lessons completed")}
           </p>
           <ProgressBar
             percent={progress.percent}
-            label={`Tiến độ khóa ${course.title}`}
-            valueText={progressText(progress)}
+            label={text(
+              `Tiến độ khóa ${course.title}`,
+              `Progress for ${course.title}`,
+            )}
+            valueText={text(
+              progressText(progress),
+              `${progress.completedLessons} of ${progress.totalLessons} lessons completed`,
+            )}
           />
         </div>
         <Link
           href={`/learn/${course.slug}`}
-          className={buttonClass(primary ? "primary" : "outline", "md", "mt-1 w-full")}
+          className={buttonClass(
+            primary ? "primary" : "outline",
+            "md",
+            "mt-1 w-full",
+          )}
         >
-          {progress.completedLessons > 0 ? "Tiếp tục học" : "Bắt đầu học"}
+          {text(progress.completedLessons > 0 ? "Tiếp tục học" : "Bắt đầu học")}
           <span className="sr-only">: {course.title}</span>
         </Link>
       </div>

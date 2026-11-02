@@ -19,6 +19,7 @@ import {
 import { ERROR_CODE, appError } from '../common/error-codes.js';
 import { config } from '../config.js';
 import { EnrollmentService } from '../enrollment/enrollment.service.js';
+import { bookTrialVideo } from './book-trial.js';
 import { STREAM_CLIENT, type StreamClient } from './stream.client.js';
 
 /**
@@ -50,6 +51,19 @@ export class PlaybackController {
     // Step 5: an ARTICLE, or a VIDEO lesson with nothing attached.
     if (!lesson.videoAsset) {
       throw appError(HttpStatus.NOT_FOUND, ERROR_CODE.NOT_FOUND, 'Not Found');
+    }
+    // These four deliberately public files live with the website. Keep them
+    // available even when other lessons use Cloudflare in production.
+    const trial =
+      lesson.videoAsset.provider === 'DEMO'
+        ? bookTrialVideo(lesson.videoAsset.externalId)
+        : null;
+    if (trial) {
+      return {
+        playbackUrl: `${config.webOrigin.replace(/\/$/, '')}${trial.path}`,
+        kind: 'mp4',
+        expiresAt: new Date(Date.now() + config.playbackTokenTtlSeconds * 1000),
+      };
     }
     // Step 6: awaited — a Promise has no `.ready`, so forgetting it answers
     // 409 to every request.

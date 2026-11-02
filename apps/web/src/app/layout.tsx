@@ -1,65 +1,69 @@
 import type { Metadata } from "next";
-import { Inter, Lexend } from "next/font/google";
+import { Be_Vietnam_Pro, IBM_Plex_Mono } from "next/font/google";
 import { RouteAnnouncer } from "@/components/route-announcer";
 import { Toaster } from "@/components/ui/toast";
+import { LanguageProvider } from "@/components/language-provider";
+import { getLocale } from "@/lib/locale";
 import { OPEN_GRAPH_DEFAULTS, SITE_URL } from "@/lib/site";
 import "./globals.css";
-
-const lexend = Lexend({
-  variable: "--font-lexend",
+const vietnam = Be_Vietnam_Pro({
+  variable: "--font-vietnam",
   subsets: ["latin", "vietnamese"],
-  weight: ["500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
-
-const inter = Inter({
-  variable: "--font-inter",
+const mono = IBM_Plex_Mono({
+  variable: "--font-code",
   subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500"],
   display: "swap",
 });
-
-export const metadata: Metadata = {
-  // Resolves the relative image and canonical URLs of every page to this site.
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: "E-learning",
-    template: "%s · E-learning",
-  },
-  description: "Nền tảng khóa học trực tuyến.",
-  openGraph: { ...OPEN_GRAPH_DEFAULTS, type: "website" },
-};
-
-const designContract = `<!--
-THESIS: Learning tasks should feel direct and trustworthy, never like a generic promotional template.
-OWN-WORLD: Flat slate surfaces, teal identity, amber conversion actions, compact radii, crisp borders, Lexend headings, Inter body copy.
-STORY: A Vietnamese learner completes identity, account, and contact tasks with visible state and a clear next action.
-FIRST VIEWPORT: One focused heading and one task panel, left aligned inside a calm responsive shell; the primary action remains immediately visible.
-FORM: Operate mode, plan-pinned marketplace structure, seed operate-marketplace-flat-20260904.
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
--->`;
-
-export default function RootLayout({
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default:
+        locale === "vi"
+          ? "The CodingBuddy · Cùng học, cùng làm"
+          : "The CodingBuddy · Learn and make together",
+      template: "%s · The CodingBuddy",
+    },
+    description:
+      locale === "vi"
+        ? "Cùng Hải Nam học lập trình qua những dự án nhỏ có thể giúp ích cho người khác. Dành cho học sinh 10–15 tuổi."
+        : "Learn to code with Hải Nam through small projects that can help someone. For students aged 10–15.",
+    openGraph: {
+      ...OPEN_GRAPH_DEFAULTS,
+      locale: locale === "vi" ? "vi_VN" : "en_US",
+      type: "website",
+    },
+  };
+}
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
   return (
     <html
-      lang="vi"
-      // Lets Next switch smooth scrolling off during route transitions.
+      lang={locale}
       data-scroll-behavior="smooth"
-      className={`${lexend.variable} ${inter.variable}`}
+      className={`${vietnam.variable} ${mono.variable}`}
     >
       <body>
-        <template dangerouslySetInnerHTML={{ __html: designContract }} />
-        <a
-          href="#main"
-          className="fixed left-4 top-4 z-50 -translate-y-24 rounded-md bg-primary-strong px-4 py-3 font-semibold text-primary-foreground transition-transform focus:translate-y-0"
-        >
-          Bỏ qua và tới nội dung chính
-        </a>
-        {children}
-        <RouteAnnouncer />
-        <Toaster />
+        <LanguageProvider initialLocale={locale}>
+          <a
+            href="#main"
+            className="fixed left-4 top-4 z-50 -translate-y-24 rounded-md bg-primary-strong px-4 py-3 font-semibold text-primary-foreground transition-transform focus:translate-y-0"
+          >
+            {locale === "vi"
+              ? "Bỏ qua và tới nội dung chính"
+              : "Skip to main content"}
+          </a>
+          {children}
+          <RouteAnnouncer />
+          <Toaster />
+        </LanguageProvider>
       </body>
     </html>
   );

@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { forwardVisitor } from "./lib/internal-api";
 import { catalogResource } from "./lib/routes";
 import { API_ORIGIN } from "./lib/site";
+import { stat } from "node:fs/promises";
+import { resolve } from "node:path";
+import { unsatisfiableVideoRange } from "./lib/video-range";
 
 /**
  * Every page streams (the root `loading.tsx` wraps them all), so the status is
@@ -28,6 +31,16 @@ async function catalogStatus(request: NextRequest, resource: string) {
 }
 
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith("/videos/books/")) {
+    const filename = /^\/videos\/books\/(lesson-0[1-4]\.mp4)$/.exec(request.nextUrl.pathname)?.[1];
+    if (filename && request.method === "GET" && request.headers.has("range")) {
+      const file = await stat(resolve(process.cwd(), "public/videos/books", filename)).catch(() => null);
+      if (file && unsatisfiableVideoRange(request.headers.get("range"), file.size)) {
+        return new NextResponse(null, { status: 416, headers: { "Content-Range": `bytes */${file.size}`, "Accept-Ranges": "bytes" } });
+      }
+    }
+    return NextResponse.next();
+  }
   // The `/api/*` rewrite in next.config.ts forwards these request headers.
   if (request.nextUrl.pathname.startsWith("/api/")) {
     const headers = forwardVisitor(
@@ -59,6 +72,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/videos/books/:path*",
     "/account/:path*",
     "/admin/:path*",
     "/api/:path*",

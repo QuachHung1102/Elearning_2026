@@ -4,23 +4,15 @@
  * good" and "why can't this be refunded" have exactly one answer.
  */
 
-/** Selling is switched on per environment; the flag is read at build time. */
+/** Legacy order history/admin screens; direct-contact enrollment ignores this flag. */
 export const CHECKOUT_ENABLED =
   process.env.NEXT_PUBLIC_CHECKOUT_ENABLED === "true";
 
 export type PurchaseStatus =
-  | "PENDING"
-  | "PAID"
-  | "REFUND_REQUESTED"
-  | "REFUNDED"
-  | "CANCELLED";
+  "PENDING" | "PAID" | "REFUND_REQUESTED" | "REFUNDED" | "CANCELLED";
 
 export type AttemptStatus =
-  | "PENDING"
-  | "SUCCEEDED"
-  | "FAILED"
-  | "EXPIRED"
-  | "CANCELLED";
+  "PENDING" | "SUCCEEDED" | "FAILED" | "EXPIRED" | "CANCELLED";
 
 export type PaymentProvider = "DEMO" | "ZALOPAY";
 
@@ -136,7 +128,9 @@ export function paymentView({
 export function qrStillLive(
   attempt: { status: AttemptStatus; expiresAt: string } | undefined,
 ): boolean {
-  return attempt?.status === "PENDING" && Date.parse(attempt.expiresAt) > Date.now();
+  return (
+    attempt?.status === "PENDING" && Date.parse(attempt.expiresAt) > Date.now()
+  );
 }
 
 /** Every 3 seconds for the first minute, then every 10 (UX_PLAN.md §5.5). */

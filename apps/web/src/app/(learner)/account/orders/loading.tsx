@@ -1,3 +1,4 @@
+import { UiText } from "@/components/language-provider";
 import { Skeleton } from "@/components/ui/feedback";
 
 /**
@@ -7,7 +8,9 @@ import { Skeleton } from "@/components/ui/feedback";
 export default function Loading() {
   return (
     <section className="grid gap-8" aria-busy="true">
-      <span className="sr-only">Đang tải…</span>
+      <span className="sr-only">
+        <UiText value="Đang tải…" />
+      </span>
       <div aria-hidden="true" className="grid gap-3">
         {[0, 1, 2, 3, 4].map((index) => (
           <Skeleton key={index} className="h-14" />

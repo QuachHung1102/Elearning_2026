@@ -87,7 +87,17 @@ export async function apiFetch<T = unknown>(
     throw new ApiError(0, "NETWORK_ERROR");
   }
 
-  const body = response.status === 204 ? undefined : await response.json();
+  // Contact returns 202 with no body; not every successful response is JSON.
+  const raw = response.status === 204 ? "" : await response.text();
+  let body: unknown;
+  if (raw.trim()) {
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      if (response.ok) throw new ApiError(response.status, "INTERNAL");
+      // Reverse proxies may return HTML errors. Preserve the HTTP error below.
+    }
+  }
   if (!response.ok) {
     const error = (body ?? {}) as ErrorBody;
     if (error.code === "CSRF_INVALID" && !retriedCsrf) {

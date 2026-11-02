@@ -1,3 +1,4 @@
+import { UiText } from "@/components/language-provider";
 import { Receipt } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -27,7 +28,8 @@ export default async function OrdersPage({
     await serverFetch(`/purchases/me?page=${page}&pageSize=${PAGE_SIZE}`),
     "/account/orders",
   );
-  if (!response.ok) throw new Error(`GET /purchases/me answered ${response.status}`);
+  if (!response.ok)
+    throw new Error(`GET /purchases/me answered ${response.status}`);
   const orders = (await response.json()) as Paginated<PurchaseRow>;
 
   return (
@@ -39,7 +41,7 @@ export default async function OrdersPage({
           description="Đơn hàng sẽ xuất hiện ở đây sau lần đăng ký học đầu tiên."
           action={
             <Link href="/courses" className={buttonClass("outline")}>
-              Xem danh sách khóa học
+              <UiText value="Xem danh sách khóa học" />
             </Link>
           }
         />

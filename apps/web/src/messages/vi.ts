@@ -1,3 +1,4 @@
+import { englishErrors } from "./en";
 export const messages = {
   VALIDATION_FAILED: "Thông tin chưa hợp lệ.",
   TOKEN_INVALID: "Liên kết đã hết hạn hoặc đã được dùng.",
@@ -41,5 +42,11 @@ export const contextMessages = {
 export type MessageCode = keyof typeof messages;
 
 export function t(code: string): string {
+  if (
+    typeof document !== "undefined" &&
+    /(?:^|;\s*)codingbuddy-language=en(?:;|$)/.test(document.cookie)
+  ) {
+    return englishErrors[code] ?? englishErrors.INTERNAL;
+  }
   return messages[code as MessageCode] ?? messages.INTERNAL;
 }

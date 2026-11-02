@@ -1,0 +1,401 @@
+.direct-enrollment {
+  padding-top: 30px;
+  padding-bottom: 75px;
+}
+.direct-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  min-height: 44px;
+}
+.direct-enrollment-header {
+  padding: 25px 0 35px;
+  max-width: 790px;
+}
+.direct-enrollment-header h1 {
+  font-size: clamp(36px, 4.3vw, 56px);
+  font-weight: 800;
+  line-height: 1.22;
+  letter-spacing: -2px;
+  margin-top: 20px;
+}
+.direct-enrollment-header em {
+  font-style: normal;
+  color: var(--color-primary-text);
+}
+.direct-enrollment-header > .direct-enrollment-intro {
+  color: var(--color-muted-foreground);
+  font-size: 15px;
+  line-height: 1.95;
+  max-width: 740px;
+  margin-top: 21px;
+}
+.direct-enrollment-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 345px;
+  gap: 34px;
+  align-items: start;
+}
+.direct-selected-caption {
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+  line-height: 1.8;
+  margin-top: 15px;
+}
+.direct-selected-caption strong {
+  font-weight: 500;
+  color: var(--color-foreground);
+}
+.direct-enrollment-main {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  gap: 26px;
+  min-width: 0;
+}
+.direct-course-summary {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 185px minmax(0, 1fr);
+  background: var(--color-card);
+}
+.direct-course-summary > .course-visual {
+  height: 100%;
+  min-height: 235px;
+}
+.direct-course-summary .cover-label {
+  font-size: 9px;
+  left: 14px;
+  top: 13px;
+}
+.direct-course-summary .cover-subject {
+  font-size: 53px;
+  letter-spacing: -4px;
+}
+.direct-course-summary .course-visual:before {
+  width: 135px;
+  height: 95px;
+}
+.direct-course-summary > div:last-child {
+  padding: 24px;
+  display: grid;
+  gap: 12px;
+  align-content: center;
+  min-width: 0;
+}
+.direct-course-summary h2 {
+  font-size: 22px;
+  line-height: 1.5;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.direct-course-price {
+  display: grid;
+  gap: 5px;
+}
+.direct-course-price > span:last-child {
+  font-size: 11px;
+  color: var(--color-muted-foreground);
+  line-height: 1.7;
+}
+.direct-contact-card {
+  grid-column: 2;
+  grid-row: 1;
+  border: 1px solid var(--color-border);
+  border-radius: 15px;
+  background: var(--color-card);
+  padding: 28px;
+  position: sticky;
+  top: 25px;
+  min-width: 0;
+}
+.direct-contact-card h2 {
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+  margin: 10px 0 24px;
+}
+.direct-contact-card .section-label {
+  font-size: 10px;
+}
+.contact-qr-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 13px;
+  min-height: 260px;
+  border: 1px dashed var(--color-input);
+  border-radius: 12px;
+  padding: 25px 20px;
+  background: var(--color-background);
+}
+.contact-qr-placeholder > svg {
+  color: var(--color-primary-text);
+}
+.contact-qr-placeholder strong {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.contact-qr-placeholder p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--color-muted-foreground);
+  max-width: 230px;
+}
+.contact-qr-ready {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+.contact-qr-ready img {
+  width: 240px;
+  height: 240px;
+  max-width: 100%;
+  object-fit: contain;
+  background: #fff;
+  border: 12px solid #fff;
+  border-radius: 12px;
+}
+.contact-qr-ready p,
+.direct-contact-caption {
+  font-size: 12px;
+  line-height: 1.85;
+  color: var(--color-muted-foreground);
+}
+.direct-contact-caption {
+  margin-top: 17px;
+}
+.direct-contact-links {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+.direct-contact-links:empty {
+  display: none;
+}
+.direct-contact-links > a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 46px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 9px 13px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.direct-contact-links > a.studio-button {
+  border-color: var(--color-primary-strong);
+}
+.direct-contact-links > a:not(.studio-button):hover {
+  border-color: var(--color-primary-text);
+  color: var(--color-primary-text);
+}
+.direct-contact-links svg {
+  flex-shrink: 0;
+}
+.enrollment-message {
+  padding: 25px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-card);
+  min-width: 0;
+}
+.enrollment-message-heading {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 17px;
+}
+.enrollment-message h2,
+.direct-enrollment-steps > h2 {
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+}
+.enrollment-message-heading > span {
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+}
+.enrollment-message textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 210px;
+  resize: vertical;
+  border: 1px solid var(--color-input);
+  border-radius: 8px;
+  padding: 15px 16px;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-size: 14px;
+  line-height: 1.9;
+  font-family: var(--font-sans);
+  overflow-wrap: anywhere;
+}
+.enrollment-copy-row {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin-top: 17px;
+}
+.enrollment-copy-row p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--color-muted-foreground);
+}
+.enrollment-copy-row .studio-button {
+  font-size: 13px;
+  gap: 10px;
+}
+.direct-enrollment-steps {
+  padding: 8px 0 0;
+}
+.direct-enrollment-steps ol {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+  display: grid;
+}
+.direct-enrollment-steps li {
+  display: flex;
+  gap: 20px;
+  padding: 20px 0;
+  border-top: 1px solid var(--color-border);
+}
+.direct-enrollment-steps li > span {
+  font: 400 13px/1.8 var(--font-mono);
+  color: var(--color-primary-text);
+}
+.direct-enrollment-steps h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 7px;
+}
+.direct-enrollment-steps li p {
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--color-muted-foreground);
+  max-width: 560px;
+}
+.direct-account-note {
+  display: flex;
+  align-items: start;
+  gap: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 18px;
+  background: var(--color-muted);
+  margin-top: 7px;
+}
+.direct-account-note > svg {
+  flex-shrink: 0;
+  color: var(--color-secondary);
+  margin-top: 3px;
+}
+.direct-account-note p {
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--color-muted-foreground);
+}
+.direct-account-note a {
+  color: var(--color-primary-text);
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 1023px) {
+  .direct-enrollment-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 24px;
+  }
+  .direct-course-summary {
+    grid-template-columns: 1fr;
+  }
+  .direct-course-summary > .course-visual {
+    min-height: 170px;
+    height: 170px;
+  }
+  .direct-contact-card {
+    padding: 22px;
+  }
+  .direct-contact-card h2 {
+    font-size: 23px;
+  }
+  .direct-enrollment-header h1 {
+    font-size: 46px;
+  }
+}
+@media (max-width: 760px) {
+  .direct-enrollment {
+    padding-top: 20px;
+    padding-bottom: 45px;
+  }
+  .direct-enrollment-header {
+    padding-top: 21px;
+    padding-bottom: 26px;
+  }
+  .direct-enrollment-header h1 {
+    font-size: clamp(34px, 7.3vw, 44px);
+    letter-spacing: -1.6px;
+  }
+  .direct-enrollment-header > .direct-enrollment-intro {
+    font-size: 14px;
+  }
+  .direct-enrollment-grid {
+    grid-template-columns: 1fr;
+    gap: 23px;
+  }
+  .direct-contact-card {
+    position: static;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .direct-enrollment-main {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .direct-course-summary {
+    grid-template-columns: 1fr;
+  }
+  .direct-course-summary > div:last-child {
+    padding: 21px;
+  }
+  .direct-course-summary h2 {
+    font-size: 21px;
+  }
+  .direct-course-summary > .course-visual {
+    height: 175px;
+    min-height: 175px;
+  }
+  .enrollment-message {
+    padding: 20px;
+  }
+  .enrollment-message textarea {
+    font-size: 16px;
+    min-height: 260px;
+  }
+  .enrollment-message h2 {
+    font-size: 20px;
+  }
+  .direct-contact-card {
+    padding: 23px;
+  }
+  .contact-qr-placeholder {
+    min-height: 230px;
+  }
+  .direct-enrollment-steps li {
+    gap: 15px;
+  }
+  .direct-contact-links > a {
+    min-height: 48px;
+  }
+}

@@ -1,3 +1,4 @@
+import { UiText } from "@/components/language-provider";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -21,10 +22,10 @@ export default async function VerifyEmailPage({
     <section className="grid gap-8">
       <div className="grid gap-2">
         <h1 tabIndex={-1} className="text-4xl font-bold">
-          Xác minh email
+          <UiText value="Xác minh email" />
         </h1>
         <p className="text-muted-foreground">
-          Liên kết xác minh chỉ dùng được một lần.
+          <UiText value="Liên kết xác minh chỉ dùng được một lần." />
         </p>
       </div>
       <div className="grid gap-5">
@@ -42,7 +43,7 @@ export default async function VerifyEmailPage({
                   className="inline-flex min-h-11 items-center text-sm font-semibold text-primary-text hover:underline"
                   href="/login"
                 >
-                  Đăng nhập
+                  <UiText value="Đăng nhập" />
                 </Link>
               </div>
             }

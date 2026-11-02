@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thư viện tài liệu nhỏ · CodingBuddy</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f7fc; color: #18243d; font: 16px/1.8 system-ui, sans-serif; }
+    main { max-width: 800px; margin: 35px auto; padding: 25px; }
+    header p, small { color: #526078; } h1 { font-size: 32px; line-height: 1.35; }
+    input { width: 100%; padding: 13px; font: inherit; border: 1px solid #8996ac; border-radius: 8px; }
+    nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 15px 0; }
+    button { font: inherit; cursor: pointer; } nav button { padding: 8px 15px; border: 1px solid #cbd5e8; border-radius: 6px; background: #fff; color: #18243d; }
+    nav button[aria-pressed="true"] { background: #294bc9; color: #fff; }
+    ul { list-style: none; margin: 0; padding: 0; } li { border-bottom: 1px solid #dce3ef; }
+    li button { display: block; width: 100%; text-align: left; background: #fff; border: 0; padding: 20px; color: #18243d; }
+    li button:hover { background: #edf2ff; } strong, small { display: block; }
+    :focus-visible { outline: 3px solid #294bc9; outline-offset: 3px; }
+    #note { margin-top: 25px; background: #fff; padding: 23px; border-radius: 9px; } #task { border-left: 3px solid #dcad4e; padding: 12px 18px; background: #fff8e9; }
+    footer { margin-top: 28px; color: #526078; font-size: 14px; }
+    @media (max-width: 500px) { main { margin: 0; padding: 20px; } h1 { font-size: 27px; } }
+  </style>
+</head>
+<body>
+<main>
+  <header><p>CodingBuddy / Bài thực hành mở</p>
+    <h1>Thư viện tài liệu cho lớp mình</h1>
+    <p>Tìm một ghi chú, đọc và thử làm. Bạn có thể sửa tệp này bằng một trình soạn thảo.</p>
+  </header>
+  <label for="search">Tìm tài liệu</label>
+  <input id="search" type="search" placeholder="Ví dụ: biến, HTML…">
+  <nav aria-label="Chủ đề">
+    <button type="button" data-topic="all" aria-pressed="true">Tất cả</button>
+    <button type="button" data-topic="python" aria-pressed="false">Python</button>
+    <button type="button" data-topic="web" aria-pressed="false">Web</button>
+    <button type="button" data-topic="thinking" aria-pressed="false">Tư duy</button>
+  </nav>
+  <p id="count" aria-live="polite"></p><ul id="results"></ul>
+  <section id="note" hidden><h2 id="title"></h2><p id="content"></p><p id="task"></p></section>
+  <footer>Đến lượt bạn: tìm mảng resources trong mã nguồn và thêm một ghi chú hữu ích. Lưu tệp, rồi tải lại trang.</footer>
+</main>
+<script>
+// Your library data. Add another object here to add a note.
+const resources = [
+  {
+    "topic": "python",
+    "title": "Biến: đặt tên cho một thông tin",
+    "description": "Bắt đầu với tên, giá trị và một phép tính nhỏ.",
+    "note": "Một biến giúp chương trình ghi nhớ một giá trị. Với books = 3, tên books giữ giá trị 3. Khi thêm một cuốn sách, bạn có thể viết books = books + 1. Chọn tên dễ hiểu để người khác cũng đọc được chương trình.",
+    "exercise": "Tạo biến books với giá trị 3. Thêm 2 cuốn và in số sách mới bằng print(books)."
+  },
+  {
+    "topic": "python",
+    "title": "Danh sách: gom những điều liên quan",
+    "description": "Lưu các tài liệu cùng nhau, thay vì ghi nhớ từng cái.",
+    "note": "Một danh sách có thể chứa nhiều mục: titles = [\"Biến\", \"Danh sách\"]. Dùng vòng lặp for title in titles: để xem từng mục. Đây là cách một thư viện nhỏ có thể bắt đầu từ vài dòng code.",
+    "exercise": "Thêm tên một bài học vào danh sách. Dùng vòng lặp để in từng tên trên một dòng riêng."
+  },
+  {
+    "topic": "web",
+    "title": "HTML: sắp xếp một trang dễ đọc",
+    "description": "Dùng tiêu đề, đoạn văn và liên kết đúng chỗ.",
+    "note": "HTML mô tả cấu trúc của trang. Dùng h1 cho tiêu đề chính, p cho một đoạn văn và a cho liên kết. Nhãn rõ ràng và thứ tự đọc hợp lý giúp người mới tìm thấy điều họ cần.",
+    "exercise": "Tạo một trang giới thiệu tài liệu yêu thích. Viết tiêu đề rõ ràng và một câu giải thích tài liệu giúp người đọc làm được gì."
+  },
+  {
+    "topic": "thinking",
+    "title": "Sửa lỗi: thay từng điều một",
+    "description": "Quan sát kết quả, thử một giả thuyết rồi kiểm tra lại.",
+    "note": "Khi kết quả không như mong muốn, hãy ghi lại điều bạn nghĩ sẽ xảy ra và điều thực sự xảy ra. Kiểm tra một phần nhỏ của chương trình. Thay một điều mỗi lần để biết thay đổi nào đã giúp.",
+    "exercise": "Thử tìm một từ chưa có trong thư viện. Giao diện nên giải thích điều gì? Viết một thông báo giúp người dùng biết cách thử lại."
+  }
+];
+
+const search = document.getElementById("search");
+const results = document.getElementById("results");
+let topic = "all";
+function normalize(value) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase().trim();
+}
+function render() {
+  const term = normalize(search.value);
+  const matches = resources.filter((resource) =>
+    (topic === "all" || resource.topic === topic) &&
+    normalize(resource.title + " " + resource.description + " " + resource.topic).includes(term)
+  );
+  results.replaceChildren();
+  document.getElementById("count").textContent = matches.length + " ghi chú";
+  if (!matches.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "Chưa có ghi chú phù hợp. Thử một từ ngắn hơn hoặc chọn tất cả chủ đề.";
+    results.append(empty);
+  }
+  matches.forEach((resource) => {
+    const row = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    const title = document.createElement("strong");
+    title.textContent = resource.title;
+    const description = document.createElement("small");
+    description.textContent = resource.description;
+    button.append(title, description);
+    button.addEventListener("click", () => {
+      document.getElementById("note").hidden = false;
+      document.getElementById("title").textContent = resource.title;
+      document.getElementById("content").textContent = resource.note;
+      document.getElementById("task").textContent = resource.exercise;
+    });
+    row.append(button);
+    results.append(row);
+  });
+}
+search.addEventListener("input", render);
+document.querySelectorAll("[data-topic]").forEach((button) => {
+  button.addEventListener("click", () => {
+    topic = button.dataset.topic;
+    document.querySelectorAll("[data-topic]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+    render();
+  });
+});
+render();
+</script>
+</body>
+</html>

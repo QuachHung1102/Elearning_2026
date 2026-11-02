@@ -10,7 +10,9 @@ import Link from "next/link";
 import type { Category } from "@/lib/catalog";
 import { formatNumber } from "@/lib/format";
 import { renderMarkdown } from "@/lib/markdown";
-import { SITE_OWNER } from "@/lib/site";
+import { UiText } from "@/components/language-provider";
+import { getLocale } from "@/lib/locale";
+import { translate } from "@/lib/translations";
 import { buttonClass } from "@/components/ui/button";
 
 export function SearchHero({ courseCount }: { courseCount: number }) {
@@ -114,14 +116,16 @@ export function TrustStats({
   );
 }
 
-export function InstructorCard({
+export async function InstructorCard({
   variant = "compact",
   name,
 }: {
   variant?: "compact" | "full";
-  /** The course's own instructor; absent, the site owner who writes every course. */
+  /** The course's own instructor, or the site founder when absent. */
   name?: string;
 }) {
+  const locale = await getLocale();
+  const text = (vi: string, en?: string) => translate(locale, vi, en);
   return (
     <section className="panel grid gap-3 p-6" aria-labelledby="owner-heading">
       <GraduationCap
@@ -130,57 +134,78 @@ export function InstructorCard({
         strokeWidth={1.75}
       />
       <h2 id="owner-heading" className="text-2xl font-semibold">
-        Người đứng lớp
+        {text("Người đứng lớp")}
       </h2>
       <p className="text-muted-foreground">
         {name
-          ? `${name} soạn và giảng khóa học này.`
-          : `${SITE_OWNER.name} tự biên soạn và giảng toàn bộ khóa học trên nền tảng này. Mỗi bài học đi ra từ một tình huống làm việc thật.`}
+          ? text(`Người dạy khóa học: ${name}.`, `Course instructor: ${name}.`)
+          : text(
+              "Hải Nam · Người sáng lập CodingBuddy. Cùng học kiến thức nền tảng và thử làm những dự án có ích.",
+              "Hải Nam · Founder of CodingBuddy. Learn the fundamentals together and try building something useful.",
+            )}
       </p>
       {variant === "full" && !name && (
         <p className="text-muted-foreground">
-          Thông tin chi tiết về người dạy đang được cập nhật. Trong lúc chờ, bạn
-          có thể gửi câu hỏi qua trang liên hệ.
+          {text(
+            "Mình đang chuẩn bị chuỗi video hướng dẫn làm dự án. Bạn có thể bắt đầu với bài thực hành mở.",
+            "I’m preparing a project-building video series. You can begin with the open practice lesson.",
+          )}
         </p>
       )}
       <Link href="/contact" className={buttonClass("outline", "md", "w-fit")}>
-        Liên hệ
+        {text("Liên hệ")}
       </Link>
     </section>
   );
 }
 
-const FAQ = [
-  {
-    question: "Tôi đăng ký học bằng cách nào",
-    answer:
-      "Hiện tại bạn gửi yêu cầu qua trang liên hệ. Sau khi xác nhận, quyền học được mở trong tài khoản của bạn.",
-  },
-  {
-    question: "Học thử được không",
-    answer:
-      "Được. Mỗi khóa học có ít nhất một bài học thử, mở cho mọi tài khoản đã đăng nhập mà không cần trả phí.",
-  },
-  {
-    question: "Tôi học được trong bao lâu",
-    answer:
-      "Quyền học không có hạn sử dụng. Tiến độ được lưu lại theo từng bài, bạn quay lại đúng chỗ đã dừng.",
-  },
-  {
-    question: "Có xuất hóa đơn không",
-    answer:
-      "Có. Bạn nêu yêu cầu hóa đơn trong nội dung liên hệ, kèm thông tin đơn vị và mã số thuế.",
-  },
-];
-
-export function FaqAccordion() {
+export async function FaqAccordion({
+  entries: courseEntries = [],
+}: {
+  entries?: { question: string; answer: string }[];
+} = {}) {
+  const locale = await getLocale();
+  const text = (vi: string, en?: string) => translate(locale, vi, en);
+  const entries = [
+    ...courseEntries,
+    {
+      question: text(
+        "Mình chưa biết code, bắt đầu ở đâu?",
+        "I haven’t coded before. Where do I start?",
+      ),
+      answer: text(
+        "Bạn có thể thử bài thực hành mở mà không cần tài khoản. Mỗi khóa học có phần yêu cầu để bạn biết nên chuẩn bị gì trước khi đăng ký.",
+        "You can try the open practice lesson without an account. Each course lists its prerequisites so you know what to prepare before enrolling.",
+      ),
+    },
+    {
+      question: text(
+        "Có thể học thử một khóa không?",
+        "Can I preview a course?",
+      ),
+      answer: text(
+        "Dự án tủ sách chia sẻ có bốn video và bài đọc miễn phí, không cần tài khoản. Năm khóa dự án có bài đọc đã mở đăng ký qua Zalo; bốn dự án khác sắp có.",
+        "The book-sharing project has four free videos and written notes, with no account required. Five written project courses are open for enrollment through Zalo; four more projects are upcoming.",
+      ),
+    },
+    {
+      question: text(
+        "Video và bài học dùng ngôn ngữ nào?",
+        "What language are the lessons in?",
+      ),
+      answer: text(
+        "Giao diện có tiếng Việt và tiếng Anh. Nội dung và âm thanh bài học giữ ngôn ngữ gốc của người dạy; giao diện tiếng Anh không có nghĩa video đã được dịch.",
+        "The interface is available in Vietnamese and English. Lesson content and audio keep the instructor’s original language; an English interface does not mean a video has been translated.",
+      ),
+    },
+  ];
   return (
     <section className="grid gap-4" aria-labelledby="faq-heading">
       <h2 id="faq-heading" className="text-2xl font-semibold">
-        Câu hỏi thường gặp
+        {text("Câu hỏi thường gặp")}
       </h2>
       <div className="grid gap-2">
-        {FAQ.map((entry) => (
+        {entries.map((entry) => (
           <details key={entry.question} className="panel p-4">
             <summary className="flex min-h-11 cursor-pointer list-none items-center font-semibold">
               {entry.question}
@@ -207,7 +232,9 @@ function IconList({
   if (items.length === 0) return null;
   return (
     <section className="grid gap-3">
-      <h2 className="text-2xl font-semibold">{title}</h2>
+      <h2 className="text-2xl font-semibold">
+        <UiText value={title} />
+      </h2>
       <ul
         className={`grid list-none gap-2 p-0 ${columns ? "md:grid-cols-2" : ""}`}
       >

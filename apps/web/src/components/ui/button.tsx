@@ -1,4 +1,5 @@
 import { LoaderCircle } from "lucide-react";
+import { UiText } from "@/components/language-provider";
 import type { ButtonHTMLAttributes } from "react";
 
 export type ButtonVariant =
@@ -66,7 +67,7 @@ export function Button({
           strokeWidth={1.75}
         />
       )}
-      {children}
+      {typeof children === "string" ? <UiText value={children} /> : children}
     </button>
   );
 }

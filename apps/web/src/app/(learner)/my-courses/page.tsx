@@ -1,15 +1,16 @@
+import { UiText } from "@/components/language-provider";
 import { BookOpen, GraduationCap } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  CourseProgressCard,
-} from "@/components/learning/course-progress-card";
+import { CourseProgressCard } from "@/components/learning/course-progress-card";
 import { buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { requireAuth } from "@/lib/api";
 import { firstValue, type Paginated } from "@/lib/catalog";
 import type { EnrollmentItem } from "@/lib/learning";
 import { getSession, serverFetch } from "@/lib/session";
+import { getLocale } from "@/lib/locale";
+import { translate } from "@/lib/translations";
 
 export const metadata: Metadata = { title: "Khóa học của tôi" };
 
@@ -24,6 +25,7 @@ export default async function MyCoursesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const done = firstValue((await searchParams).tab) === "done";
+  const locale = await getLocale();
   // ponytail: one page of 100 and no pager; a learner with more than 100
   // active courses is far past a one-owner catalog. Add `?page=` then.
   const response = await requireAuth(
@@ -41,18 +43,26 @@ export default async function MyCoursesPage({
 
   return (
     <div className="page-shell grid gap-6 py-6 lg:gap-8 lg:py-10">
-      <div className="grid gap-2">
+      <div className="learner-welcome grid gap-2">
         <h1 tabIndex={-1} className="text-4xl font-bold">
-          Học tiếp từ nơi bạn đã dừng
+          <UiText value="Tiếp tục học cùng CodingBuddy" />
         </h1>
         {user && (
           <p className="text-lg text-muted-foreground">
-            Chào {user.displayName}, hôm nay bạn muốn học gì?
+            <UiText value="Chào" /> {user.displayName}
+            <UiText value=", mình cùng tiếp tục nhé." />
           </p>
         )}
       </div>
 
-      <nav aria-label="Lọc khóa học của tôi" className="flex flex-wrap gap-2">
+      <nav
+        aria-label={translate(
+          locale,
+          "Lọc khóa học của tôi",
+          "Filter my courses",
+        )}
+        className="flex flex-wrap gap-2"
+      >
         {TABS.map((tab) => {
           const current = (tab.key === "done") === done;
           return (
@@ -60,9 +70,13 @@ export default async function MyCoursesPage({
               key={tab.key}
               href={tab.href}
               aria-current={current ? "page" : undefined}
-              className={buttonClass(current ? "primary" : "outline", "md", "min-w-40")}
+              className={buttonClass(
+                current ? "primary" : "outline",
+                "md",
+                "min-w-40",
+              )}
             >
-              {tab.label}
+              <UiText value={tab.label} />
             </Link>
           );
         })}
@@ -76,7 +90,7 @@ export default async function MyCoursesPage({
             description="Hoàn thành hết bài trong một khóa để nó xuất hiện ở đây."
             action={
               <Link href="/my-courses" className={buttonClass("outline")}>
-                Về mục Đang học
+                <UiText value="Về mục Đang học" />
               </Link>
             }
           />
@@ -87,7 +101,7 @@ export default async function MyCoursesPage({
             description="Khóa học bạn đăng ký hoặc được cấp quyền học sẽ xuất hiện tại đây."
             action={
               <Link href="/courses" className={buttonClass("primary")}>
-                Xem danh sách khóa học
+                <UiText value="Xem danh sách khóa học" />
               </Link>
             }
           />

@@ -4,9 +4,10 @@
  */
 export const PRICE_BANDS = [
   { label: "Tất cả", min: "", max: "" },
-  { label: "Dưới 500.000 ₫", min: "", max: "499999" },
-  { label: "500.000 – 1.000.000 ₫", min: "500000", max: "1000000" },
-  { label: "Trên 1.000.000 ₫", min: "1000001", max: "" },
+  { label: "100.000 ₫", min: "100000", max: "100000" },
+  { label: "150.000 ₫", min: "150000", max: "150000" },
+  { label: "200.000 ₫", min: "200000", max: "200000" },
+  { label: "Miễn phí", min: "0", max: "0" },
 ] as const;
 
 export function bandIndex(min?: string, max?: string): number {

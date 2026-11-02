@@ -1,0 +1,2006 @@
+{
+  "python-tu-sach-lop-minh": {
+    "vi": {
+      "introduction": [
+        "Một góc lớp có vài chục cuốn sách nhưng không ai nhớ cuốn nào đang ở đâu. Một bạn hỏi mượn, một bạn đã trả, còn danh sách giấy chưa được cập nhật. Dự án này bắt đầu từ việc rất nhỏ đó: làm cho danh sách sách đáng tin hơn.",
+        "Bạn cùng Nam viết một chương trình Python chạy trên máy tính để tìm sách, ghi nhận lượt mượn và đọc lại dữ liệu ở lần mở sau. Không cần dựng website, mua dịch vụ hay nối với một hệ thống thư viện lớn. Điều cần làm rõ là mỗi cuốn sách được lưu ra sao và chương trình nên phản hồi thế nào khi một thao tác không hợp lệ.",
+        "Đây là dự án học thử mở hoàn toàn. Bốn video, ghi chú thực hành và mã tham khảo có sẵn ở Bài thực hành; bạn có thể xem trước cách Nam giải thích rồi quyết định có muốn học tiếp các dự án khác hay không."
+      ],
+      "outcomes": [
+        "Biểu diễn một cuốn sách bằng các trường dữ liệu có ý nghĩa, thay vì nhiều biến rời rạc.",
+        "Tìm một phần tên sách và phân biệt sách còn trống với sách đang được mượn.",
+        "Chia thao tác tìm, mượn, trả thành các hàm có nhiệm vụ rõ ràng.",
+        "Lưu và nạp lại danh sách bằng JSON để không mất trạng thái khi đóng chương trình.",
+        "Thử tình huống không tìm thấy sách, mượn hai lần và dữ liệu lưu không hợp lệ.",
+        "Giải thích được vì sao chương trình chấp nhận hoặc từ chối một lượt mượn."
+      ],
+      "requirements": [
+        "Máy tính chạy được Python 3 và một trình soạn thảo; không cần cài thư viện ngoài.",
+        "Đã biết mở, sửa và chạy một tệp Python; hiểu sơ bộ biến và vòng lặp.",
+        "Nếu chưa quen list, dictionary hoặc hàm, sẵn sàng dừng video để thử từng phần với dữ liệu nhỏ."
+      ],
+      "audience": [
+        "Bạn muốn làm dự án Python đầu tiên có thể đưa cho một người khác dùng thử.",
+        "Lớp học hoặc câu lạc bộ có một tủ sách nhỏ, cần một cách theo dõi đơn giản.",
+        "Phụ huynh muốn xem nội dung dạy thực tế trước khi đăng ký khóa có phí."
+      ],
+      "projectBrief": "Làm một sổ tủ sách chạy cục bộ, có danh sách sách, trạng thái mượn và dữ liệu lưu được qua nhiều lần chạy. Phiên bản học tập tập trung vào một người sử dụng tại một thời điểm.",
+      "scenario": "Bạn phụ trách tủ sách tìm một cuốn theo từ trong tên, ghi nhận bạn khác mượn, rồi kiểm tra lại danh sách sau khi mở chương trình vào hôm sau. Nếu cuốn đó đã được mượn, chương trình cần báo đúng tình trạng thay vì ghi nhận thêm một lượt.",
+      "deliverables": [
+        "Một chương trình Python với các thao tác tìm sách, mượn và trả.",
+        "Một tệp JSON lưu danh sách và trạng thái của sách.",
+        "Một bộ tình huống tự kiểm tra cùng ghi chú cách chạy chương trình."
+      ],
+      "chapters": [
+        {
+          "title": "Từ tủ sách thật đến dữ liệu",
+          "summary": "Chọn thông tin tối thiểu để một bản ghi sách dễ hiểu và dễ cập nhật.",
+          "topics": [
+            "Danh sách và dictionary trong một tình huống cụ thể.",
+            "Tên sách, trạng thái và sự nhất quán của dữ liệu.",
+            "Chạy phiên bản nhỏ trước khi thêm nhiều tính năng."
+          ]
+        },
+        {
+          "title": "Tìm sách và ghi nhận lượt mượn",
+          "summary": "Biến câu hỏi của người dùng thành thao tác mà chương trình xử lý được.",
+          "topics": [
+            "Tìm theo một phần tên và đọc kết quả.",
+            "Điều kiện để mượn hoặc trả một cuốn sách.",
+            "Thông báo rõ khi không tìm thấy hoặc trạng thái không phù hợp."
+          ]
+        },
+        {
+          "title": "Giữ dữ liệu cho lần mở sau",
+          "summary": "Tách bộ nhớ của chương trình khỏi tệp lưu trên máy.",
+          "topics": [
+            "Vai trò của JSON và tệp lưu.",
+            "Đọc lại trạng thái sau khi khởi động.",
+            "Nhận biết dữ liệu lưu bị thiếu hoặc sai định dạng."
+          ]
+        },
+        {
+          "title": "Thử như một người sử dụng mới",
+          "summary": "Hoàn thiện đường đi từ mở chương trình đến xử lý một lượt mượn.",
+          "topics": [
+            "Thử chuỗi thao tác tìm, mượn, đóng và mở lại.",
+            "Kiểm tra các tình huống lỗi thay vì chỉ chạy trường hợp thuận lợi.",
+            "Ghi lại một thay đổi bạn muốn làm sau phản hồi."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Có hai cuốn trùng tên trong tủ sách. Một cuốn đang được mượn, cuốn còn lại vẫn ở lớp. Trước khi sửa code, hãy mô tả chương trình cần hỏi hoặc hiển thị gì để người trực tủ không chọn nhầm.",
+        "questions": [
+          "Tên sách có đủ để nhận diện một cuốn cụ thể không?",
+          "Người dùng cần thấy thông tin gì trước khi xác nhận mượn?",
+          "Bạn sẽ thử tình huống trùng tên như thế nào?"
+        ]
+      },
+      "scope": "Toàn bộ dự án học thử được mở miễn phí, gồm bốn video bằng tiếng Việt, ghi chú và mã nguồn tham khảo. Không cần tài khoản để mở nội dung; tài khoản chỉ cần khi bạn muốn dùng khu vực lưu tiến độ học.",
+      "extensions": [
+        "Thêm mã riêng cho từng bản sách và dữ liệu người mượn dạng bí danh.",
+        "Bổ sung lịch sử lượt mượn hoặc một giao diện dễ dùng hơn sau khi phiên bản cơ bản ổn định."
+      ],
+      "faq": [
+        {
+          "question": "Chưa biết Python thì có theo được không?",
+          "answer": "Bạn nên biết cách chạy tệp và đọc một vòng lặp đơn giản. Có thể xem video đầu để kiểm tra mức phù hợp; nếu các khái niệm list và hàm còn hoàn toàn mới, hãy dành thêm thời gian làm từng ví dụ nhỏ trước khi đi tiếp."
+        },
+        {
+          "question": "Có thể dùng ngay cho thư viện của trường không?",
+          "answer": "Bạn có thể thử với một tủ sách nhỏ và dữ liệu giả trước. Phiên bản này không có đăng nhập nhiều người, sao lưu tự động hay xử lý nhiều máy cùng sửa dữ liệu, nên cần đánh giá thêm trước khi dùng làm hệ thống chính thức."
+        },
+        {
+          "question": "Có cần mua khóa khác để làm xong dự án này không?",
+          "answer": "Không. Bốn phần của dự án tủ sách và mã tham khảo đều mở miễn phí. Những khóa có phí là các dự án riêng để tiếp tục thực hành, không phải phần kết bị giữ lại của dự án này."
+        }
+      ],
+      "whyThisProject": [
+        "Một cuốn sách chỉ được chia sẻ khi người cần đọc biết nó đang ở đâu và có thể mượn được hay không. Dự án này chọn một cách bắt đầu gần gũi: làm cho thông tin về tủ sách rõ ràng hơn, để việc dùng chung những cuốn đã có trở nên thuận tiện.",
+        "Tủ sách cũng là một dự án đầu tay vừa đủ trọn vẹn. Bạn thấy ngay một thay đổi trong code ảnh hưởng đến việc tìm, mượn hoặc trả như thế nào; rồi học cách giữ thay đổi đó cho lần mở sau. Mục đích là giúp bạn nối kiến thức Python với một việc có người sử dụng cụ thể."
+      ]
+    },
+    "en": {
+      "introduction": [
+        "A classroom has a shelf of books, but nobody is quite sure which ones are available. Someone borrows a title, someone returns another, and the paper list falls behind. This project starts with that small, familiar problem: making the book list dependable.",
+        "Build a local Python tool with Nam to find a book, record a loan and load the same information the next time you open it. There is no website to deploy or service to buy. The focus is on representing a book clearly and deciding what should happen when a request is not valid.",
+        "This is the fully open trial project. Four videos, practice notes and reference code are available in the Practice lesson area. You can see how Nam teaches before deciding whether to continue with a paid project."
+      ],
+      "outcomes": [
+        "Represent a book with a clear set of fields rather than unrelated variables.",
+        "Search part of a title and distinguish available books from books on loan.",
+        "Separate searching, borrowing and returning into small functions.",
+        "Save and reload a JSON list across program sessions.",
+        "Test missing books, repeated borrowing and invalid saved data.",
+        "Explain why the program accepts or rejects a loan request."
+      ],
+      "requirements": [
+        "A computer with Python 3 and a text editor; no external packages are required.",
+        "Basic experience editing and running a Python file, with some familiarity with variables and loops.",
+        "Be prepared to pause and experiment if lists, dictionaries or functions are still unfamiliar."
+      ],
+      "audience": [
+        "Students looking for a first Python project another person can try.",
+        "A class or club with a small book shelf and a simple tracking need.",
+        "Parents who want to see real teaching material before arranging a paid course."
+      ],
+      "projectBrief": "Build a local book register with searchable records, borrowing states and a file that survives closing the program. The learning version assumes one person uses it at a time.",
+      "scenario": "The student looking after the shelf searches for part of a title, records a loan, then opens the program the next day. The loan should still be recorded. If a book is already borrowed, the program should explain its state instead of silently lending it twice.",
+      "deliverables": [
+        "A Python program for finding, borrowing and returning books.",
+        "A JSON file holding the book list and its current state.",
+        "A short run guide and a set of manual checks."
+      ],
+      "chapters": [
+        {
+          "title": "Turn the shelf into records",
+          "summary": "Choose the smallest useful description of a book.",
+          "topics": [
+            "Lists and dictionaries in a concrete task.",
+            "Titles, borrowing states and consistent records.",
+            "Run a small version before adding features."
+          ]
+        },
+        {
+          "title": "Find a book and record a loan",
+          "summary": "Turn a reader’s request into an operation the program can handle.",
+          "topics": [
+            "Partial-title search and readable results.",
+            "Rules for borrowing and returning.",
+            "Clear responses to missing items and invalid state changes."
+          ]
+        },
+        {
+          "title": "Keep the data for next time",
+          "summary": "Separate the running program from the file saved on the computer.",
+          "topics": [
+            "What JSON stores.",
+            "Reloading state after a restart.",
+            "Recognizing missing or malformed saved data."
+          ]
+        },
+        {
+          "title": "Try the tool as a new user",
+          "summary": "Check the full journey rather than one successful function call.",
+          "topics": [
+            "Search, borrow, close and reopen.",
+            "Test inconvenient cases deliberately.",
+            "Record an improvement suggested by a test user."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Two copies have the same title. One is on loan and one is still on the shelf. Before editing the code, describe what the program should show or ask so the student managing the shelf cannot pick the wrong copy.",
+        "questions": [
+          "Is the title enough to identify a physical copy?",
+          "What should someone see before confirming a loan?",
+          "How would you test the duplicate-title situation?"
+        ]
+      },
+      "scope": "All four Vietnamese teaching videos, practice notes and reference code are free to open without an account. An account is only needed if you want to use the separate learning-progress area.",
+      "extensions": [
+        "Give each physical copy a separate ID and use aliases for borrowers.",
+        "Add loan history or a friendlier interface after the basic workflow works reliably."
+      ],
+      "faq": [
+        {
+          "question": "Can I start without knowing Python?",
+          "answer": "You should be able to run a file and read a simple loop. Try the first video to judge the pace. If lists and functions are entirely new, take time to explore small examples before continuing."
+        },
+        {
+          "question": "Can this run my school library?",
+          "answer": "Start with a small shelf and fictional records. This version has no multi-user login, automatic backup or coordination between several computers editing the same file. A school-wide system would need further work."
+        },
+        {
+          "question": "Do I need to buy another course to finish?",
+          "answer": "No. All four parts and the reference code are open. The paid courses are separate projects for further practice, not a withheld ending to this one."
+        }
+      ],
+      "whyThisProject": [
+        "Sharing a book starts with knowing where it is and whether it is available. This project takes a familiar first step: make the shelf’s information clear enough for people to use the books they already share.",
+        "A small shelf also makes a manageable first complete project. A code change has an immediate effect on finding, borrowing or returning a book, and saving gives that change a life beyond one run. The aim is to connect Python concepts to a task with an identifiable user."
+      ]
+    }
+  },
+  "python-ke-hoach-on-tap": {
+    "vi": {
+      "introduction": [
+        "Tuần sau có bài kiểm tra, nhưng danh sách cần ôn vẫn chỉ là một dòng “học hết chương”. Đến lúc ngồi vào bàn mới nhận ra một số phần dài hơn dự tính và hai môn cùng cần thời gian vào một buổi.",
+        "Trong dự án này, bạn thiết kế một công cụ biến chủ đề, hạn hoàn thành và thời gian rảnh thành các buổi ôn cụ thể. Một kế hoạch tốt cần chỉ ra việc không xếp được, thay vì nhét thêm việc vào một ngày đã kín.",
+        "Bạn sẽ xem lịch như một bài toán có ràng buộc: mỗi ngày có giới hạn, mỗi chủ đề cần thời gian, còn buổi bị bỏ lỡ phải được xử lý có lý do. Không cần AI hay kết nối tài khoản lịch để thử phiên bản đầu."
+      ],
+      "outcomes": [
+        "Biến một chủ đề lớn thành các nhiệm vụ nhỏ có thời lượng dự kiến.",
+        "Lưu ngày kiểm tra, mức ưu tiên và quỹ thời gian bằng dữ liệu rõ ràng.",
+        "Phân biệt hạn hoàn thành với ngày dự kiến làm một nhiệm vụ.",
+        "Mô tả quy tắc xếp việc và phát hiện ngày vượt khả năng.",
+        "Xử lý buổi đã làm, bỏ lỡ hoặc cần chuyển sang ngày khác.",
+        "Xuất lịch CSV và kiểm thử kế hoạch bằng các bộ dữ liệu nhỏ."
+      ],
+      "requirements": [
+        "Python 3; đã làm quen với hàm, list, dictionary và đọc ghi dữ liệu.",
+        "Biết dùng thời lượng theo phút và đọc ngày theo một định dạng nhất quán.",
+        "Một tuần thời gian rảnh giả định và vài chủ đề ôn tập do bạn tự đặt."
+      ],
+      "audience": [
+        "Bạn thường ghi kế hoạch quá chung hoặc xếp nhiều việc vào sát hạn.",
+        "Người học muốn thử thuật toán sắp xếp với một vấn đề gần mình.",
+        "Bạn đã hoàn thành tủ sách và muốn chuyển từ quản lý bản ghi sang lập kế hoạch."
+      ],
+      "projectBrief": "Làm một trình lập lịch chạy cục bộ: nhận chủ đề, hạn và thời gian có thể dành mỗi ngày; xuất danh sách buổi học kèm những việc chưa xếp được. Lịch cần có thể đọc lại và điều chỉnh, không chỉ in một kết quả rồi mất.",
+      "scenario": "Bạn còn ba chủ đề, nhưng tối thứ Tư chỉ rảnh một khoảng ngắn. Sau đó bạn bỏ lỡ buổi thứ Hai. Công cụ cần tính lại trong giới hạn thời gian còn lại và nói rõ khi không thể hoàn thành tất cả trước hạn.",
+      "deliverables": [
+        "Một danh sách nhiệm vụ có thời lượng, hạn và trạng thái.",
+        "Bộ xếp lịch có kiểm tra sức chứa từng ngày và danh sách việc chưa xếp.",
+        "Lịch CSV cùng tình huống thử khi thay đổi hạn hoặc bỏ lỡ một buổi."
+      ],
+      "chapters": [
+        {
+          "title": "Viết một nhiệm vụ đủ cụ thể",
+          "summary": "Chuyển “ôn môn này” thành các đơn vị có thể đưa lên lịch.",
+          "topics": [
+            "Chủ đề, nhiệm vụ và thời lượng.",
+            "Ngày hết hạn và thông tin cần lưu.",
+            "Dữ liệu thiếu, thời lượng âm hoặc nhiệm vụ trùng."
+          ]
+        },
+        {
+          "title": "Đặt giới hạn trước khi xếp việc",
+          "summary": "Tạo mô hình về thời gian thực sự có thể sử dụng.",
+          "topics": [
+            "Quỹ thời gian theo ngày.",
+            "Thứ tự ưu tiên có thể giải thích.",
+            "Nhận biết việc lớn hơn khoảng trống còn lại."
+          ]
+        },
+        {
+          "title": "Xếp lịch và báo phần chưa xếp",
+          "summary": "Xây một phiên bản có kết quả xác định, dễ kiểm tra.",
+          "topics": [
+            "Phân bổ nhiệm vụ vào các ngày hợp lệ.",
+            "Giữ giới hạn của từng ngày.",
+            "Thông báo quá tải thay vì tự dời hạn."
+          ]
+        },
+        {
+          "title": "Cập nhật khi lịch thay đổi",
+          "summary": "Giữ phần đã hoàn thành và xử lý phần còn lại.",
+          "topics": [
+            "Đánh dấu buổi đã làm.",
+            "Xếp lại công việc bị bỏ lỡ.",
+            "So sánh trước và sau một thay đổi."
+          ]
+        },
+        {
+          "title": "Xuất lịch và thử với người dùng",
+          "summary": "Đánh giá xem kế hoạch có dễ đọc và có thể làm theo không.",
+          "topics": [
+            "Xuất CSV để mở bằng bảng tính.",
+            "Thử ngày trống, hạn sát nhau và thiếu thời gian.",
+            "Ghi chú giả định và giới hạn của thuật toán."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Bạn còn 90 phút ôn trong tuần nhưng các nhiệm vụ cần tổng cộng 150 phút. Hãy mô tả màn hình hoặc thông báo bạn muốn thấy. Đừng bắt đầu bằng việc viết thuật toán; trước hết hãy quyết định công cụ cần nói thật với người học điều gì.",
+        "questions": [
+          "Có được tự tăng số phút rảnh của một ngày không?",
+          "Ai quyết định giảm phạm vi hoặc đổi mức ưu tiên?",
+          "Việc chưa xếp được nên xuất hiện ở đâu để không bị quên?"
+        ]
+      },
+      "scope": "Đây là đề cương của dự án sắp có, tập trung vào lập lịch cá nhân bằng quy tắc rõ ràng. Không có cam kết tăng điểm, đo khả năng học hay tự quyết định học thay bạn. Các bài hướng dẫn và tài liệu riêng sẽ được hoàn thiện trong giai đoạn biên soạn.",
+      "extensions": [
+        "Thêm khoảng nghỉ và cách chia một nhiệm vụ dài thành nhiều buổi.",
+        "Thử giao diện lịch hoặc chức năng nhập lại CSV sau khi bộ xếp lịch cốt lõi đã được kiểm tra."
+      ],
+      "faq": [
+        {
+          "question": "Có tự biết mình yếu phần nào không?",
+          "answer": "Không. Bạn nhập chủ đề và mức cần ôn dựa trên việc học của mình. Dự án xử lý kế hoạch từ dữ liệu đã có, không chẩn đoán kiến thức hay chấm điểm năng lực."
+        },
+        {
+          "question": "Nếu kế hoạch không thể thực hiện thì sao?",
+          "answer": "Công cụ nên chỉ ra phần không xếp được và lý do. Người dùng mới là người chọn giảm khối lượng, đổi ưu tiên hoặc điều chỉnh thời gian, thay vì nhận một lịch trông đẹp nhưng không thể làm."
+        },
+        {
+          "question": "Có cần Google Calendar hay trả phí API không?",
+          "answer": "Không cần cho hướng triển khai đầu tiên. Dữ liệu và lịch CSV có thể xử lý trên máy. Tích hợp dịch vụ lịch là một mở rộng riêng, không phải điều kiện để học dự án."
+        }
+      ],
+      "whyThisProject": [
+        "Một kế hoạch nhìn đầy đủ trên giấy vẫn có thể vượt quá thời gian thật sự có trong ngày. Dự án này bắt đầu từ nhu cầu thấy rõ mình có thể làm được bao nhiêu, phần nào chưa xếp được và điều gì phải thay đổi khi bỏ lỡ một buổi.",
+        "Lập lịch biến những khái niệm như danh sách, sắp xếp và điều kiện thành các quyết định bạn có thể tự kiểm tra. Thay vì để chương trình hứa một kế hoạch hoàn hảo, bạn học cách biểu diễn giới hạn và giải thích lựa chọn. Điều có ích là một kế hoạch có thể điều chỉnh và làm theo, không phải lời hứa về điểm số."
+      ]
+    },
+    "en": {
+      "introduction": [
+        "A test is next week, but the revision plan still says only “study the chapter”. When you finally sit down, some topics take longer than expected and two subjects need the same evening.",
+        "This project turns topics, deadlines and available time into individual revision sessions. A useful planner should show the work it cannot fit, rather than quietly filling a day beyond its capacity.",
+        "Treat scheduling as a problem with constraints: every day has a limit, each task needs time, and a missed session needs a deliberate response. The first version does not need AI or access to an online calendar."
+      ],
+      "outcomes": [
+        "Break a broad topic into tasks with estimated durations.",
+        "Represent deadlines, priorities and daily capacity clearly.",
+        "Distinguish a task deadline from its scheduled day.",
+        "Describe a scheduling rule and detect overloaded days.",
+        "Handle completed, missed and rescheduled sessions.",
+        "Export a CSV plan and check its behavior with small examples."
+      ],
+      "requirements": [
+        "Python 3 and some experience with functions, lists, dictionaries and file handling.",
+        "Comfort working with minutes and consistently formatted dates.",
+        "A fictional week of available time and a few revision topics."
+      ],
+      "audience": [
+        "Students whose plans are too vague or crowded near a deadline.",
+        "Learners who want to try scheduling logic on a personal problem.",
+        "Students ready to move beyond storing records after the book project."
+      ],
+      "projectBrief": "Build a local planner that accepts tasks, deadlines and daily availability. It should produce a readable schedule and a visible list of unallocated work, then let you revisit and adjust the plan.",
+      "scenario": "You have three topics left and only a short free period on Wednesday. Then you miss Monday’s session. The tool should reconsider the remaining work without exceeding your available time, and explain if the deadline can no longer be met.",
+      "deliverables": [
+        "A task list with durations, deadlines and completion states.",
+        "A capacity-aware scheduler with explicit unallocated work.",
+        "A CSV timetable and checks for missed sessions or changed deadlines."
+      ],
+      "chapters": [
+        {
+          "title": "Describe a task precisely",
+          "summary": "Turn “revise this subject” into something a scheduler can place.",
+          "topics": [
+            "Topics, tasks and durations.",
+            "Deadlines and the fields worth storing.",
+            "Missing values, negative durations and duplicate tasks."
+          ]
+        },
+        {
+          "title": "Set capacity before allocating",
+          "summary": "Model the time the learner actually has.",
+          "topics": [
+            "Daily availability.",
+            "An explainable priority order.",
+            "Tasks that do not fit the remaining space."
+          ]
+        },
+        {
+          "title": "Allocate work and show gaps",
+          "summary": "Create a deterministic first version that can be checked.",
+          "topics": [
+            "Placing tasks on eligible days.",
+            "Respecting daily capacity.",
+            "Reporting overload without silently changing deadlines."
+          ]
+        },
+        {
+          "title": "Respond to a changed week",
+          "summary": "Preserve completed work while adjusting what remains.",
+          "topics": [
+            "Recording completion.",
+            "Reconsidering missed work.",
+            "Comparing a plan before and after a change."
+          ]
+        },
+        {
+          "title": "Export and test the plan",
+          "summary": "Judge whether the result can actually be followed.",
+          "topics": [
+            "A CSV timetable for a spreadsheet.",
+            "Empty days, competing deadlines and insufficient time.",
+            "Documenting assumptions and algorithm limits."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "You have 90 free minutes this week, but your tasks need 150. Describe the response you want from the planner before designing the algorithm. What should it tell the learner honestly?",
+        "questions": [
+          "May it invent extra availability for a day?",
+          "Who decides whether to reduce scope or change priorities?",
+          "Where should unfinished allocation remain visible?"
+        ]
+      },
+      "scope": "This is an upcoming project outline about personal scheduling with explicit rules. It does not promise improved grades or assess your ability. Detailed teaching materials will be developed separately; the page describes the intended build.",
+      "extensions": [
+        "Add breaks and rules for splitting a long task into smaller sessions.",
+        "Try a calendar interface or CSV re-import after validating the scheduling core."
+      ],
+      "faq": [
+        {
+          "question": "Will it identify my weakest topics?",
+          "answer": "No. You supply the topics and priorities based on your own study. The tool plans from that input rather than diagnosing knowledge or scoring ability."
+        },
+        {
+          "question": "What if the plan is impossible?",
+          "answer": "It should expose the unallocated work and explain why it did not fit. The learner then decides whether to reduce the workload, change priorities or adjust availability."
+        },
+        {
+          "question": "Do I need Google Calendar or a paid API?",
+          "answer": "Not for the initial direction. The local tool can work with files and a CSV timetable. Connecting an online calendar would be a separate extension."
+        }
+      ],
+      "whyThisProject": [
+        "A plan that looks complete on paper may require more time than a day actually has. This project starts with seeing what fits, what remains unallocated and what must change after a missed session.",
+        "Scheduling turns lists, sorting and conditions into decisions you can inspect yourself. You learn to represent limits and explain choices rather than make the program promise a perfect plan. The useful outcome is an adjustable plan someone can follow, without promising a particular grade."
+      ]
+    }
+  },
+  "python-sap-xep-tep": {
+    "vi": {
+      "introduction": [
+        "Thư mục tải xuống có ảnh, bài tập, bản sao tên gần giống nhau và vài tệp không biết từ đâu. Viết một đoạn code chuyển tất cả vào thư mục con thì khá nhanh; làm sao để biết nó sẽ chuyển gì và có thể quay lại mới là phần đáng học.",
+        "Dự án này hướng đến một công cụ sắp xếp tệp theo quy tắc bạn chọn. Bạn sẽ thiết kế chế độ xem trước, cách xử lý trùng tên và nhật ký thao tác trước khi cho phép chương trình đổi vị trí tệp.",
+        "Bắt đầu bằng thư mục thử có dữ liệu tự tạo. Bạn học cách tự động hóa một việc lặp lại nhưng vẫn giữ khả năng kiểm tra và dừng lại khi điều kiện không phù hợp."
+      ],
+      "outcomes": [
+        "Đọc danh sách tệp và phân biệt tên, phần mở rộng, đường dẫn và thư mục.",
+        "Diễn đạt quy tắc phân nhóm bằng cấu hình dễ chỉnh.",
+        "Tạo danh sách thay đổi dự kiến trước khi thực hiện.",
+        "Nhận biết xung đột tên và tránh ghi đè tệp đã có.",
+        "Lưu nhật ký đủ thông tin cho một thao tác hoàn tác có kiểm tra.",
+        "Giới hạn công việc trong đúng thư mục thử và giải thích từng trường hợp bị bỏ qua."
+      ],
+      "requirements": [
+        "Python 3; hiểu hàm, điều kiện, vòng lặp và thao tác đọc tệp cơ bản.",
+        "Một thư mục thử chứa bản sao hoặc tệp giả, không dùng thư mục tài liệu gốc.",
+        "Biết tìm lại vị trí tệp trên máy và phân biệt thư mục với tên tệp."
+      ],
+      "audience": [
+        "Bạn muốn tự động hóa thư mục bài tập hoặc tệp tải xuống.",
+        "Người học thích thấy Python tương tác trực tiếp với máy tính.",
+        "Bạn muốn tập thiết kế một công cụ có thể kiểm tra trước khi chạy."
+      ],
+      "projectBrief": "Xây trình sắp xếp tệp chạy cục bộ, có quy tắc phân nhóm, chế độ xem trước, xử lý trùng tên và nhật ký. Một lượt hoàn tác cần kiểm tra tình trạng hiện tại của tệp, thay vì mặc định mọi thứ vẫn giống lúc di chuyển.",
+      "scenario": "Hai tệp ảnh ở các vị trí khác nhau cùng tên “anh-lop.png”. Thư mục đích đã có một bản khác. Bạn muốn công cụ báo rõ dự định, giữ được cả các bản và ghi lại thay đổi để có thể kiểm tra sau.",
+      "deliverables": [
+        "Một bộ quy tắc phân loại dễ chỉnh cho một thư mục thử.",
+        "Báo cáo xem trước cùng cơ chế xử lý xung đột tên.",
+        "Nhật ký di chuyển và luồng hoàn tác biết dừng khi có xung đột mới."
+      ],
+      "chapters": [
+        {
+          "title": "Quan sát trước khi di chuyển",
+          "summary": "Lập danh sách những gì thực sự có trong thư mục được chọn.",
+          "topics": [
+            "Đường dẫn và phần mở rộng.",
+            "Phân biệt tệp với thư mục.",
+            "Xác định phạm vi được phép xử lý."
+          ]
+        },
+        {
+          "title": "Từ quy tắc đến kế hoạch",
+          "summary": "Tách việc quyết định vị trí đích khỏi việc thay đổi tệp.",
+          "topics": [
+            "Cấu hình nhóm và vị trí đích.",
+            "Tệp không khớp quy tắc.",
+            "Một kế hoạch có thể đọc trước khi xác nhận."
+          ]
+        },
+        {
+          "title": "Di chuyển mà giữ được các bản",
+          "summary": "Thiết kế cách xử lý tên trùng và lỗi từng thao tác.",
+          "topics": [
+            "Không ghi đè tệp có sẵn.",
+            "Kiểm tra đường dẫn đích.",
+            "Phân biệt thao tác đã xong, bỏ qua và thất bại."
+          ]
+        },
+        {
+          "title": "Ghi nhật ký và hoàn tác",
+          "summary": "Chuẩn bị đủ thông tin để quay lại một lượt sắp xếp.",
+          "topics": [
+            "Nguồn, đích và kết quả thao tác.",
+            "Kiểm tra tệp trước khi trả về.",
+            "Xung đột xuất hiện sau lần chạy đầu."
+          ]
+        },
+        {
+          "title": "Thử cả lúc có sự cố",
+          "summary": "Đánh giá công cụ bằng một thư mục thử có chủ đích.",
+          "topics": [
+            "Tên có dấu, phần mở rộng lạ và nhóm rỗng.",
+            "Quy tắc thay đổi giữa hai lượt.",
+            "Viết hướng dẫn chạy thử và kiểm tra kết quả."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Ở chế độ xem trước, công cụ báo sẽ chuyển một tệp vào thư mục Ảnh. Trước khi bạn xác nhận, một tệp khác cùng tên xuất hiện tại đích. Hãy mô tả điều kiện nào phải được kiểm tra lại khi thực sự di chuyển.",
+        "questions": [
+          "Có thể tin kế hoạch cũ mà không kiểm tra đích không?",
+          "Nhật ký nên ghi gì khi một thao tác bị bỏ qua?",
+          "Khi hoàn tác, làm sao biết tệp đã bị thay đổi bởi người dùng?"
+        ]
+      },
+      "scope": "Đây là phạm vi dự kiến của dự án sắp có. Phiên bản đầu được thiết kế để học trên thư mục thử, không tự dọn toàn bộ máy, xóa tệp hay chạy nền theo lịch. Chức năng hoàn tác không thay thế bản sao lưu.",
+      "extensions": [
+        "Thêm cách phân nhóm theo ngày hoặc đọc cấu hình từ một tệp riêng.",
+        "Làm giao diện xem trước trực quan sau khi logic thao tác và nhật ký đã được kiểm tra."
+      ],
+      "faq": [
+        {
+          "question": "Có làm mất dữ liệu không?",
+          "answer": "Mục tiêu thiết kế là có xem trước, không ghi đè và chỉ thao tác trong phạm vi chọn. Dù vậy, dự án cần được thử trên bản sao; không dùng tài liệu duy nhất để kiểm tra code đang học."
+        },
+        {
+          "question": "Hoàn tác có luôn khôi phục mọi thứ không?",
+          "answer": "Không nên hứa như vậy. Tệp có thể đã bị sửa, đổi tên hoặc di chuyển tiếp. Một lệnh hoàn tác tốt phải phát hiện tình huống đó và báo xung đột, không ép ghi đè."
+        },
+        {
+          "question": "Có cần cài thêm thư viện không?",
+          "answer": "Hướng triển khai cốt lõi dùng các công cụ quản lý đường dẫn và tệp của Python. Không cần dịch vụ đám mây hoặc tài khoản trả phí để thử bài toán."
+        }
+      ],
+      "whyThisProject": [
+        "Sắp xếp tệp là một việc nhỏ nhưng lặp lại thường xuyên: tìm bài đã tải, gom ảnh hoặc phân biệt các bản cùng tên. Đó là cơ hội dễ thấy để Python giúp bớt thao tác tay và làm cho một thư mục dễ tìm hơn.",
+        "Phần quan trọng của dự án nằm ở cách trao quyền cho chương trình một cách có kiểm soát. Xem trước, giữ các bản trùng tên và ghi nhật ký đều buộc bạn suy nghĩ về hậu quả của từng thao tác. Bạn học tự động hóa cùng khả năng kiểm tra, thay vì chỉ làm cho một đoạn code chạy nhanh."
+      ]
+    },
+    "en": {
+      "introduction": [
+        "Your downloads folder contains photos, homework, similarly named copies and files you barely recognize. Moving everything into subfolders takes only a short script. Knowing what it will move and how to inspect or reverse the changes is the more interesting problem.",
+        "This project outlines an organizer based on rules you choose. Design a preview mode, collision handling and an operation log before allowing the program to move files.",
+        "Start with a sandbox folder containing copies or invented files. The aim is to automate repetitive work while keeping the result inspectable and stopping when conditions no longer match the plan."
+      ],
+      "outcomes": [
+        "Distinguish file names, extensions, paths and directories.",
+        "Express grouping rules in editable configuration.",
+        "Generate a proposed move list before changing anything.",
+        "Detect name collisions without overwriting existing files.",
+        "Keep an operation log suitable for a checked undo process.",
+        "Limit work to the chosen sandbox and explain skipped items."
+      ],
+      "requirements": [
+        "Python 3, functions, conditions, loops and basic file reading.",
+        "A sandbox containing copied or fictional files rather than original documents.",
+        "The ability to locate files and distinguish folders from file names."
+      ],
+      "audience": [
+        "Students interested in organizing homework or downloaded files.",
+        "Learners who want Python to interact with their own computer.",
+        "Anyone who wants practice designing inspectable automation."
+      ],
+      "projectBrief": "Build a local organizer with grouping rules, a dry-run preview, collision handling and a move log. Undo should check the current state of files rather than assume nothing has changed since the original operation.",
+      "scenario": "Two source pictures are both named “class-photo.png”, and the destination already contains another file with that name. The tool should show its proposal, preserve separate copies and record enough information to inspect the result.",
+      "deliverables": [
+        "An editable grouping configuration for a sandbox folder.",
+        "A dry-run report and non-overwriting collision rules.",
+        "An operation log and an undo flow that detects new conflicts."
+      ],
+      "chapters": [
+        {
+          "title": "Observe before moving",
+          "summary": "List what actually exists inside the chosen folder.",
+          "topics": [
+            "Paths and extensions.",
+            "Files versus directories.",
+            "An explicit processing boundary."
+          ]
+        },
+        {
+          "title": "Turn rules into a plan",
+          "summary": "Separate deciding a destination from changing the filesystem.",
+          "topics": [
+            "Groups and destination configuration.",
+            "Files that match no rule.",
+            "A plan someone can read before confirming."
+          ]
+        },
+        {
+          "title": "Move without losing copies",
+          "summary": "Handle conflicting names and failures one operation at a time.",
+          "topics": [
+            "Preserving existing destinations.",
+            "Checking destination paths.",
+            "Completed, skipped and failed operations."
+          ]
+        },
+        {
+          "title": "Log and reverse changes",
+          "summary": "Capture enough context to attempt a checked undo.",
+          "topics": [
+            "Source, destination and outcome.",
+            "Checking a file before moving it back.",
+            "Conflicts introduced after the first run."
+          ]
+        },
+        {
+          "title": "Test inconvenient situations",
+          "summary": "Challenge the tool using a deliberate sandbox setup.",
+          "topics": [
+            "Accented names, unusual extensions and empty groups.",
+            "Changed rules between runs.",
+            "A run guide and a way to inspect results."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "The preview proposes moving a picture to an Images folder. Before confirmation, another file with the same destination name appears there. Describe what must be checked again when the actual move happens.",
+        "questions": [
+          "Is the old preview enough to trust the destination?",
+          "What belongs in the log for a skipped operation?",
+          "How could undo notice that a file has since changed?"
+        ]
+      },
+      "scope": "This is the planned scope of an upcoming project. The first version is for a sandbox, not an automatic whole-computer cleanup service. It does not delete files or run scheduled background jobs. Undo is not a substitute for a backup.",
+      "extensions": [
+        "Add date-based grouping or load rules from a separate configuration file.",
+        "Build a visual preview after validating the move and logging logic."
+      ],
+      "faq": [
+        {
+          "question": "Could it lose data?",
+          "answer": "The intended design uses previews, no-overwrite behavior and an explicit folder boundary. You should still learn with copies: never use the only copy of important work to test a script you are developing."
+        },
+        {
+          "question": "Will undo always restore everything?",
+          "answer": "That would be an unsafe promise. A user may have edited, renamed or moved files since the original run. Undo should detect those conflicts and explain them instead of forcing an overwrite."
+        },
+        {
+          "question": "Are additional services needed?",
+          "answer": "The core direction uses Python’s path and filesystem tools. There is no cloud service or paid account required to explore the problem."
+        }
+      ],
+      "whyThisProject": [
+        "Organizing files is small but repetitive work: finding downloaded homework, grouping pictures or distinguishing copies with the same name. It is an immediate opportunity for Python to reduce manual steps and make a folder easier to navigate.",
+        "The important teaching choice is controlled automation. Previewing moves, preserving conflicting names and keeping a log make you consider what each operation changes. The project teaches automation together with inspection and recovery, rather than speed alone."
+      ]
+    }
+  },
+  "python-tim-do-that-lac": {
+    "vi": {
+      "introduction": [
+        "Sau một buổi sinh hoạt, trên bàn có một bình nước, một áo khoác và vài cây bút. Chụp ảnh đăng vào nhóm chat giúp được một lúc, nhưng khi tin nhắn trôi đi thì việc tìm lại và ghi nhận đã trả đồ trở nên khó theo dõi.",
+        "Dự án này hướng đến một sổ đồ thất lạc dùng trong lớp: mỗi món có mã, đặc điểm, thời điểm tìm thấy và trạng thái xử lý. Bạn sẽ thiết kế công cụ để người trực có thể tìm thông tin nhanh mà vẫn giữ riêng những chi tiết dùng để xác minh người nhận.",
+        "Trọng tâm là tìm kiếm, tổ chức dữ liệu và một quy trình bàn giao có thể giải thích. Đây không phải ứng dụng nhận diện đồ vật bằng AI; người phụ trách vẫn kiểm tra trước khi trả đồ."
+      ],
+      "outcomes": [
+        "Chuyển mô tả đồ vật thành các trường dữ liệu nhất quán.",
+        "Thiết kế mã duy nhất để phân biệt những món có vẻ giống nhau.",
+        "Kết hợp bộ lọc theo loại, màu, nơi tìm thấy và trạng thái.",
+        "Mô tả các bước từ mới ghi nhận đến xác minh và bàn giao.",
+        "Tách ghi chú xác minh khỏi danh sách có thể công khai.",
+        "Lập bộ kiểm thử cho đồ trùng mô tả, yêu cầu nhận sai và cập nhật lặp."
+      ],
+      "requirements": [
+        "Python 3 trên máy tính; đã làm hoặc hiểu dự án tủ sách miễn phí.",
+        "Biết list, dictionary, vòng lặp, điều kiện và hàm.",
+        "Chuẩn bị dữ liệu giả về đồ vật; không cần lấy thông tin liên hệ thật của bạn học."
+      ],
+      "audience": [
+        "Bạn muốn áp dụng kỹ năng tìm kiếm vào một công cụ cho lớp.",
+        "Thành viên ban cán sự hoặc câu lạc bộ thường phụ trách đồ để quên.",
+        "Người học thích dự án có nhiều tình huống sử dụng, thay vì chỉ tính một kết quả."
+      ],
+      "projectBrief": "Xây sổ đồ thất lạc có mã nhận diện, bộ lọc và lịch sử xử lý tối thiểu. Bản danh sách để mọi người xem chỉ chứa thông tin đủ để tìm món đồ; ghi chú xác minh thuộc phần người phụ trách kiểm tra.",
+      "scenario": "Hai chiếc bình cùng màu xanh được nhặt ở hai địa điểm khác nhau. Một người nói mình mất bình màu xanh. Công cụ cần giúp người trực tìm các món có thể phù hợp, sau đó ghi nhận kết quả xác minh và bàn giao mà không tự kết luận ai là chủ.",
+      "deliverables": [
+        "Danh mục đồ vật có mã, đặc điểm và trạng thái rõ ràng.",
+        "Luồng tìm kiếm, kiểm tra yêu cầu nhận và ghi nhận bàn giao.",
+        "Danh sách đồ chưa nhận có thể xuất ra mà không kèm thông tin riêng."
+      ],
+      "chapters": [
+        {
+          "title": "Thiết kế một bản ghi đủ dùng",
+          "summary": "Chọn dữ liệu giúp tìm và phân biệt món đồ mà không thu thập quá nhiều.",
+          "topics": [
+            "Loại đồ, đặc điểm và ngày tìm thấy.",
+            "Mã nhận diện và quy tắc nhập thống nhất.",
+            "Thông tin công khai và ghi chú giữ riêng."
+          ]
+        },
+        {
+          "title": "Tìm gần đúng, lọc có chủ đích",
+          "summary": "Giúp người trực thu hẹp kết quả từ một mô tả chưa đầy đủ.",
+          "topics": [
+            "Kết hợp nhiều điều kiện tìm.",
+            "Thông báo khi không có hoặc có nhiều kết quả.",
+            "Không biến một kết quả giống nhau thành kết luận về chủ sở hữu."
+          ]
+        },
+        {
+          "title": "Xác minh rồi mới bàn giao",
+          "summary": "Thiết kế các trạng thái và điều kiện chuyển trạng thái.",
+          "topics": [
+            "Ghi nhận yêu cầu nhận đồ.",
+            "Kiểm tra thông tin với người phụ trách.",
+            "Tránh trả một món hai lần."
+          ]
+        },
+        {
+          "title": "Lưu, xuất và thử quy trình",
+          "summary": "Đưa công cụ qua một lượt sử dụng từ đầu đến cuối.",
+          "topics": [
+            "Lưu lại thay đổi giữa các lần mở.",
+            "Xuất danh sách đồ chưa nhận.",
+            "Thử đồ trùng mô tả và thao tác sai thứ tự."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Bạn có thể cho cả lớp biết một chiếc ví được tìm thấy, nhưng có nên công khai toàn bộ đồ bên trong không? Hãy viết hai phiên bản mô tả: một bản để tìm kiếm và một ghi chú chỉ người phụ trách dùng để xác minh.",
+        "questions": [
+          "Chi tiết nào giúp phân biệt mà không tiết lộ hết cách xác minh?",
+          "Một món đã bàn giao có còn xuất hiện trong danh sách chưa nhận không?",
+          "Nếu có hai người cùng đến nhận, chương trình nên ghi nhận việc gì?"
+        ]
+      },
+      "scope": "Đây là đề cương chi tiết của dự án sắp có. Nội dung bên dưới mô tả sản phẩm và những phần dự kiến biên soạn; chưa phải các bài học đã mở trong tài khoản. Việc xác minh và trả đồ do người phụ trách thực hiện.",
+      "extensions": [
+        "Bổ sung ảnh lưu cục bộ và bản in thông báo sau khi luồng dữ liệu hoạt động ổn định.",
+        "Thử thống kê loại đồ thường thất lạc để đề xuất chỗ đặt đồ hoặc cách nhắc trong lớp."
+      ],
+      "faq": [
+        {
+          "question": "Có dùng AI để nhận diện chủ của món đồ không?",
+          "answer": "Không. Dự án dựa vào trường dữ liệu, bộ lọc và việc xác minh của con người. Bạn học cách làm một công cụ hỗ trợ quyết định, không tự động phán đoán chủ sở hữu."
+        },
+        {
+          "question": "Khác gì một bảng tính?",
+          "answer": "Một bảng tính đã giải quyết được nhiều nhu cầu đơn giản. Phần đáng học ở đây là tự viết quy tắc dữ liệu, tìm nhiều điều kiện và chặn các thao tác bàn giao không hợp lệ, rồi so sánh xem công cụ của mình có thực sự tiện hơn không."
+        },
+        {
+          "question": "Có bắt buộc đưa dữ liệu lên mạng không?",
+          "answer": "Không. Hướng triển khai đầu tiên là công cụ chạy cục bộ với dữ liệu giả. Việc chia sẻ rộng hoặc để nhiều người cùng cập nhật là bước khác cần được thiết kế riêng."
+        }
+      ],
+      "whyThisProject": [
+        "Trả lại một món đồ thường khó ở việc tìm đúng thông tin và theo dõi xem món đó đã được nhận chưa. Một danh sách có mã, đặc điểm và trạng thái giúp người phụ trách bớt phải nhớ lại nhiều tin nhắn rời rạc.",
+        "Dự án được chọn để bạn tập thiết kế cả một quy trình, chứ không dừng ở tìm một từ trong danh sách. Bạn cần nghĩ xem thông tin nào nên công khai, chi tiết nào giữ để xác minh và khi nào được đổi trạng thái. Công nghệ hỗ trợ người trả đồ làm việc rõ ràng hơn; quyết định bàn giao vẫn thuộc về con người."
+      ]
+    },
+    "en": {
+      "introduction": [
+        "After a club meeting, a water bottle, a jacket and several pens are left behind. A photo in the class chat helps briefly, but messages disappear into the conversation and nobody records which items have already been returned.",
+        "This project outlines a classroom lost-and-found register. Each item has an ID, distinguishing features, a discovery date and a handling state. The tool should make searching easier while keeping verification details separate from a public list.",
+        "The emphasis is on searchable records and a handover process people can understand. It is not an AI system that identifies owners: the person responsible still checks a claim before returning an item."
+      ],
+      "outcomes": [
+        "Turn informal item descriptions into consistent fields.",
+        "Create unique identifiers for similar-looking objects.",
+        "Combine filters for type, colour, location and handling state.",
+        "Describe a clear path from logging an item to checking and completing a claim.",
+        "Separate private verification notes from a shareable list.",
+        "Test matching descriptions, incorrect claims and repeated updates."
+      ],
+      "requirements": [
+        "Python 3 on a computer, plus experience with the free book-sharing project.",
+        "Familiarity with lists, dictionaries, loops, conditions and functions.",
+        "Fictional item records; there is no need to collect classmates’ real contact details."
+      ],
+      "audience": [
+        "Students who want to apply searching to a useful classroom tool.",
+        "Class or club members who regularly handle forgotten belongings.",
+        "Learners who enjoy workflows with several possible outcomes."
+      ],
+      "projectBrief": "Build an item register with IDs, filters and a minimal handling record. A shareable list should contain enough information to help find an item; details used to check a claim belong in a separate view for the person handling returns.",
+      "scenario": "Two blue bottles are found in different places. A student reports losing a blue bottle. The tool should help the person on duty find possible matches and record the outcome of a check, rather than automatically declaring a match to be the owner.",
+      "deliverables": [
+        "An item register with clear features, identifiers and states.",
+        "A search, claim-checking and handover workflow.",
+        "An export of unclaimed items without private verification details."
+      ],
+      "chapters": [
+        {
+          "title": "Design a useful item record",
+          "summary": "Choose fields that help identify belongings without collecting unnecessary information.",
+          "topics": [
+            "Item types, features and discovery dates.",
+            "Identifiers and consistent input rules.",
+            "Public descriptions versus private notes."
+          ]
+        },
+        {
+          "title": "Find candidates, not conclusions",
+          "summary": "Narrow a search from an incomplete description.",
+          "topics": [
+            "Combining several filters.",
+            "Handling no matches and multiple matches.",
+            "Keeping search results separate from ownership decisions."
+          ]
+        },
+        {
+          "title": "Check a claim before handover",
+          "summary": "Define states and valid changes between them.",
+          "topics": [
+            "Recording a claim.",
+            "A human verification step.",
+            "Preventing a second handover of the same item."
+          ]
+        },
+        {
+          "title": "Save, export and rehearse",
+          "summary": "Try a complete return journey from start to finish.",
+          "topics": [
+            "Keeping changes between sessions.",
+            "Exporting the unclaimed list.",
+            "Testing similar records and out-of-order actions."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "You can announce that a wallet was found, but should every detail inside it be public? Write a searchable public description and a separate note that only the person verifying a claim should use.",
+        "questions": [
+          "Which details help without revealing the whole verification check?",
+          "Should returned items remain in the unclaimed export?",
+          "What should be recorded if two people claim the same object?"
+        ]
+      },
+      "scope": "This is a detailed outline for an upcoming project. It describes the intended build and teaching sequence, not lessons already available inside an account. A person remains responsible for checking claims and handing items back.",
+      "extensions": [
+        "Add local photos and a printable notice after the basic workflow is reliable.",
+        "Explore which types of belongings are often lost and suggest a practical classroom change."
+      ],
+      "faq": [
+        {
+          "question": "Will AI identify the owner?",
+          "answer": "No. The project uses structured fields, filters and human checks. You are building a tool that supports a decision rather than automatically assigning ownership."
+        },
+        {
+          "question": "Why not use a spreadsheet?",
+          "answer": "A spreadsheet may already meet a simple need. The learning value is writing your own validation, combined search and handover rules, then judging whether they actually make the task easier."
+        },
+        {
+          "question": "Must the records be uploaded?",
+          "answer": "No. The initial direction is a local tool using fictional records. Public sharing or simultaneous editing by several people would need a separate design."
+        }
+      ],
+      "whyThisProject": [
+        "Returning a lost object often comes down to finding the right information and knowing whether it has already been collected. IDs, distinguishing features and handling states can reduce reliance on scattered chat messages.",
+        "The reason for choosing this project is to practice a workflow beyond matching a search word. You consider what should be public, which details help verify a claim and when a state may change. The tool supports a clearer handover while leaving the ownership check to a person."
+      ]
+    }
+  },
+  "python-ngan-sach-cau-lac-bo": {
+    "vi": {
+      "introduction": [
+        "Câu lạc bộ vừa thu tiền cho một hoạt động, mua vài món vật tư và nhận lại một khoản hoàn. Mỗi khoản đều nhỏ, nhưng cuối tháng câu hỏi “còn bao nhiêu?” không thể trả lời chỉ bằng việc nhớ số tiền trong lần nhắn gần nhất.",
+        "Dự án này hướng đến một sổ quỹ có giao dịch, danh mục và mã tham chiếu. Bạn sẽ dùng Python cùng SQLite để tổ chức dữ liệu, tính số dư và đối chiếu chi thực tế với kế hoạch. Một kết quả cần có thể lần ngược về những giao dịch tạo ra nó.",
+        "Đây là bài tập về phần mềm và chất lượng dữ liệu, dùng số liệu giả. Công cụ không kết nối ngân hàng, nhận tiền, chuyển tiền hay thay thế quy trình duyệt chi của câu lạc bộ."
+      ],
+      "outcomes": [
+        "Thiết kế bản ghi thu, chi và khoản điều chỉnh với ngày, số tiền và tham chiếu.",
+        "Giải thích vai trò của bảng dữ liệu và mã giao dịch trong SQLite.",
+        "Kiểm tra dữ liệu nhập thiếu, số tiền không hợp lệ và nghi ngờ trùng giao dịch.",
+        "Tính số dư từ số đầu kỳ và các giao dịch trong một khoảng thời gian.",
+        "So sánh ngân sách theo hoạt động với khoản chi đã ghi nhận.",
+        "Xuất báo cáo tháng có thể đối chiếu, kèm ghi chú về các dòng cần kiểm tra."
+      ],
+      "requirements": [
+        "Python 3, hàm, list, dictionary và kinh nghiệm đọc ghi tệp.",
+        "Biết phân biệt một khoản thu với một khoản chi và dùng một đơn vị tiền thống nhất.",
+        "Sẵn sàng học SQLite từ ngữ cảnh của dự án; không cần tài khoản ngân hàng hay dữ liệu quỹ thật."
+      ],
+      "audience": [
+        "Bạn tham gia câu lạc bộ và muốn hiểu cách một sổ giao dịch tạo thành báo cáo.",
+        "Người học muốn thử cơ sở dữ liệu với một bài toán nhỏ có quy tắc rõ.",
+        "Bạn thích kiểm tra số liệu, tìm giao dịch trùng và giải thích chênh lệch."
+      ],
+      "projectBrief": "Làm sổ giao dịch cục bộ dùng SQLite, có danh mục hoạt động, ngân sách và báo cáo đối chiếu. Những dòng có vấn đề phải được nhận diện để kiểm tra; chương trình không tự coi mọi dòng được nhập là đúng.",
+      "scenario": "Một khoản mua vật tư bị ghi hai lần dưới hai mô tả hơi khác nhau. Tổng chi vì vậy trông cao hơn dự kiến. Bạn cần xem những giao dịch liên quan, đánh dấu phần cần xác minh và có thể giải thích lại con số trong báo cáo.",
+      "deliverables": [
+        "Cơ sở dữ liệu SQLite với giao dịch và danh mục có liên kết rõ.",
+        "Báo cáo số dư, ngân sách so với chi thực tế và các dòng nghi trùng.",
+        "Tệp CSV báo cáo tháng cùng hướng dẫn kiểm tra lại các khoản liên quan."
+      ],
+      "chapters": [
+        {
+          "title": "Một giao dịch cần những gì?",
+          "summary": "Chọn dữ liệu đủ để hiểu và truy lại từng khoản.",
+          "topics": [
+            "Ngày, loại khoản, số tiền và hoạt động.",
+            "Mã tham chiếu và ghi chú.",
+            "Quy tắc nhập không phụ thuộc cách viết mô tả."
+          ]
+        },
+        {
+          "title": "Đưa sổ quỹ vào SQLite",
+          "summary": "Tổ chức các bản ghi để có thể thêm và truy vấn lại.",
+          "topics": [
+            "Bảng, khóa và mối liên hệ.",
+            "Ghi giao dịch với dữ liệu được kiểm tra.",
+            "Truy vấn theo khoảng ngày và danh mục."
+          ]
+        },
+        {
+          "title": "Tính số dư có thể đối chiếu",
+          "summary": "Đi từ từng khoản đến con số tổng.",
+          "topics": [
+            "Số đầu kỳ và dấu của từng loại khoản.",
+            "Khoản điều chỉnh và tính nhất quán.",
+            "Kiểm tra tổng bằng một bộ dữ liệu nhỏ."
+          ]
+        },
+        {
+          "title": "Nhìn chênh lệch và nghi ngờ trùng",
+          "summary": "Tách điều đáng chú ý khỏi một kết luận tự động.",
+          "topics": [
+            "Ngân sách theo hoạt động.",
+            "Những dấu hiệu nhập lặp.",
+            "Ghi nhận việc kiểm tra thay vì âm thầm xóa dòng."
+          ]
+        },
+        {
+          "title": "Chốt một báo cáo có thể giải thích",
+          "summary": "Trình bày kết quả để người khác đọc và kiểm tra lại.",
+          "topics": [
+            "Lọc theo tháng và xuất CSV.",
+            "Giữ mã tham chiếu trong báo cáo.",
+            "Tự thử với hoàn tiền, dữ liệu thiếu và kỳ không có giao dịch."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Hai giao dịch có cùng ngày và cùng số tiền. Một giao dịch là bản ghi trùng, nhưng cũng có thể hai nhóm thực sự mua cùng một món. Trước khi cho chương trình xử lý, hãy quyết định thông tin nào đủ để báo nghi ngờ và thông tin nào phải nhờ người phụ trách xác minh.",
+        "questions": [
+          "Một cảnh báo trùng có đủ để tự xóa giao dịch không?",
+          "Báo cáo cần giữ mã nào để tìm lại dòng gốc?",
+          "Nếu sửa một giao dịch, người đọc cần hiểu thay đổi đó như thế nào?"
+        ]
+      },
+      "scope": "Đề cương của dự án sắp có bao gồm sổ giao dịch, dữ liệu SQLite và báo cáo kiểm tra. Không có kết nối ngân hàng, thanh toán online, chức năng kế toán chuyên nghiệp hoặc quyền phê duyệt chi. Toàn bộ bài tập nên bắt đầu với giao dịch giả.",
+      "extensions": [
+        "Bổ sung nhập CSV có màn hình xác nhận và báo lỗi từng dòng.",
+        "Thử báo cáo theo hoạt động hoặc bản in, sau khi kết quả đối chiếu cơ bản đã đúng."
+      ],
+      "faq": [
+        {
+          "question": "Có cần biết SQL từ trước không?",
+          "answer": "Không cần học xong một khóa SQL riêng, nhưng bạn nên nắm các cấu trúc Python đã liệt kê. Các khái niệm bảng và truy vấn sẽ được đặt trong nhu cầu cụ thể của sổ giao dịch."
+        },
+        {
+          "question": "Có dùng để quản lý quỹ thật ngay không?",
+          "answer": "Nên hoàn thành và kiểm thử với số liệu giả trước. Sổ quỹ thật còn cần người chịu trách nhiệm, cách duyệt, sao lưu và đối chiếu độc lập; dự án học tập không tự cung cấp tất cả những quy trình đó."
+        },
+        {
+          "question": "Phần nào làm dự án khác một máy tính cộng trừ?",
+          "answer": "Bạn quan tâm tới nguồn của mỗi con số: giao dịch nào được tính, giao dịch nào bị nghi trùng và báo cáo dùng khoảng ngày nào. Lưu trữ, truy vấn và truy lại dữ liệu là phần cốt lõi của bài toán."
+        }
+      ],
+      "whyThisProject": [
+        "Khi nhiều người cùng góp công cho một hoạt động, việc giải thích các khoản thu và chi cũng là một phần của làm việc có trách nhiệm. Một con số tổng sẽ có ích hơn khi người đọc tìm lại được những giao dịch tạo nên nó.",
+        "Sổ quỹ tạo ra một lý do cụ thể để học cơ sở dữ liệu: lưu bản ghi nhất quán, truy vấn đúng khoảng thời gian và kiểm tra nghi ngờ nhập trùng. Dự án dùng giao dịch giả để bạn tập sự cẩn thận với dữ liệu, rồi hiểu vì sao một báo cáo cần có dấu vết để đối chiếu."
+      ]
+    },
+    "en": {
+      "introduction": [
+        "A club collects money for an activity, buys supplies and receives a small refund. Each transaction is simple, but “how much is left?” cannot be answered reliably by remembering the latest chat message.",
+        "This project outlines a ledger with transactions, categories and reference IDs. Use Python and SQLite to organize records, calculate a balance and compare recorded spending with a plan. A total should be traceable to the entries that produced it.",
+        "This is a software and data-quality exercise using fictional figures. It does not connect to a bank, accept or transfer money, or replace a club’s spending-approval process."
+      ],
+      "outcomes": [
+        "Model income, spending and adjustments with dates, values and references.",
+        "Explain the role of tables and transaction identifiers in SQLite.",
+        "Check missing values, invalid amounts and possible duplicate entries.",
+        "Calculate a balance from an opening amount and a selected period.",
+        "Compare activity budgets with recorded spending.",
+        "Export a monthly report with references and items needing review."
+      ],
+      "requirements": [
+        "Python 3, functions, lists, dictionaries and experience reading files.",
+        "An understanding of income versus spending and a consistent unit of currency.",
+        "Willingness to learn SQLite in context; no bank account or real club records are needed."
+      ],
+      "audience": [
+        "Club members interested in how a transaction list becomes a report.",
+        "Learners ready to explore a small database with explicit rules.",
+        "Students who enjoy checking figures and explaining discrepancies."
+      ],
+      "projectBrief": "Create a local SQLite ledger with activities, budgets and a reconciliation report. Questionable entries should be visible for review instead of automatically treating every submitted record as correct.",
+      "scenario": "A supply purchase is entered twice with slightly different descriptions, making reported spending higher than expected. You need to inspect the related records, flag the uncertainty and explain the resulting total to someone else.",
+      "deliverables": [
+        "A SQLite database with clearly related transactions and categories.",
+        "Balance and budget-versus-spend summaries with possible duplicates flagged.",
+        "A monthly CSV report and a short reconciliation guide."
+      ],
+      "chapters": [
+        {
+          "title": "Describe a transaction",
+          "summary": "Choose fields that make an entry understandable and traceable.",
+          "topics": [
+            "Date, transaction type, amount and activity.",
+            "References and notes.",
+            "Rules independent of free-text descriptions."
+          ]
+        },
+        {
+          "title": "Store the ledger in SQLite",
+          "summary": "Organize records so they can be added and queried later.",
+          "topics": [
+            "Tables, keys and relationships.",
+            "Writing checked input.",
+            "Queries by date range and category."
+          ]
+        },
+        {
+          "title": "Calculate a checkable balance",
+          "summary": "Connect individual entries to a summary.",
+          "topics": [
+            "Opening balance and transaction direction.",
+            "Adjustments and consistency.",
+            "Manual checks using a small example."
+          ]
+        },
+        {
+          "title": "Investigate differences and duplicates",
+          "summary": "Distinguish a useful flag from an automatic verdict.",
+          "topics": [
+            "Activity budgets.",
+            "Signs of repeated entry.",
+            "Recording a review rather than silently deleting rows."
+          ]
+        },
+        {
+          "title": "Produce an explainable report",
+          "summary": "Make a summary another person can inspect.",
+          "topics": [
+            "Monthly filtering and CSV export.",
+            "Keeping references in the output.",
+            "Refunds, missing data and periods with no transactions."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Two records have the same date and amount. They might be duplicates, or two groups might really have bought the same thing. Decide which evidence warrants a flag and which facts a person must confirm.",
+        "questions": [
+          "Is a duplicate flag enough to delete an entry?",
+          "Which references must remain in the report?",
+          "How should a correction be explained to a reader?"
+        ]
+      },
+      "scope": "This upcoming project covers a local transaction ledger, SQLite storage and inspection reports. It does not include banking connections, online payments, professional accounting or spending authorization. Exercises should begin with fictional transactions.",
+      "extensions": [
+        "Add CSV import with a confirmation step and row-level error reporting.",
+        "Explore activity reports or printable summaries after basic reconciliation is correct."
+      ],
+      "faq": [
+        {
+          "question": "Do I need SQL beforehand?",
+          "answer": "You do not need a separate completed SQL course, but the listed Python skills matter. Tables and queries can be introduced through the needs of the ledger."
+        },
+        {
+          "question": "Can it immediately manage a real club fund?",
+          "answer": "Complete and test it with fictional figures first. Real funds also need responsible people, approvals, backups and independent reconciliation. A learning project does not supply those processes automatically."
+        },
+        {
+          "question": "How is this different from a calculator?",
+          "answer": "You investigate the source of a total: which entries were included, which were flagged and which dates define the report. Storage, queries and traceability are central to the project."
+        }
+      ],
+      "whyThisProject": [
+        "When people contribute to a shared activity, explaining income and spending is part of being responsible to the group. A total becomes more useful when a reader can trace it back to the transactions behind it.",
+        "A club ledger gives databases a concrete purpose: consistent records, queries for the right period and checks for possible duplicates. Fictional transactions let you practice care with data and understand why a report needs a trail that another person can inspect."
+      ]
+    }
+  },
+  "python-giam-lang-phi-thuc-pham": {
+    "vi": {
+      "introduction": [
+        "Một ngày lớp để thừa nhiều thức ăn hơn ngày trước. Nhưng hôm đó cũng có nhiều bạn ăn hơn. Nếu chỉ nhìn tổng gram, rất dễ kết luận sai về việc có thực sự lãng phí hơn hay không.",
+        "Bạn xây một công cụ đọc nhật ký bữa ăn, kiểm tra số suất và lượng thức ăn thừa, rồi tạo báo cáo HTML. Dự án đặt câu hỏi cụ thể: với dữ liệu đang có, chỉ số nào giúp so sánh các bữa ăn hợp lý hơn?",
+        "Ba bài đọc hiện có đưa bạn qua toàn bộ phiên bản đầu: dữ liệu CSV, logic tính toán và báo cáo mở bằng trình duyệt. Bạn sẽ chạy trên dữ liệu mẫu, thử trường hợp sai và viết ra điều kết quả chưa thể cho biết."
+      ],
+      "outcomes": [
+        "Đọc nhật ký bữa ăn với ngày, bữa, số suất và lượng thừa bằng gram.",
+        "Phát hiện số suất không hợp lệ, giá trị thiếu, số âm và bản ghi trùng.",
+        "Phân biệt tổng lượng thừa với lượng thừa trên một suất ăn.",
+        "Tính kết quả chung theo số suất, tránh hiểu sai trung bình của các tỷ lệ.",
+        "Xuất báo cáo HTML có kết quả, đơn vị và thông tin về dữ liệu bị loại.",
+        "Đề xuất một phép so sánh trước–sau có ghi rõ khác biệt về điều kiện."
+      ],
+      "requirements": [
+        "Python 3; biết hàm, list, dictionary, vòng lặp và điều kiện.",
+        "Biết nhân chia cơ bản và đọc đơn vị gram; không cần học pandas trước.",
+        "Có thể tạo tệp CSV và mở tệp HTML trên máy; dùng dữ liệu mẫu khi bắt đầu."
+      ],
+      "audience": [
+        "Bạn muốn dùng Python để hiểu một vấn đề môi trường gần lớp mình.",
+        "Thành viên câu lạc bộ đang tập đọc dữ liệu thay vì chỉ vẽ biểu đồ đẹp.",
+        "Người học muốn thực hành chuỗi đọc dữ liệu, kiểm tra, tính toán và trình bày."
+      ],
+      "projectBrief": "Làm báo cáo cục bộ từ một tệp nhật ký bữa ăn. Phiên bản đang học dùng thư viện chuẩn Python và xuất HTML tĩnh; không cần cảm biến, ứng dụng điện thoại hay cơ sở dữ liệu online.",
+      "scenario": "Lớp thử thay cách lấy cơm trong một tuần. Báo cáo cần cho thấy lượng thừa và số suất của từng bữa, để người đọc biết sự thay đổi đến từ khẩu phần, lượng người ăn hay một điều chưa đo được.",
+      "deliverables": [
+        "Hàm đọc CSV chấp nhận dữ liệu đúng và báo số dòng có vấn đề.",
+        "Phần phân tích lượng thừa trên mỗi suất và kết quả chung.",
+        "Báo cáo HTML cùng ghi chú về cách thu thập và giới hạn so sánh."
+      ],
+      "chapters": [
+        {
+          "title": "Ghi một bữa ăn thành dữ liệu",
+          "summary": "Bắt đầu từ dữ liệu mẫu và một bộ đọc có kiểm tra đầu vào.",
+          "topics": [
+            "Ngày, bữa, số suất và gram thức ăn thừa.",
+            "Tiêu đề cột, giá trị thiếu và dòng nhập trùng.",
+            "Giữ lại thông báo lỗi để sửa nguồn."
+          ]
+        },
+        {
+          "title": "Chọn chỉ số đúng cho câu hỏi",
+          "summary": "Tính kết quả rồi đối chiếu bằng một bộ nhỏ trước khi tin báo cáo.",
+          "topics": [
+            "Tổng gram và gram trên mỗi suất.",
+            "Mẫu số của kết quả toàn kỳ.",
+            "Dữ liệu rỗng và những phép chia cần được kiểm tra."
+          ]
+        },
+        {
+          "title": "Đưa kết quả ra một báo cáo đọc được",
+          "summary": "Hoàn thiện phiên bản đầu với bảng HTML và thông tin đủ để giải thích số liệu.",
+          "topics": [
+            "Nhãn, đơn vị và lỗi dữ liệu.",
+            "Mở báo cáo trong trình duyệt.",
+            "Thử thay đổi dữ liệu và trình bày giới hạn của phép so sánh."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Hai ngày có tổng lượng thức ăn thừa khác nhau nhưng số suất cũng khác nhau. Nếu chỉ được chọn hai thông tin đặt cạnh con số tổng trong báo cáo, bạn sẽ chọn gì để người đọc không hiểu nhầm?",
+        "questions": [
+          "Có đủ cơ sở kết luận một thay đổi đã hiệu quả chưa?",
+          "Những điều kiện nào giữa hai ngày có thể khác nhau?",
+          "Một dòng lỗi có thể làm mẫu số thay đổi ra sao?"
+        ]
+      },
+      "scope": "Khóa đang mở đăng ký có ba bài đọc thực hành bằng tiếng Việt. Bài học chứa các bước làm, mã Python, dữ liệu mẫu, kết quả để đối chiếu và bài tự kiểm tra. Trang này giới thiệu phạm vi; phần hướng dẫn hoàn chỉnh nằm trong khu vực được cấp quyền học. Video chưa nằm trong phiên bản hiện có.",
+      "extensions": [
+        "Theo dõi thêm nhiều tuần hoặc tách nhóm bữa ăn khi đã có cách thu thập dữ liệu nhất quán.",
+        "Thêm biểu đồ hoặc một giao diện nhập liệu sau khi bảng kết quả được kiểm tra đúng."
+      ],
+      "faq": [
+        {
+          "question": "Có phải cân thức ăn thật mới học được không?",
+          "answer": "Không. Các bài hiện có bắt đầu với dữ liệu mẫu. Khi muốn thu thập thật, bạn cần thống nhất cách cân và cách đếm số suất với người phụ trách, rồi ghi rõ cách thực hiện để so sánh được."
+        },
+        {
+          "question": "Có dùng pandas hoặc cần học thống kê trước không?",
+          "answer": "Phiên bản đầu dùng thư viện chuẩn. Bạn cần phép tính cơ bản và sẵn sàng kiểm tra mẫu số; dự án giới thiệu cách suy nghĩ về dữ liệu ngay trong tình huống thực tế."
+        },
+        {
+          "question": "Làm xong có chứng minh được giảm lãng phí không?",
+          "answer": "Báo cáo giúp bạn mô tả dữ liệu đã ghi. Kết luận về một thay đổi còn phụ thuộc cách đo, số ngày quan sát và các khác biệt giữa bữa ăn. Bạn sẽ tập ghi rõ giới hạn đó thay vì khẳng định vượt quá dữ liệu."
+        }
+      ],
+      "whyThisProject": [
+        "Muốn giảm thức ăn thừa, trước hết cần hiểu mình đang đo điều gì. Tổng lượng thừa có thể thay đổi chỉ vì số người ăn thay đổi. Dự án này chọn một câu hỏi gần lớp học để bạn tập nhìn dữ liệu đi cùng đơn vị và mẫu số.",
+        "Một công cụ nhỏ có thể giúp lớp ghi nhận nhất quán hơn và đặt câu hỏi tốt hơn trước khi thử một thay đổi. Giá trị học tập nằm ở chuỗi từ quan sát đến kiểm tra và báo cáo, cùng sự thận trọng khi giải thích kết quả. Báo cáo là điểm bắt đầu cho việc tìm hiểu, không phải bằng chứng tự động rằng một biện pháp đã hiệu quả."
+      ]
+    },
+    "en": {
+      "introduction": [
+        "The class leaves more food one day than the day before, but more students ate that day too. Total grams alone can give a misleading impression of whether waste actually increased.",
+        "Build a tool that reads meal records, checks serving counts and waste measurements, then creates an HTML report. The project asks a specific question: which measure makes meals reasonably comparable with the data available?",
+        "The three available written lessons cover the first version from CSV input to calculation and a browser-readable report. You work with sample data, try invalid cases and explain what the result cannot establish."
+      ],
+      "outcomes": [
+        "Read meal records with dates, meal labels, serving counts and waste in grams.",
+        "Detect invalid serving counts, missing values, negatives and duplicate records.",
+        "Distinguish total waste from waste per serving.",
+        "Calculate an overall result using serving counts rather than averaging ratios carelessly.",
+        "Produce an HTML report with units and rejected-data information.",
+        "Propose a before-and-after comparison while naming differences in conditions."
+      ],
+      "requirements": [
+        "Python 3, functions, lists, dictionaries, loops and conditions.",
+        "Basic arithmetic and familiarity with grams; pandas is not required.",
+        "The ability to create CSV files and open HTML locally; begin with the provided samples."
+      ],
+      "audience": [
+        "Students interested in a local environmental question.",
+        "Club members learning to question data rather than just make attractive charts.",
+        "Learners who want a complete read, validate, calculate and report workflow."
+      ],
+      "projectBrief": "Create a local report from a meal-log CSV. The current build uses Python’s standard library and static HTML; it does not require sensors, a phone app or an online database.",
+      "scenario": "Your class tries a different way of serving rice for a week. The report should show both waste and serving counts so a reader can distinguish a change in portioning from a change in attendance or another unmeasured factor.",
+      "deliverables": [
+        "A CSV reader that reports problematic rows.",
+        "Analysis of waste per serving and an overall result.",
+        "An HTML report with notes about collection and comparison limits."
+      ],
+      "chapters": [
+        {
+          "title": "Represent a meal as data",
+          "summary": "Start with the sample and a reader that checks its input.",
+          "topics": [
+            "Dates, meals, serving counts and waste in grams.",
+            "Headers, missing values and repeated records.",
+            "Keeping errors visible so the source can be corrected."
+          ]
+        },
+        {
+          "title": "Choose a measure for the question",
+          "summary": "Check calculations on a small example before relying on a report.",
+          "topics": [
+            "Total grams versus grams per serving.",
+            "The denominator for the full period.",
+            "Empty input and divisions that need validation."
+          ]
+        },
+        {
+          "title": "Make the report understandable",
+          "summary": "Finish the first version with an HTML table and enough context to explain it.",
+          "topics": [
+            "Labels, units and input errors.",
+            "Opening the report in a browser.",
+            "Changing the data and describing comparison limits."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Two days have different total waste and different serving counts. If you can put only two extra pieces of information beside the totals, what should they be to help a reader interpret the comparison?",
+        "questions": [
+          "Is there enough evidence to attribute the difference to one intervention?",
+          "Which conditions may differ between the meals?",
+          "How could an invalid row alter the denominator?"
+        ]
+      },
+      "scope": "Enrollment is open for three Vietnamese written lessons. The enrolled area contains the guided steps, Python code, sample data, expected results and practice checks. This page previews the scope; videos are not part of the current version.",
+      "extensions": [
+        "Compare more weeks or separate meal groups once collection is consistent.",
+        "Add charts or an input interface after checking the underlying table."
+      ],
+      "faq": [
+        {
+          "question": "Must I weigh real food to start?",
+          "answer": "No. The lessons begin with sample data. If you later collect real measurements, agree on a consistent weighing and serving-count method with the person responsible and document it."
+        },
+        {
+          "question": "Do I need pandas or statistics first?",
+          "answer": "The first version uses the standard library. Basic arithmetic and a willingness to examine denominators are enough to begin exploring the data questions."
+        },
+        {
+          "question": "Will the project prove that waste was reduced?",
+          "answer": "The report describes recorded data. Attributing a change depends on collection, the observation period and differences between meals. You practice stating those limits rather than making a stronger claim than the data supports."
+        }
+      ],
+      "whyThisProject": [
+        "Understanding food waste begins with understanding the measurement. A total may change simply because more people ate. This project uses a familiar classroom question to connect numbers to their units and denominators.",
+        "A small tool can help a class record consistently and ask better questions before trying a change. The learning value is the path from observation to validation and reporting, with care about interpretation. A report begins an investigation rather than automatically proving an intervention worked."
+      ]
+    }
+  },
+  "python-lich-tinh-nguyen": {
+    "vi": {
+      "introduction": [
+        "Một hoạt động cần người trực buổi sáng và buổi chiều. Có bạn chỉ rảnh sáng, có bạn nhận được cả hai ca, nhưng mỗi người cũng có giới hạn số ca. Xếp lần lượt theo danh sách có thể khiến người ít lựa chọn không còn chỗ phù hợp.",
+        "Dự án này đưa bạn từ bảng đăng ký thời gian rảnh đến một bộ xếp ca nhỏ bằng Python. Điều quan trọng là viết rõ quy tắc, kiểm tra từng lượt chọn và báo ca thiếu người. Một lịch không đầy đủ nhưng giải thích được còn hữu ích hơn lịch đã điền kín bằng những người không thể tham gia.",
+        "Ba bài đọc đang có dùng dữ liệu CSV và thuật toán xác định cho ví dụ sáng–chiều. Đây là cách thử một bài toán phân bổ nguồn lực vừa sức, không phải lời hứa tự động tạo lịch tối ưu cho mọi hoạt động."
+      ],
+      "outcomes": [
+        "Biểu diễn người tham gia bằng mã, ca rảnh và số ca tối đa.",
+        "Kiểm tra ca không hợp lệ, giới hạn sai và bản ghi người bị trùng.",
+        "Đọc và giải thích thứ tự xét ứng viên của một thuật toán tham lam.",
+        "Tôn trọng thời gian rảnh và giới hạn công việc ở mỗi lượt phân bổ.",
+        "Phân biệt lịch có thể thực hiện với lịch được cho là tối ưu hoặc công bằng.",
+        "Xuất báo cáo HTML có người được xếp và những ca còn thiếu."
+      ],
+      "requirements": [
+        "Python 3; biết hàm, list, dictionary, vòng lặp và cách đọc điều kiện.",
+        "Đã thử một dự án xử lý dữ liệu nhỏ hoặc hoàn thành tủ sách miễn phí.",
+        "Dùng mã giả cho người tham gia; không cần thu thập lịch cá nhân thật để làm bài."
+      ],
+      "audience": [
+        "Bạn từng phụ trách chia ca cho câu lạc bộ hoặc một buổi sinh hoạt.",
+        "Người học muốn thấy thuật toán ảnh hưởng đến một quyết định cụ thể.",
+        "Bạn thích thử các tình huống “đổi một điều kiện thì kết quả thay đổi ra sao”."
+      ],
+      "projectBrief": "Xây một bộ phân ca nhỏ từ CSV, kiểm tra dữ liệu rồi xuất HTML. Bản hiện có xét hai ca mẫu, mỗi ca một vị trí; quy tắc chọn và kết quả đều có thể được kiểm tra bằng tay.",
+      "scenario": "Một bạn chỉ tham gia được buổi sáng, hai bạn còn lại có nhiều lựa chọn hơn. Sau khi một người đổi thời gian rảnh, bạn chạy lại và kiểm tra xem lịch còn hợp lệ không, ai đổi ca và có vị trí nào chưa đủ người.",
+      "deliverables": [
+        "Bộ đọc danh sách người tham gia có kiểm tra dữ liệu và mã trùng.",
+        "Hàm xếp ca tôn trọng điều kiện, trả kết quả ổn định với cùng đầu vào.",
+        "Báo cáo HTML hiển thị phân ca, chỗ thiếu người và ghi chú về quy tắc."
+      ],
+      "chapters": [
+        {
+          "title": "Đọc một bảng đăng ký có quy tắc",
+          "summary": "Biến thông tin thời gian rảnh thành đầu vào có thể kiểm tra.",
+          "topics": [
+            "Mã người, danh sách ca và giới hạn số ca.",
+            "Ca không có trong danh mục và giá trị không hợp lệ.",
+            "Giữ lỗi theo dòng để sửa dữ liệu nguồn."
+          ]
+        },
+        {
+          "title": "Xếp một ca và giải thích lượt chọn",
+          "summary": "Viết phần phân bổ với thứ tự xét rõ ràng, rồi đối chiếu kết quả mẫu.",
+          "topics": [
+            "Ứng viên đủ điều kiện cho từng ca.",
+            "Thứ tự ưu tiên và cách xử lý khi cùng điều kiện.",
+            "Báo thiếu người khi không còn ứng viên hợp lệ."
+          ]
+        },
+        {
+          "title": "Đọc lịch như người phụ trách",
+          "summary": "Xuất kết quả và thử lại khi thông tin đăng ký thay đổi.",
+          "topics": [
+            "Báo cáo HTML với nhãn ca và kết quả.",
+            "Tình huống đổi thời gian rảnh hoặc giới hạn.",
+            "Giới hạn của cách xếp tham lam và tiêu chí muốn cải thiện."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Một lịch dùng được vẫn có thể khiến một người nhận nhiều ca hơn người khác. Hãy đặt ra hai tiêu chí bạn muốn theo dõi trước khi gọi một lịch là công bằng, rồi nói rõ khi hai tiêu chí có thể mâu thuẫn.",
+        "questions": [
+          "Công bằng theo số ca hay theo tổng thời gian?",
+          "Người ít ca rảnh có nên được xét khác không?",
+          "Bạn sẽ giải thích thế nào nếu không thể đáp ứng tất cả mong muốn?"
+        ]
+      },
+      "scope": "Khóa đang mở gồm ba bài đọc thực hành bằng tiếng Việt, với mã, dữ liệu mẫu, kết quả đối chiếu và bài tự kiểm tra trong khu vực được cấp quyền. Phiên bản đầu xử lý ví dụ hai ca và xuất HTML. Nó không tự liên hệ người tham gia hoặc cung cấp một bộ tối ưu lịch tổng quát.",
+      "extensions": [
+        "Mở rộng danh mục ca hoặc số người cần mỗi ca sau khi đã xác định rõ dữ liệu và cách kiểm tra.",
+        "So sánh một quy tắc khác, tính khối lượng theo thời gian hoặc tìm một ví dụ mà cách tham lam bỏ lỡ lịch hợp lệ."
+      ],
+      "faq": [
+        {
+          "question": "Có đảm bảo luôn tìm ra lịch đầy đủ không?",
+          "answer": "Không. Thuật toán tham lam có thể bỏ lỡ một cách xếp khác. Bạn sẽ học cách nhìn giới hạn đó và phân biệt “không tìm được bằng cách này” với “không thể có lịch nào”."
+        },
+        {
+          "question": "Vì sao dùng mã thay vì tên thật?",
+          "answer": "Dữ liệu giả và mã giúp bạn tập trung vào thuật toán, đồng thời tránh đưa lịch cá nhân lên báo cáo chia sẻ. Khi dùng thật, người phụ trách có thể giữ bảng đối chiếu tên riêng."
+        },
+        {
+          "question": "Có thể áp dụng cho sự kiện lớn không?",
+          "answer": "Bản hiện có là bài học nhỏ với hai ca. Một hoạt động nhiều ngày, nhiều vị trí và nhiều ràng buộc cần mô hình và kiểm thử thêm; không nên dùng kết quả mẫu như một hệ thống tổ chức sự kiện hoàn chỉnh."
+        }
+      ],
+      "whyThisProject": [
+        "Một lịch phân ca tác động trực tiếp đến thời gian và công việc của từng người. Nếu chỉ điền tên cho kín bảng, người phụ trách có thể bỏ qua thời gian rảnh hoặc dồn việc vào một vài bạn. Dự án này đặt các điều kiện đó vào dữ liệu để nhìn thấy và kiểm tra được.",
+        "Đây cũng là cơ hội hiểu rằng thuật toán mang theo những lựa chọn do người viết đặt ra. Bạn thử một quy tắc nhỏ, xem ai được xếp, ca nào còn thiếu và điều gì xảy ra khi đổi đầu vào. Mục tiêu là một quyết định có thể giải thích và xem xét lại, không tự gắn nhãn mọi kết quả là công bằng."
+      ]
+    },
+    "en": {
+      "introduction": [
+        "An activity needs a morning helper and an afternoon helper. One person is only free in the morning, another can do either, and everyone has a workload limit. Assigning people in list order may leave the person with fewer options without a suitable slot.",
+        "Build a small Python allocator from an availability CSV. The important work is stating the rules, checking each choice and showing unfilled shifts. An incomplete but honest schedule is more useful than a full one containing people who cannot attend.",
+        "The three available written lessons use a deterministic greedy approach for a morning-and-afternoon example. This is an approachable resource-allocation exercise, not a promise to find an optimal schedule for every event."
+      ],
+      "outcomes": [
+        "Represent participants with aliases, available shifts and workload limits.",
+        "Detect unsupported shifts, invalid limits and duplicate participant records.",
+        "Explain the candidate ordering used by a greedy allocator.",
+        "Respect availability and workload constraints at every assignment.",
+        "Distinguish a feasible schedule from an optimal or fair one.",
+        "Create an HTML schedule showing assignments and unfilled positions."
+      ],
+      "requirements": [
+        "Python 3, functions, lists, dictionaries, loops and conditions.",
+        "Some experience with a small data project or the free book-sharing trial.",
+        "Fictional participant IDs; real personal schedules are not needed."
+      ],
+      "audience": [
+        "Students who have helped organize a club activity.",
+        "Learners interested in how an algorithm makes a concrete choice.",
+        "Students who enjoy changing one condition and explaining the new result."
+      ],
+      "projectBrief": "Build a small CSV-to-HTML shift allocator. The current example has two shifts and one position per shift; its rules and outputs can be checked by hand.",
+      "scenario": "One volunteer can only attend in the morning while others have more options. Someone later changes availability. Run the tool again and check feasibility, changed assignments and remaining gaps.",
+      "deliverables": [
+        "A participant CSV reader with validation and duplicate checks.",
+        "A deterministic allocator that respects eligibility conditions.",
+        "An HTML report with assignments, gaps and an explanation of the rule."
+      ],
+      "chapters": [
+        {
+          "title": "Read an availability register",
+          "summary": "Make the signup information explicit enough to validate.",
+          "topics": [
+            "Aliases, available shifts and maximum assignments.",
+            "Unknown shifts and invalid values.",
+            "Row-level errors for correcting the source."
+          ]
+        },
+        {
+          "title": "Allocate a shift and explain the choice",
+          "summary": "Build the allocation step and check it against the example.",
+          "topics": [
+            "Eligible candidates for each shift.",
+            "Priority order and tie handling.",
+            "Reporting a gap when no eligible candidate remains."
+          ]
+        },
+        {
+          "title": "Read the result as an organizer",
+          "summary": "Export the schedule and try a changed input.",
+          "topics": [
+            "HTML shift labels and assignments.",
+            "Changed availability and workload limits.",
+            "Limits of greedy selection and possible evaluation criteria."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "A feasible schedule can still give one person more work than another. Suggest two measures you would check before calling the result fair, and describe a situation where those measures might conflict.",
+        "questions": [
+          "Should fairness mean equal shifts or equal hours?",
+          "Should people with fewer available slots be treated differently?",
+          "How would you explain conflicting requests that cannot all be satisfied?"
+        ]
+      },
+      "scope": "The open-enrollment course contains three Vietnamese written lessons with implementation steps, code, sample data, expected results and self-checks behind enrolled access. The first version handles the two-shift example and produces HTML. It does not contact participants or provide a general scheduling optimizer.",
+      "extensions": [
+        "Add more shifts or required people per shift after defining the new data model and checks.",
+        "Compare another rule, account for hours, or find an example where greedy selection misses a feasible schedule."
+      ],
+      "faq": [
+        {
+          "question": "Will it always find a complete schedule?",
+          "answer": "No. A greedy rule can miss another valid arrangement. You learn to distinguish “this method did not find one” from “no possible schedule exists”."
+        },
+        {
+          "question": "Why use aliases?",
+          "answer": "Fictional IDs keep attention on the logic and avoid publishing personal availability in a report. A real organizer could keep a separate private name lookup."
+        },
+        {
+          "question": "Can it organize a large event?",
+          "answer": "The current build is a two-shift learning example. Multi-day events, multiple roles and more constraints require additional modeling and testing rather than treating the sample as a complete event system."
+        }
+      ],
+      "whyThisProject": [
+        "A shift schedule affects each person’s time and workload. Filling every cell can hide unavailable volunteers or concentrate work on a few people. This project makes those conditions explicit so they can be inspected.",
+        "It also shows that algorithms carry choices made by their authors. You try a small rule, inspect who is assigned, identify gaps and change the input. The aim is a decision that can be explained and reconsidered, rather than automatically labeling every output fair."
+      ]
+    }
+  },
+  "python-quan-ly-thiet-bi": {
+    "vi": {
+      "introduction": [
+        "Câu lạc bộ có vài bộ robot, cáp kết nối và máy tính dùng chung. “Có bao nhiêu bộ dùng được?” không giống “Có bao nhiêu bộ trong sổ”: một số đang được mượn, một số bảo trì, còn một vài món đã quá ngày hẹn trả.",
+        "Bạn xây công cụ kiểm tra sổ thiết bị và tạo báo cáo phân loại theo trạng thái. Mỗi kết quả cần dựa vào mã thiết bị và ngày hạn trả, không dựa vào màu ô hoặc trí nhớ của người phụ trách.",
+        "Ba bài đọc hiện có tập trung vào phiên bản CSV và báo cáo HTML. Bạn sẽ học cách biến quy tắc vận hành thành phép kiểm tra dữ liệu, đồng thời phân biệt số đang mượn với phần đang mượn đã quá hạn."
+      ],
+      "outcomes": [
+        "Thiết kế sổ thiết bị có mã, trạng thái và thông tin hạn trả phù hợp.",
+        "Kiểm tra mã trùng, trạng thái ngoài danh mục và ngày không hợp lệ.",
+        "Phân loại thiết bị sẵn có, đang mượn và đang bảo trì.",
+        "Nhận diện quá hạn như một phần của nhóm đang mượn, tránh cộng hai lần.",
+        "Dùng mốc ngày kiểm thử cố định để kết quả có thể lặp lại.",
+        "Xuất báo cáo HTML và giải thích được nguồn của mỗi con số."
+      ],
+      "requirements": [
+        "Python 3; đã hiểu hàm, vòng lặp, list và dictionary.",
+        "Có thể đọc một ngày dạng năm-tháng-ngày và so sánh thứ tự ngày.",
+        "Tạo được CSV trên máy; không cần phần cứng robot hoặc danh mục thiết bị thật."
+      ],
+      "audience": [
+        "Bạn làm việc với thiết bị dùng chung của lớp, câu lạc bộ hoặc đội robot.",
+        "Người học muốn luyện dữ liệu có trạng thái và điều kiện phụ thuộc nhau.",
+        "Bạn muốn xây một báo cáo giúp người phụ trách biết nên kiểm tra việc gì tiếp theo."
+      ],
+      "projectBrief": "Làm một bộ đọc sổ thiết bị và báo cáo kiểm kê nhỏ chạy cục bộ. Bản đang học không phải hệ thống đặt lịch hay giao diện mượn trả; nó giúp bạn kiểm tra đầu vào và hiểu đúng tình trạng trong sổ.",
+      "scenario": "Trước buổi thực hành, người phụ trách cần biết số thiết bị sẵn dùng và những món đang bảo trì. Báo cáo cũng chỉ ra số lượt mượn đã qua hạn tại một mốc ngày cụ thể, để người phụ trách kiểm tra tiếp thay vì đoán từ tổng số thiết bị.",
+      "deliverables": [
+        "Hàm đọc CSV có kiểm tra mã, trạng thái và dữ liệu ngày.",
+        "Bảng đếm theo trạng thái với quá hạn được tính đúng phạm vi.",
+        "Báo cáo HTML và các trường hợp thử sai dữ liệu hoặc đổi mốc ngày."
+      ],
+      "chapters": [
+        {
+          "title": "Làm rõ một dòng trong sổ thiết bị",
+          "summary": "Đọc dữ liệu mẫu và đặt điều kiện hợp lệ cho mỗi trường.",
+          "topics": [
+            "Mã thiết bị và trạng thái được chấp nhận.",
+            "Ngày hạn trả và quan hệ với trạng thái mượn.",
+            "Dòng thiếu, trùng hoặc sai định dạng."
+          ]
+        },
+        {
+          "title": "Đếm đúng mà không cộng hai lần",
+          "summary": "Viết logic thống kê rồi đối chiếu với ví dụ có thể tính bằng tay.",
+          "topics": [
+            "Ba trạng thái chính loại trừ nhau.",
+            "Quá hạn là một tập con của đang mượn.",
+            "Mốc ngày cố định và việc kiểm thử lặp lại."
+          ]
+        },
+        {
+          "title": "Xuất báo cáo cho người phụ trách",
+          "summary": "Hoàn thiện bảng HTML và thử các tình huống cần kiểm tra.",
+          "topics": [
+            "Đơn vị số thiết bị và nhãn trạng thái.",
+            "Hiển thị vấn đề dữ liệu thay vì bỏ qua âm thầm.",
+            "Thay đổi một bản ghi để kiểm tra kết quả trước và sau."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Một báo cáo ghi 10 thiết bị đang mượn và 3 thiết bị quá hạn. Có thể cộng hai số đó để nói đang có 13 thiết bị bên ngoài không? Hãy đề xuất cách ghi nhãn hoặc trình bày để người đọc hiểu đúng quan hệ giữa các nhóm.",
+        "questions": [
+          "Nhóm nào loại trừ nhau, nhóm nào nằm trong nhóm khác?",
+          "Ngày nào đang được dùng để xét quá hạn?",
+          "Nếu một món chuyển sang bảo trì, những chỉ số nào cần được kiểm tra lại?"
+        ]
+      },
+      "scope": "Khóa đang mở có ba bài đọc bằng tiếng Việt. Hướng dẫn, mã Python, dữ liệu mẫu, đầu ra đối chiếu và bài tự kiểm tra nằm trong khu vực được cấp quyền. Phiên bản này tạo báo cáo từ CSV, chưa có đặt lịch, tài khoản nhiều người hoặc thông báo nhắc trả tự động.",
+      "extensions": [
+        "Thêm lịch sử mượn trả hoặc bản ghi kiểm tra bảo trì sau khi mô hình trạng thái đã rõ.",
+        "Xây giao diện bàn giao, quét mã hoặc đặt lịch như các bước tiếp theo riêng biệt."
+      ],
+      "faq": [
+        {
+          "question": "Có cần thiết bị thật để làm bài không?",
+          "answer": "Không. Dữ liệu mẫu đủ để chạy và thử các tình huống. Nếu dùng một sổ thật sau này, nên sao chép dữ liệu và đối chiếu với người phụ trách trước khi dựa vào báo cáo."
+        },
+        {
+          "question": "Khóa có sẵn giao diện đặt mượn không?",
+          "answer": "Bản hiện có tập trung vào đọc CSV, thống kê và xuất HTML. Đặt mượn hay bàn giao bằng giao diện là hướng phát triển tiếp, không phải tính năng đã có trong ba bài đọc."
+        },
+        {
+          "question": "Vì sao dùng một ngày cố định trong bài?",
+          "answer": "Khi ngày xét thay đổi theo thời gian, cùng một dữ liệu có thể cho kết quả khác vào ngày mai. Mốc cố định giúp bạn đối chiếu và phát hiện lỗi; sau đó bạn có thể thiết kế cách truyền ngày xét vào chương trình."
+        }
+      ],
+      "whyThisProject": [
+        "Với thiết bị dùng chung, biết mình có một món chưa đủ để biết buổi học tới có thể dùng nó hay không. Trạng thái đang mượn, bảo trì và hạn trả đều ảnh hưởng đến việc chuẩn bị. Một sổ rõ ràng có thể giúp người phụ trách kiểm tra trước khi cả nhóm cần thiết bị.",
+        "Bài toán này gần với việc làm dự án và robot: vật dụng thực tế có trạng thái, còn báo cáo phải phản ánh đúng trạng thái đó. Bạn tập mô hình hóa dữ liệu và tránh đếm trùng, rồi nghĩ xem thông tin nào thực sự giúp người khác hành động. Phiên bản báo cáo nhỏ là nền tảng trước khi phát triển giao diện mượn trả."
+      ]
+    },
+    "en": {
+      "introduction": [
+        "A club shares robot kits, cables and computers. “How many can we use?” is different from “how many do we own?” Some are on loan, others are under maintenance, and a few borrowed items have passed their due dates.",
+        "Build a tool that checks an equipment register and summarizes its states. Every result should come from asset IDs and date rules rather than spreadsheet colours or someone’s memory.",
+        "The three available written lessons focus on a CSV-to-HTML first version. Turn operating rules into data checks and distinguish all loans from the subset that is overdue."
+      ],
+      "outcomes": [
+        "Describe assets using identifiers, states and appropriate due-date information.",
+        "Detect duplicate IDs, unknown states and invalid dates.",
+        "Classify available, loaned and maintenance assets.",
+        "Treat overdue items as a subset of loans rather than double-counting them.",
+        "Use a fixed reference date for repeatable checks.",
+        "Produce an HTML report and explain the source of each count."
+      ],
+      "requirements": [
+        "Python 3 with functions, loops, lists and dictionaries.",
+        "The ability to read consistently formatted dates and compare their order.",
+        "Basic local CSV handling; no robot hardware or real equipment records are required."
+      ],
+      "audience": [
+        "Students sharing equipment in a class, club or robotics team.",
+        "Learners interested in records with states and dependent conditions.",
+        "Students who want a report that helps a person decide what to inspect next."
+      ],
+      "projectBrief": "Build a local inventory reader and a small status report. The current course is not a booking system or borrowing interface; it teaches how to check a register and interpret its contents accurately.",
+      "scenario": "Before a workshop, the organizer needs to know what is available and what is being maintained. The report also identifies how many loans are overdue at a stated reference date, prompting a person to check those records rather than guessing from the asset total.",
+      "deliverables": [
+        "A CSV reader that validates identifiers, states and dates.",
+        "State counts with overdue loans kept in the correct relationship.",
+        "An HTML report and checks for invalid records or a changed reference date."
+      ],
+      "chapters": [
+        {
+          "title": "Understand an equipment record",
+          "summary": "Read the sample and define valid values for each field.",
+          "topics": [
+            "Asset IDs and accepted states.",
+            "Due dates and their relationship to loans.",
+            "Missing, repeated and malformed records."
+          ]
+        },
+        {
+          "title": "Count without counting twice",
+          "summary": "Build the summary and check it against a small example.",
+          "topics": [
+            "Three mutually exclusive main states.",
+            "Overdue loans as a subset.",
+            "A fixed date for reproducible checks."
+          ]
+        },
+        {
+          "title": "Report to the person responsible",
+          "summary": "Finish the HTML table and test situations worth investigating.",
+          "topics": [
+            "Asset-count units and state labels.",
+            "Visible data issues instead of silent omissions.",
+            "Changing one record and comparing the result."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "A report lists 10 assets on loan and 3 overdue assets. Can those be added to claim that 13 assets are out? Suggest labels or a layout that makes the relationship between the groups clear.",
+        "questions": [
+          "Which groups are separate and which overlap?",
+          "What reference date determines an overdue loan?",
+          "If an asset moves into maintenance, which counts need checking?"
+        ]
+      },
+      "scope": "Enrollment is open for three Vietnamese written lessons. Guided implementation, Python code, sample records, expected output and self-checks stay in the enrolled learning area. This version reports from CSV; it does not include booking, multi-user accounts or automatic return reminders.",
+      "extensions": [
+        "Add loan history or maintenance inspections once the state model is clear.",
+        "Explore handover screens, scanning or booking as separate later builds."
+      ],
+      "faq": [
+        {
+          "question": "Do I need real equipment?",
+          "answer": "No. Sample records are enough to run the project and test the conditions. If you later use real records, start with a copy and reconcile the results with the person responsible."
+        },
+        {
+          "question": "Is a booking interface included?",
+          "answer": "The current lessons focus on CSV validation, summary logic and HTML output. Booking or handover interfaces are possible later directions, not features already taught in the three written lessons."
+        },
+        {
+          "question": "Why use a fixed date?",
+          "answer": "If the reference date changes, identical input may produce a different result tomorrow. A fixed date makes debugging repeatable; you can later design an explicit reference-date input."
+        }
+      ],
+      "whyThisProject": [
+        "Owning a shared device does not tell you whether it will be usable for the next session. Loans, maintenance and due dates all affect preparation. A clear register can help the person responsible check availability before a group needs the equipment.",
+        "The problem connects naturally to building things and robotics: physical items have states, and reports need to represent them accurately. You practice data modeling and avoiding double counts while asking what information helps someone act. A small report provides a foundation for a later borrowing interface."
+      ]
+    }
+  },
+  "python-khao-sat-thanh-bao-cao": {
+    "vi": {
+      "introduction": [
+        "Lớp hỏi mọi người muốn tổ chức hoạt động nào tiếp theo. Có phiếu bị nhập lặp, có câu trả lời ngoài danh sách lựa chọn, và có bạn không tham gia khảo sát. Một biểu đồ đẹp vẫn có thể kể sai câu chuyện nếu những điều đó không được làm rõ.",
+        "Dự án này bắt đầu từ tệp CSV các câu trả lời ẩn danh. Bạn kiểm tra dữ liệu, đếm lựa chọn, tính tỷ lệ với mẫu số rõ ràng và xuất báo cáo HTML mà không đưa từng câu trả lời cá nhân lên trang kết quả.",
+        "Ba bài đọc hiện có tập trung vào một câu hỏi lựa chọn đơn. Bạn sẽ học cách kiểm tra và giải thích một báo cáo nhỏ trước khi nghĩ tới dashboard nhiều biểu đồ hoặc khảo sát nhiều câu."
+      ],
+      "outcomes": [
+        "Biểu diễn phiếu bằng mã ẩn danh và lựa chọn trong một danh mục rõ ràng.",
+        "Kiểm tra phiếu trùng, mã rỗng và lựa chọn không hợp lệ.",
+        "Phân biệt số dòng nhận được với số câu trả lời hợp lệ dùng để tính.",
+        "Tính số phiếu và tỷ lệ, kể cả lựa chọn không được ai chọn.",
+        "Tạo báo cáo HTML tổng hợp, không chép danh sách phản hồi cá nhân vào kết quả.",
+        "Viết nhận xét tách biệt điều dữ liệu cho thấy với điều chưa thể kết luận."
+      ],
+      "requirements": [
+        "Python 3; biết hàm, dictionary, list và vòng lặp.",
+        "Hiểu phần trăm ở mức cơ bản và sẵn sàng kiểm tra mẫu số.",
+        "Dùng CSV mẫu hoặc câu trả lời giả; không cần tài khoản khảo sát online."
+      ],
+      "audience": [
+        "Bạn từng tổng hợp bình chọn cho lớp hoặc câu lạc bộ.",
+        "Người học muốn chuyển từ đếm thủ công sang một quy trình có thể lặp lại.",
+        "Bạn quan tâm đến trình bày dữ liệu dễ hiểu và giữ riêng thông tin người trả lời."
+      ],
+      "projectBrief": "Xây công cụ tổng hợp một câu hỏi khảo sát với các lựa chọn định trước. Phiên bản đầu đọc CSV, báo lỗi dữ liệu và tạo bảng HTML có số phiếu, mẫu số và tỷ lệ; đây không phải website thu thập phản hồi trực tiếp.",
+      "scenario": "Ban cán sự cần chọn giữa một buổi đọc sách, hoạt động thể thao hoặc mỹ thuật. Báo cáo cần cho biết lựa chọn nào được các phiếu hợp lệ chọn nhiều hơn, đồng thời không biến kết quả đó thành tuyên bố rằng toàn trường đều có cùng sở thích.",
+      "deliverables": [
+        "Bộ đọc CSV phát hiện mã phiếu trùng và lựa chọn sai danh mục.",
+        "Bảng tổng hợp giữ đủ các lựa chọn cùng số phiếu và tỷ lệ.",
+        "Báo cáo HTML không lộ bản ghi cá nhân, có chú thích cách hiểu kết quả."
+      ],
+      "chapters": [
+        {
+          "title": "Biết mình đang đếm phiếu gì",
+          "summary": "Đọc dữ liệu mẫu và xác định một phiếu hợp lệ.",
+          "topics": [
+            "Mã phản hồi và danh mục lựa chọn.",
+            "Phiếu trùng, giá trị rỗng và câu trả lời ngoài danh mục.",
+            "Giữ lỗi để đối chiếu nguồn thay vì âm thầm bỏ qua."
+          ]
+        },
+        {
+          "title": "Từ số phiếu đến tỷ lệ",
+          "summary": "Tính bảng kết quả và kiểm tra bằng dữ liệu nhỏ.",
+          "topics": [
+            "Mẫu số là những phản hồi hợp lệ nào.",
+            "Lựa chọn có số phiếu bằng không.",
+            "Dữ liệu rỗng, làm tròn và cách ghi số phiếu đi cùng phần trăm."
+          ]
+        },
+        {
+          "title": "Viết báo cáo để người khác quyết định",
+          "summary": "Xuất HTML và thêm ngữ cảnh cần thiết cho một kết luận vừa mức.",
+          "topics": [
+            "Bảng tổng hợp thay cho danh sách người trả lời.",
+            "Tiêu đề, mẫu số và nhãn lựa chọn.",
+            "Giới hạn về nhóm tham gia và những câu hỏi cần hỏi thêm."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Khảo sát được gửi cho cả lớp nhưng chỉ một phần các bạn trả lời. Hãy viết một câu mô tả kết quả mà không nói thay những người chưa trả lời, rồi liệt kê thông tin bạn muốn thêm vào báo cáo để người đọc hiểu phạm vi.",
+        "questions": [
+          "Tỷ lệ đang tính trên người được mời hay phiếu hợp lệ?",
+          "Một lựa chọn bằng không có nên biến mất khỏi bảng không?",
+          "Làm thế nào để người đọc kiểm tra được ý nghĩa của phần trăm?"
+        ]
+      },
+      "scope": "Khóa đang nhận đăng ký gồm ba bài đọc tiếng Việt. Các bước triển khai, mã Python, dữ liệu mẫu, đầu ra đối chiếu và lời giải thực hành nằm trong khu vực được cấp quyền. Phạm vi hiện có là khảo sát một câu hỏi lựa chọn đơn và báo cáo HTML tĩnh; không cần chờ video để học bài đọc.",
+      "extensions": [
+        "Thêm câu hỏi khác hoặc phân nhóm khi có đủ số phản hồi và mục đích so sánh rõ ràng.",
+        "Bổ sung biểu đồ sau khi đã kiểm tra bảng số liệu, mẫu số và cách ẩn danh."
+      ],
+      "faq": [
+        {
+          "question": "Có thu thập tên và email không?",
+          "answer": "Dữ liệu học tập dùng mã phản hồi ẩn danh. Không cần tên, email hoặc số điện thoại để thực hành. Nếu làm khảo sát thật, hãy chỉ thu thập những gì cần cho câu hỏi và cân nhắc thông tin nào không nên xuất ra báo cáo."
+        },
+        {
+          "question": "Có dùng cho khảo sát chọn nhiều đáp án được không?",
+          "answer": "Ba bài hiện có xử lý mỗi phiếu một lựa chọn. Chọn nhiều đáp án sẽ thay đổi cách lưu, cách đếm và cách giải thích phần trăm, nên cần thiết kế một mở rộng riêng."
+        },
+        {
+          "question": "Phải có biểu đồ mới gọi là báo cáo không?",
+          "answer": "Không. Một bảng có nhãn và mẫu số rõ có thể hữu ích hơn biểu đồ thiếu ngữ cảnh. Bạn sẽ hoàn thiện kết quả có thể kiểm tra trước, rồi mới cân nhắc cách trình bày thêm."
+        }
+      ],
+      "whyThisProject": [
+        "Khảo sát có thể giúp một nhóm lắng nghe ý kiến, nhưng cách đếm và trình bày có thể làm ý kiến đó bị hiểu sai. Phiếu trùng, người chưa trả lời và mẫu số không rõ đều ảnh hưởng đến câu chuyện mà một tỷ lệ phần trăm kể lại.",
+        "Dự án này được chọn để gắn lập trình với việc ra quyết định có căn cứ và tôn trọng người cung cấp dữ liệu. Bạn tập kiểm tra nguồn, giữ đủ lựa chọn và báo cáo ở mức tổng hợp. Điều cần đạt là giúp người đọc hiểu rõ ai đã trả lời và dữ liệu nói được đến đâu."
+      ]
+    },
+    "en": {
+      "introduction": [
+        "Your class asks which activity people would like next. Some responses are duplicated, some use options that were not offered, and some classmates never reply. A polished chart can still tell the wrong story if those details are ignored.",
+        "Start with a CSV of anonymous responses. Validate records, count choices, calculate percentages with explicit denominators and create an HTML report without publishing individual responses.",
+        "The three available written lessons focus on one single-choice question. Learn to check and explain a small report before moving on to multi-question dashboards."
+      ],
+      "outcomes": [
+        "Represent a response using an anonymous ID and an allowed choice.",
+        "Detect repeated IDs, empty fields and invalid options.",
+        "Distinguish received rows from valid responses used in calculations.",
+        "Count choices and percentages, including options nobody selected.",
+        "Create an aggregate HTML report without copying personal response records into it.",
+        "Separate what the data shows from claims it cannot support."
+      ],
+      "requirements": [
+        "Python 3, functions, dictionaries, lists and loops.",
+        "Basic percentages and a willingness to check the denominator.",
+        "Sample or fictional CSV responses; no online survey account is required."
+      ],
+      "audience": [
+        "Students who have summarized a class or club poll.",
+        "Learners who want a repeatable process rather than manual counting.",
+        "Students interested in understandable reports and respondent privacy."
+      ],
+      "projectBrief": "Build a summary tool for one question with predefined choices. The first version reads CSV, reports input issues and exports an HTML table with counts, denominators and percentages. It is not a live survey-collection website.",
+      "scenario": "The class is choosing between a reading session, a sports activity and an art activity. The report should describe the preferences of valid respondents without implying that the result represents the whole school.",
+      "deliverables": [
+        "A CSV reader that catches duplicate response IDs and unsupported choices.",
+        "A complete summary including zero-vote options, counts and percentages.",
+        "An HTML report with interpretation notes and no individual response listing."
+      ],
+      "chapters": [
+        {
+          "title": "Define a valid response",
+          "summary": "Read the sample and decide which records can be counted.",
+          "topics": [
+            "Response IDs and allowed options.",
+            "Duplicates, blanks and unsupported answers.",
+            "Keeping errors available for source review."
+          ]
+        },
+        {
+          "title": "Turn counts into proportions",
+          "summary": "Build the summary and verify it on a small example.",
+          "topics": [
+            "Which valid responses define the denominator.",
+            "Options with no votes.",
+            "Empty data, rounding and counts displayed alongside percentages."
+          ]
+        },
+        {
+          "title": "Report for a real decision",
+          "summary": "Export HTML with enough context for a modest conclusion.",
+          "topics": [
+            "Aggregates rather than respondent listings.",
+            "Titles, denominators and option labels.",
+            "Participation limits and useful follow-up questions."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "A poll was sent to the whole class, but only some students replied. Write a sentence describing the result without speaking for nonrespondents, then identify the context a reader should see beside the table.",
+        "questions": [
+          "Does the percentage use invited students or valid respondents?",
+          "Should an option with no votes disappear?",
+          "What makes the meaning of a percentage checkable?"
+        ]
+      },
+      "scope": "Enrollment is open for three Vietnamese written lessons. Implementation steps, Python code, sample input, expected results and worked practice belong to the enrolled area. The current scope is one single-choice question and a static HTML report; videos are not required to begin the written lessons.",
+      "extensions": [
+        "Add questions or grouping only when there are enough responses and a clear comparison purpose.",
+        "Add charts after validating the table, denominators and anonymity approach."
+      ],
+      "faq": [
+        {
+          "question": "Are names and emails required?",
+          "answer": "No. Learning data uses anonymous response IDs. Real names, email addresses and phone numbers are unnecessary for practice. A real survey should collect only what its question requires and consider what should stay out of reports."
+        },
+        {
+          "question": "Does it handle multiple-choice selections?",
+          "answer": "The current lessons assume one choice per response. Allowing several answers changes the data model, counting and interpretation of percentages, so it needs a deliberate extension."
+        },
+        {
+          "question": "Must a report include a chart?",
+          "answer": "No. A clearly labeled table can be more useful than a chart missing context. The course first produces checkable numbers, then leaves room for further presentation."
+        }
+      ],
+      "whyThisProject": [
+        "A survey can help a group listen, but counting and presentation can also misrepresent what people said. Duplicates, nonresponse and an unclear denominator all change the story a percentage appears to tell.",
+        "The project connects programming with evidence-based decisions and respect for respondents. You check the input, retain all options and report aggregates. The goal is to help a reader understand whose responses were counted and how far the evidence reaches."
+      ]
+    }
+  },
+  "python-nhat-ky-chat-luong-khong-khi": {
+    "vi": {
+      "introduction": [
+        "Bạn có một vài lần đo PM2.5 ở các điểm quanh trường. Đặt những con số cạnh nhau chưa đủ để nói điểm nào thường có giá trị cao hơn: có thể mỗi điểm được đo vào giờ khác nhau hoặc có số lần quan sát rất khác nhau.",
+        "Trong dự án này, bạn xây nhật ký dữ liệu có thời điểm, mã điểm đo và giá trị, rồi tổng hợp theo ngày và địa điểm. Báo cáo cần cho người đọc thấy cả giá trị trung bình lẫn số quan sát đã dùng, để một con số không tách rời khỏi nguồn của nó.",
+        "Ba bài đọc hiện có đưa bạn từ CSV đến báo cáo HTML bằng thư viện chuẩn Python. Bạn bắt đầu bằng dữ liệu giả, tập kiểm tra thời gian và bản ghi trùng, rồi viết phần giải thích giới hạn của phép so sánh."
+      ],
+      "outcomes": [
+        "Đọc bản ghi có thời điểm, mã điểm đo và PM2.5 với đơn vị rõ ràng.",
+        "Kiểm tra ngày giờ sai, giá trị thiếu, số âm và số không hữu hạn.",
+        "Phân biệt quan sát trùng với hai điểm đo có cùng thời điểm.",
+        "Gom dữ liệu theo ngày và điểm đo để tính trung bình.",
+        "Hiển thị số quan sát cùng kết quả để người đọc hiểu mức độ dữ liệu.",
+        "Xuất HTML và ghi lại các giới hạn về giờ đo, nguồn hoặc cách thu thập."
+      ],
+      "requirements": [
+        "Python 3; hiểu hàm, list, dictionary và vòng lặp.",
+        "Biết tính trung bình cơ bản và đọc ngày giờ theo một định dạng thống nhất.",
+        "Không cần cảm biến, API key hay dữ liệu địa chỉ thật; bài học có dữ liệu mẫu."
+      ],
+      "audience": [
+        "Bạn quan tâm đến môi trường quanh trường và muốn bắt đầu bằng một câu hỏi có dữ liệu.",
+        "Người học muốn luyện nhóm dữ liệu theo nhiều khóa thay vì chỉ đếm một cột.",
+        "Bạn muốn trình bày kết quả mà không biến vài quan sát thành kết luận quá rộng."
+      ],
+      "projectBrief": "Xây công cụ đọc nhật ký đo từ CSV và tạo báo cáo HTML theo ngày, điểm đo. Phiên bản đang học không lấy dữ liệu trực tiếp từ cảm biến hay dịch vụ online; nó xử lý tập dữ liệu đã có trên máy.",
+      "scenario": "Hai điểm được quan sát trong cùng một tuần nhưng một điểm có ít lần đo hơn. Khi chia sẻ báo cáo, bạn cần giữ số quan sát và cách ghi thời gian, thay vì chỉ xếp hạng các giá trị trung bình như thể các bộ dữ liệu luôn tương đương.",
+      "deliverables": [
+        "Bộ đọc CSV kiểm tra thời gian, điểm đo, giá trị và khóa quan sát trùng.",
+        "Bảng tổng hợp trung bình theo ngày và điểm, kèm số quan sát.",
+        "Báo cáo HTML có đơn vị và ghi chú về nguồn, thời gian hoặc giới hạn dữ liệu."
+      ],
+      "chapters": [
+        {
+          "title": "Ghi một lần đo thành bản ghi đáng hiểu",
+          "summary": "Đọc tệp mẫu và kiểm tra dữ liệu trước khi tổng hợp.",
+          "topics": [
+            "Thời điểm, điểm đo và đơn vị PM2.5.",
+            "Giá trị không hợp lệ và quan sát lặp.",
+            "Báo số dòng lỗi để kiểm tra lại nguồn."
+          ]
+        },
+        {
+          "title": "Gom nhóm rồi kiểm tra kết quả",
+          "summary": "Tạo bảng theo ngày và địa điểm từ những bản ghi hợp lệ.",
+          "topics": [
+            "Khóa nhóm kết hợp ngày với điểm đo.",
+            "Trung bình và số quan sát.",
+            "Dữ liệu rỗng hoặc các nhóm có độ phủ khác nhau."
+          ]
+        },
+        {
+          "title": "Xuất báo cáo có bối cảnh",
+          "summary": "Hoàn thiện HTML và viết cách đọc kết quả phù hợp với dữ liệu.",
+          "topics": [
+            "Nhãn cột, đơn vị và số mẫu.",
+            "Thử thêm hoặc sửa một quan sát.",
+            "Phân biệt mô tả dữ liệu với suy đoán về nguyên nhân."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "Một điểm đo có hai quan sát vào sáng sớm, điểm khác có nhiều quan sát vào buổi chiều. Hãy liệt kê những thông tin bạn muốn biết trước khi so sánh hai giá trị trung bình và viết một chú thích phù hợp cho báo cáo.",
+        "questions": [
+          "Hai tập quan sát có cùng thời điểm và cách đo không?",
+          "Số mẫu có nên xuất hiện cạnh trung bình không?",
+          "Một kết quả cao hơn có tự chứng minh được nguyên nhân không?"
+        ]
+      },
+      "scope": "Khóa đang nhận đăng ký có ba bài đọc thực hành tiếng Việt. Hướng dẫn đầy đủ, mã, CSV mẫu, kết quả đối chiếu và bài tập có trong khu vực được cấp quyền. Đây là dự án xử lý và trình bày dữ liệu; không cung cấp dự báo, chẩn đoán sức khỏe hay cảnh báo môi trường theo thời gian thực.",
+      "extensions": [
+        "Bổ sung nguồn dữ liệu mở với ghi chú thời gian, đơn vị và nguồn rõ ràng.",
+        "Thử biểu đồ theo thời gian sau khi đã xử lý đúng việc gom nhóm và số quan sát."
+      ],
+      "faq": [
+        {
+          "question": "Có phải mua cảm biến mới học được không?",
+          "answer": "Không. Ba bài đọc dùng dữ liệu CSV mẫu. Nếu sau này kết nối cảm biến hoặc dữ liệu mở, bạn cần kiểm tra đơn vị, thời gian và cách ghi nhận trước khi ghép vào quy trình."
+        },
+        {
+          "question": "Đây có phải khóa AI dự báo chất lượng không khí không?",
+          "answer": "Không. Bản hiện có là dự án Python đọc, kiểm tra, tổng hợp và báo cáo dữ liệu. Mô hình dự báo cần mục tiêu và dữ liệu đánh giá riêng, không phải tính năng đã có ở đây."
+        },
+        {
+          "question": "Có thể dùng báo cáo để đưa ra khuyến cáo sức khỏe không?",
+          "answer": "Bài tập không được thiết kế cho việc đó. Bạn dùng báo cáo để mô tả tập quan sát, kiểm tra cách tính và nhận ra những điều còn thiếu, thay vì chuyển dữ liệu mẫu thành chỉ dẫn về sức khỏe."
+        }
+      ],
+      "whyThisProject": [
+        "Một câu hỏi về môi trường quanh trường có thể bắt đầu từ những quan sát rất nhỏ. Nhưng khi dữ liệu được thu ở thời điểm hoặc địa điểm khác nhau, việc xếp các con số cạnh nhau chưa chắc đã tạo ra một phép so sánh có ý nghĩa.",
+        "Dự án này khuyến khích sự tò mò đi cùng cách kiểm tra: ghi rõ thời gian, đơn vị, nguồn và số quan sát trước khi rút nhận xét. Bạn học rằng một báo cáo đáng tin cần nói cả điều đã biết và điều còn thiếu. Có thể bắt đầu bằng dữ liệu mẫu trên máy, rồi mới cân nhắc việc đo hoặc lấy dữ liệu mở sau này."
+      ]
+    },
+    "en": {
+      "introduction": [
+        "You have a few PM2.5 readings from locations around school. Placing the numbers next to each other is not enough to say which place is usually higher: locations may have been sampled at different times or with very different numbers of observations.",
+        "Build a diary of timestamps, site IDs and values, then summarize it by day and location. A reader should see the mean together with the observation count, rather than a number detached from its source.",
+        "The three available written lessons take sample CSV data to an HTML report using Python’s standard library. Check timestamps and duplicates, then explain the limits of the comparison."
+      ],
+      "outcomes": [
+        "Read observations with timestamps, site IDs and clear PM2.5 units.",
+        "Detect invalid dates, missing values, negatives and non-finite numbers.",
+        "Distinguish a duplicate reading from different sites observed at the same time.",
+        "Group valid measurements by day and site.",
+        "Show observation counts alongside means.",
+        "Export HTML and document timing, source and collection limits."
+      ],
+      "requirements": [
+        "Python 3, functions, lists, dictionaries and loops.",
+        "Basic averages and consistently formatted dates and times.",
+        "No sensor, API key or real location data is needed; sample records are provided."
+      ],
+      "audience": [
+        "Students interested in asking a data-based environmental question.",
+        "Learners ready to group records by more than one field.",
+        "Students who want to share results without turning a few readings into an unsupported claim."
+      ],
+      "projectBrief": "Build a local CSV reader and an HTML summary by date and site. The current version works with an existing file rather than collecting live data from sensors or online services.",
+      "scenario": "Two sites are sampled during a week, but one has fewer readings. Your report should retain observation counts and timing context instead of ranking averages as though the underlying samples were automatically comparable.",
+      "deliverables": [
+        "A CSV reader that validates timestamps, sites, values and observation keys.",
+        "Daily site means with the number of observations used.",
+        "An HTML report with units and notes on sources, timing or coverage."
+      ],
+      "chapters": [
+        {
+          "title": "Describe an observation",
+          "summary": "Read the sample and check it before aggregation.",
+          "topics": [
+            "Timestamps, site labels and PM2.5 units.",
+            "Invalid values and repeated observations.",
+            "Row errors for reviewing the source."
+          ]
+        },
+        {
+          "title": "Group and verify",
+          "summary": "Build daily site summaries from valid readings.",
+          "topics": [
+            "A grouping key combining day and location.",
+            "Means with observation counts.",
+            "Empty input and unequal coverage between groups."
+          ]
+        },
+        {
+          "title": "Report with context",
+          "summary": "Finish the HTML output and explain what the data supports.",
+          "topics": [
+            "Column labels, units and sample counts.",
+            "Adding or changing one observation.",
+            "Describing results without assuming their causes."
+          ]
+        }
+      ],
+      "practice": {
+        "prompt": "One site has two early-morning readings while another has many afternoon readings. List what you would want to know before comparing the means, and write a note that should accompany the report.",
+        "questions": [
+          "Were the observations made at comparable times and in the same way?",
+          "Should counts appear beside the mean?",
+          "Does a higher result establish its cause?"
+        ]
+      },
+      "scope": "Enrollment is open for three Vietnamese written lessons. Full walkthroughs, code, sample CSV data, expected results and exercises remain in the enrolled area. This is a data-processing and reporting project, not a forecasting service, health assessment or live environmental alert system.",
+      "extensions": [
+        "Add an open-data source with explicit units, timestamps and attribution.",
+        "Explore a time-series chart after checking grouping and sample counts."
+      ],
+      "faq": [
+        {
+          "question": "Do I need to buy a sensor?",
+          "answer": "No. The three lessons use sample CSV records. A later sensor or open-data connection would require checking units, timestamps and collection details before reusing the workflow."
+        },
+        {
+          "question": "Is this an AI forecasting course?",
+          "answer": "No. The current project reads, validates, aggregates and reports measurements. Forecasting would need its own purpose, data and evaluation; it is not included here."
+        },
+        {
+          "question": "Can the report provide health recommendations?",
+          "answer": "That is outside this learning project. Use the report to describe observations, inspect calculations and identify missing context rather than turning sample data into health guidance."
+        }
+      ],
+      "whyThisProject": [
+        "A question about the environment around school can start with a few observations. When readings come from different times or locations, placing their values side by side does not automatically make a meaningful comparison.",
+        "This project pairs curiosity with checking: record timing, units, sources and observation counts before interpreting results. You learn that a trustworthy report should make missing context visible. Sample data lets you start locally before considering a sensor or open-data source later."
+      ]
+    }
+  }
+}

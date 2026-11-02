@@ -1,292 +1,85 @@
----
-name: E-learning
-description: A clear, focused path through practical Vietnamese learning.
-colors:
-  background: "#f8fafc"
-  foreground: "#0f172a"
-  card: "#ffffff"
-  card-foreground: "#0f172a"
-  muted: "#f1f5f9"
-  muted-foreground: "#64748b"
-  muted-foreground-strong: "#475569"
-  border: "#e2e8f0"
-  input: "#64748b"
-  overlay: "rgba(15, 23, 42, 0.55)"
-  skeleton: "#e2e8f0"
-  primary: "#0d9488"
-  primary-strong: "#0f766e"
-  primary-hover: "#115e59"
-  primary-foreground: "#ffffff"
-  primary-text: "#0f766e"
-  primary-subtle: "#ccfbf1"
-  primary-on-subtle: "#0f766e"
-  secondary: "#2dd4bf"
-  accent: "#d97706"
-  accent-hover: "#f59e0b"
-  accent-foreground: "#431407"
-  accent-subtle: "#fef3c7"
-  on-accent-subtle: "#431407"
-  ring: "#0d9488"
-  ring-offset: "#f8fafc"
-  success: "#15803d"
-  success-subtle: "#dcfce7"
-  on-success-subtle: "#166534"
-  warning: "#b45309"
-  warning-subtle: "#fef3c7"
-  on-warning-subtle: "#b45309"
-  destructive: "#dc2626"
-  destructive-hover: "#b91c1c"
-  destructive-foreground: "#ffffff"
-  destructive-subtle: "#fee2e2"
-  on-destructive-subtle: "#991b1b"
-  info: "#0369a1"
-  info-subtle: "#e0f2fe"
-  on-info-subtle: "#075985"
-typography:
-  display:
-    fontFamily: "Lexend, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "3rem"
-    fontWeight: 700
-    lineHeight: 1.125
-    letterSpacing: "-0.025em"
-  headline:
-    fontFamily: "Lexend, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "2.25rem"
-    fontWeight: 700
-    lineHeight: 1.222
-    letterSpacing: "-0.02em"
-  title:
-    fontFamily: "Lexend, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.5rem"
-    fontWeight: 600
-    lineHeight: 1.333
-    letterSpacing: "-0.01em"
-  body:
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1rem"
-    fontWeight: 400
-    lineHeight: 1.625
-    letterSpacing: "normal"
-  label:
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 600
-    lineHeight: 1.571
-    letterSpacing: "normal"
-rounded:
-  sm: "4px"
-  md: "6px"
-  lg: "8px"
-  xl: "12px"
-  full: "9999px"
-spacing:
-  unit: "4px"
-  control-gap: "8px"
-  compact: "12px"
-  component: "16px"
-  card: "20px"
-  cluster: "24px"
-  section-mobile: "48px"
-  section-desktop: "80px"
-components:
-  button-primary:
-    backgroundColor: "{colors.primary-strong}"
-    textColor: "{colors.primary-foreground}"
-    rounded: "{rounded.md}"
-    padding: "8px 16px"
-    height: "44px"
-  button-primary-hover:
-    backgroundColor: "{colors.primary-hover}"
-    textColor: "{colors.primary-foreground}"
-    rounded: "{rounded.md}"
-  button-accent:
-    backgroundColor: "{colors.accent}"
-    textColor: "{colors.accent-foreground}"
-    rounded: "{rounded.md}"
-    padding: "8px 16px"
-    height: "44px"
-  button-outline:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.card-foreground}"
-    rounded: "{rounded.md}"
-    padding: "8px 16px"
-    height: "44px"
-  input:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.card-foreground}"
-    rounded: "{rounded.md}"
-    padding: "8px 12px"
-    height: "48px"
-  panel:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.card-foreground}"
-    rounded: "{rounded.lg}"
-    padding: "16px"
-  navigation-item:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.card-foreground}"
-    rounded: "{rounded.md}"
-    padding: "8px 12px"
-    height: "44px"
-  account-tab-active:
-    backgroundColor: "{colors.background}"
-    textColor: "{colors.primary-text}"
-    padding: "8px 12px"
-    height: "44px"
-  alert-warning:
-    backgroundColor: "{colors.warning-subtle}"
-    textColor: "{colors.on-warning-subtle}"
-    rounded: "{rounded.lg}"
-    padding: "16px"
----
+# CodingBuddy course site — Maker’s Notebook
 
-# Design System: E-learning
+Status: first local review implementation, 25 October 2026. The user authorized implementation and expressly deferred all uploading and deployment.
 
-## Overview
+## Product and visual intent
 
-**Creative North Star: "Lộ trình sáng rõ / The Clear Learning Path"**
+A personal course site for students aged 10–15 to learn coding through useful, manageable projects. Course discovery, enrollment, lessons, resources, and progress remain the core product. The homepage introduces the teaching approach and links directly into actual courses; the open practice exercise remains on /workshop.
 
-Every screen should make the learner's next useful step obvious. The visual world is a flat, adult marketplace translated into an Operate-mode product: slate surfaces keep attention on the work, teal establishes trust and orientation, and amber is reserved for commercial conversion. The approved seed is `operate-marketplace-flat-20260904`.
+The user explicitly selected the earlier Maker’s Notebook reference tones. Reuse the exact dark palette from codingbuddy-directions.html: charcoal, cream, coral, lime and slate. Do not substitute blue/white or follow the operating system’s light theme. Personality comes from useful project examples, code-shaped illustrations, the tutor’s voice and deliberate typography. No invented student photography, testimonials, award counts, or completed video series.
 
-The system feels practical, calm, and exact rather than playful or aspirational. Crisp one-pixel boundaries, compact corners, generous Vietnamese line-height, and a disciplined type hierarchy create clarity without decorative noise.
+The earlier adult-marketplace system is archived in design/redesign/LEGACY-DESIGN.md. Its colors, fonts, composition, and adult positioning are superseded. Functional and security requirements in the technical documents remain applicable.
 
-**Key Characteristics:**
+## Tokens
 
-- Flat slate surfaces separated by tone and crisp borders.
-- Teal identity and navigation signals; amber only for conversion.
-- Lexend headings paired with Inter body text, both with Vietnamese support.
-- Compact radii, 4px spatial rhythm, and controls no smaller than 44px.
-- Purposeful, brief state motion with a complete reduced-motion path.
+Source: apps/web/src/app/globals.css. Shared composition: studio.css. Current course-site presentation: course-site.css.
 
-## Colors
+| Role | Value |
+| --- | --- |
+| Page / charcoal | #242520 |
+| Main text / cream | #f3f1e8 |
+| Card | #2c2e27 |
+| Muted surface | #34362f |
+| Supporting text | #b5b9aa |
+| Strong supporting text | #c9cbbf |
+| Structural border | #4b4e43 |
+| Input border | #858978 |
+| Primary action / coral | #ff9674 |
+| Action foreground | #32231a |
+| Secondary project cover / lime | #cadc85 |
+| Lime foreground | #303923 |
+| Python project cover / slate | #35415b |
+| Slate foreground | #e0e8fa |
 
-The palette pairs cool slate neutrals with trustworthy teal and a deliberately scarce amber conversion signal. The product ships a light theme only; there is no dark mode.
-
-### Primary
-
-- **Path Teal:** `primary` marks focus, progress, active tabs, and selected controls that do not carry text.
-- **Action Teal:** `primary-strong` is the accessible filled surface for brand actions that carry text; `primary-hover` is its hover state.
-- **Reading Teal:** `primary-text` is the brand color for links and icons on page or card surfaces.
-- **Trail Teal:** `primary-subtle` with `primary-on-subtle` identifies selected rows and quiet brand badges.
-
-### Secondary
-
-- **Guide Aqua:** `secondary` is decoration only: illustration strokes, heading rules, and non-semantic chart details.
-
-### Tertiary
-
-- **Decision Amber:** `accent` is the conversion color for purchase and enrollment actions, ratings, and price emphasis. `accent-hover` is `#f59e0b`: lighter, not darker, because the dark `accent-foreground` text drops to 3.12:1 on `#b45309`.
-- **Status Colors:** success, warning, destructive, and info stay semantic. They always pair with their corresponding subtle surface and `on-*-subtle` text token when used as an alert or badge.
-
-### Neutral
-
-- **Open Slate:** `background` is the page field; `card` is the contained surface.
-- **Quiet Slate:** `muted` holds low-priority regions, code blocks, table heads, chips, and empty states.
-- **Readable Slate:** `muted-foreground` belongs only on background or card; `muted-foreground-strong` belongs on muted surfaces.
-- **Crisp Slate:** `border` is decorative separation. Interactive fields use the stronger `input` boundary.
-
-### Named Rules
-
-**The Two Teals Rule.** Use `primary` for non-text signals and `primary-strong` for filled surfaces that carry text; never place white text on the `primary` value.
-
-**The Amber Means Decide Rule.** Reserve amber for conversion, rating, and price emphasis; routine navigation and account actions remain teal or neutral.
+Coral identifies primary actions, active navigation, focus and brief annotations. Lime and slate distinguish project covers and bounded learning material. The cream top ribbon and cream login button match the reference. Semantic success, warning, destructive and informational surfaces are dark, with readable contrasting text.
 
 ## Typography
 
-**Display Font:** Lexend (with `ui-sans-serif`, `system-ui`, and `sans-serif` fallbacks)  
-**Body Font:** Inter (with `ui-sans-serif`, `system-ui`, and `sans-serif` fallbacks)  
-**Label/Mono Font:** Inter for labels; `ui-monospace`, Cascadia Code, Source Code Pro, monospace for identifiers and code
+Be Vietnam Pro is used for navigation, headings, and reading. Weights 400–800 are self-hosted by next/font. IBM Plex Mono is used for actual code and sequence numbers. Both include Vietnamese support.
 
-**Character:** Lexend gives destinations and section titles a sturdy, contemporary shape; Inter keeps forms, metadata, and longer Vietnamese text quiet and highly legible. Both ship with Vietnamese glyph support.
+Public headline: roughly 38–72px by viewport, sentence case, deliberate line breaks matching the reference. Section headings: 25–33px. Long lesson and form text should remain readable; mobile editable inputs are at least 16px. Do not use typography as a decorative label above every block.
 
-### Hierarchy
+## Identity and layout
 
-- **Display** (700, 48px, 54px): desktop hero headlines only; collapse to Headline on narrow screens.
-- **Headline** (700, 36px, 44px): mobile hero headlines and primary page titles.
-- **Title** (600, 24px, 32px): section and major panel titles.
-- **Body** (400, 16px, 26px): default prose and form content, limited to 65ch where reading continuity matters.
-- **Label** (600, 14px, 22px): form labels, navigation, button labels, and compact UI. Sentence case only.
-- Supporting steps are 12/16, 14/22, 18/30, 20/28, and 30/38; only the documented 400, 500, 600, and 700 weights are loaded.
+The wordmark is The CodingBuddy, beside a rotated coral tile with a code symbol. This matches the supplied reference. The teacher monogram is a fallback to a portrait.
 
-### Named Rules
+Maximum page width: 78rem including responsive gutters. The homepage has a course-first introduction, two featured project courses, a teaching sequence, tutor introduction and purpose. The catalog has search, topic/level/price filters, sorting, real results, and pagination. Cards use two columns on desktop and one on phones, with a colored illustrated cover above each summary. A compact mobile filter button expands the same controls; never duplicate hidden form inputs.
 
-**The Vietnamese Breathing Rule.** Keep the documented line-heights and sentence case; never compress stacked Vietnamese diacritics with tight leading or all caps.
+The lesson player, progress controls, authentication and contact form keep their existing behaviors. Paid enrollment now uses the user-requested direct-contact page, described below. Shared tokens bring screens into the same family. Staff tools retain their operational structure.
 
-## Layout
+## Components and states
 
-The page container is fluid up to 1280px with gutters of 16px by default, 24px from 768px, and 32px from 1024px. The base unit is 4px; use only the established 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, and 96px steps. Public-page sections use a 48px vertical rhythm on mobile and 80px from 1024px.
+- Primary actions use coral with dark text. Secondary actions use a clear border or cream surface.
+- Use cards for a bounded project, course, form, or note. Ordinary prose and sequences can use whitespace and dividers.
+- Practice search combines query and topic. Vietnamese search supports missing diacritics. Empty results explain how to recover.
+- A practice note includes a reading and one exercise. It is not a fabricated course completion.
+- Course cards hide seeded ratings. The original demo courses are visibly identified as sample content.
+- Enrollment checks, prices, archived state, progress, signed downloads, sessions, and CSRF remain owned by the existing API.
+- The three new project courses contain nine original written lessons, exercises and four source files. The source manifest is apps/web/src/content/project-courses.json; authored lesson Markdown is in content/project-lessons. Videos remain in preparation.
+- New project lessons use the existing preview access rule and open after login. The documented demo learner is seeded with full enrollments to review progress. Non-enrolled readers use the existing untracked preview mode. Free courses lead to reading.
+- Paid-course CTAs say “Liên hệ đăng ký học” and open a public direct-contact page at /checkout/[courseSlug]. Show the chosen course, listed fee, owner-provided Zalo contact QR/details, a copyable message and manual access steps. The contact card appears first on phones. No payment session is created. The existing admin enrollment interface grants access after the owner confirms the arrangement.
+- Missing contact details use an honest message-icon placeholder. Never display a generated/fake QR or invent a phone number, email or Zalo profile. The config lives in src/content/enrollment-contact.json; future QR images go under public/images.
 
-Responsive composition starts as one column at 375px, opens to two columns at 768px, three at 1024px, and up to four within the 1280px container at 1440px. Dense data turns into cards below 768px instead of forcing horizontal scroll. Navigation collapses to a real menu; overlays and drawers retain 44px targets and return focus when closed.
+## Bilingual rules
 
-Forms and reading content stay narrow rather than stretching across the viewport: authentication panels top out at 400px, prose at 65ch, and account forms use the available page grid without inflating field width beyond useful reading distance.
+A non-sensitive codingbuddy-language cookie stores vi/en. Server rendering uses the selected locale. Switching language refreshes server copy without replacing the current route.
 
-## Elevation & Depth
+Core public pages, authentication forms, practice material, and principal learner controls have English copy. Existing course titles, videos, lesson prose, and legal documents retain their source language and are not silently represented as translated. The legal page explains this in English. Legacy staff interfaces are still primarily Vietnamese.
 
-The system is flat by default. Document-flow surfaces use tonal contrast and one-pixel borders, never ambient card shadows. Only truly floating layers receive depth: dropdowns and popovers use the overlay shadow; dialogs and drawers use the modal shadow.
+## Responsive and accessible behavior
 
-### Shadow Vocabulary
+At smaller widths navigation becomes a disclosure menu, cards stack, and the catalog’s single filter panel can be expanded. The practice rail stacks above its interface. All essential content and actions remain available.
 
-- **Overlay:** `0 8px 24px rgba(15, 23, 42, 0.12)` for dropdowns, tooltips, and popovers.
-- **Modal:** `0 16px 48px rgba(15, 23, 42, 0.20)` for dialogs and drawers.
+Use native links and buttons, visible focus, accessible names, proper labels, adequate touch targets, reduced motion, reserved media dimensions, and explicit empty/error states. Avoid scroll hijacking, autoplay decoration, and continuous animation. Native keyboard behavior takes priority over visual novelty.
 
-### Named Rules
+## Review boundary
 
-**The Flat-in-Flow Rule.** If a surface participates in normal document flow, separate it with tone or a one-pixel border, never a shadow.
+This is a local implementation for the user to inspect. No repository push, external upload, payment-provider change, or deployment is part of this phase. User recordings, final curriculum, fees, and verified impact material remain content decisions for the next review.
 
-## Shapes
 
-Corners are compact and functional: 4px for chips and checkboxes, 6px for buttons and fields, 8px for cards and alerts, and 12px only for large overlays or hero containers. Full rounding is reserved for avatars, progress tracks, and genuinely circular icon controls. Cards and fields use crisp one-pixel strokes; decorative borders never substitute for the stronger input boundary required to identify controls.
+## Catalog revision — 28 October 2026
 
-## Components
+The current catalog is one public, free book-sharing trial and nine upcoming paid Python projects. The trial at `/trial/books` has four downloaded recordings, practice notes and source files, available without an account. Paid projects are listed at 100,000₫, 150,000₫ or 200,000₫; each shows its proposed scope and an explicit in-preparation state, with an inquiry rather than immediate enrollment. Old foundation, web and inherited demo courses are removed from the public catalog by archiving; existing account history and progress are preserved. Future paid access remains arranged directly with Nam. The transfer-only archive and setup guide were removed. See `design/redesign/CATALOG-2026-10-28.md` for the active content scope. This revision is pushed to the user-owned repository for review; live deployment remains deferred.
 
-Components should feel direct and workmanlike: sturdy targets, short labels, visible boundaries, and color used only for its assigned job.
 
-### Buttons
-
-- **Shape:** compact corners (6px), semibold labels, 44px minimum height; large actions are 48px tall.
-- **Primary:** Action Teal with on-primary text; 16px horizontal padding at the default size.
-- **Accent:** Decision Amber with dark amber-brown text; use only for purchase or enrollment conversion.
-- **Hover / Focus:** shift to the matching hover token over 150ms; the global two-pixel teal focus outline sits two pixels outside the component. Active state moves down by one pixel.
-- **Outline / Ghost / Destructive:** outline uses the input-colored border, ghost uses a transparent border and muted hover fill, and destructive is reserved for irreversible or access-removing actions.
-
-### Cards / Containers
-
-- **Corner Style:** compact card corners (8px).
-- **Background:** card surface with card foreground text.
-- **Shadow Strategy:** none in document flow.
-- **Border:** one pixel in the decorative border token.
-- **Internal Padding:** 16–20px for ordinary cards; 24px for roomy empty states.
-
-### Inputs / Fields
-
-- **Style:** card background, input-colored one-pixel stroke, 6px radius, 48px minimum height, 8px by 12px padding.
-- **Focus:** the global two-pixel ring; hover changes the stroke to teal.
-- **Error / Disabled:** error changes the boundary to destructive and adds icon plus text; disabled fields use muted fill and strong muted text.
-
-### Navigation
-
-The 64px sticky site header uses the card surface and a bottom border. Desktop links are 44px-tall sentence-case targets with a muted hover fill. Mobile uses a compact bordered popover. Account navigation is a horizontally scrollable tab row whose active item uses both teal text and a two-pixel bottom indicator.
-
-### Feedback
-
-Alerts combine an 8px container, one-pixel semantic border, subtle semantic surface, icon, explicit title, and readable text. Color never carries the state alone. Empty states use a muted block, 40px Lucide outline icon, and left-aligned action hierarchy.
-
-## Do's and Don'ts
-
-### Do:
-
-- **Do** make the next action visually obvious while keeping routine choices neutral.
-- **Do** use teal for identity, focus, progress, and active navigation.
-- **Do** reserve amber for conversion, rating, and price emphasis.
-- **Do** keep controls at least 44px square and retain the global visible focus treatment.
-- **Do** preserve semantic color pairings and run the contrast check after any token change.
-- **Do** use Lucide SVG icons at 1.75 stroke width and accompany state icons with text.
-
-### Don't:
-
-- **Don't** add shadows to in-flow cards, fields, buttons, or page sections.
-- **Don't** use amber for routine actions or teal decoration as low-contrast body text.
-- **Don't** use white text on `primary` or `accent`; use the established foreground pairings.
-- **Don't** use uppercase UI copy, emoji, playful children's fonts, gradients, or oversized pill-shaped controls.
-- **Don't** hard-code spacing, color, or radius values inside components when a system token exists.
-- **Don't** introduce motion longer than 300ms or motion that survives the reduced-motion preference.
+Latest navigation revision: Community and its page/assets were removed. The practice tab (`/workshop`) now shows only the free four-video book-sharing tracker. The three-step strip beneath the homepage hero was removed. Paid project tiers: 100,000₫, 150,000₫, 200,000₫.

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The little resource library · CodingBuddy</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f7fc; color: #18243d; font: 16px/1.8 system-ui, sans-serif; }
+    main { max-width: 800px; margin: 35px auto; padding: 25px; }
+    header p, small { color: #526078; } h1 { font-size: 32px; line-height: 1.35; }
+    input { width: 100%; padding: 13px; font: inherit; border: 1px solid #8996ac; border-radius: 8px; }
+    nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 15px 0; }
+    button { font: inherit; cursor: pointer; } nav button { padding: 8px 15px; border: 1px solid #cbd5e8; border-radius: 6px; background: #fff; color: #18243d; }
+    nav button[aria-pressed="true"] { background: #294bc9; color: #fff; }
+    ul { list-style: none; margin: 0; padding: 0; } li { border-bottom: 1px solid #dce3ef; }
+    li button { display: block; width: 100%; text-align: left; background: #fff; border: 0; padding: 20px; color: #18243d; }
+    li button:hover { background: #edf2ff; } strong, small { display: block; }
+    :focus-visible { outline: 3px solid #294bc9; outline-offset: 3px; }
+    #note { margin-top: 25px; background: #fff; padding: 23px; border-radius: 9px; } #task { border-left: 3px solid #dcad4e; padding: 12px 18px; background: #fff8e9; }
+    footer { margin-top: 28px; color: #526078; font-size: 14px; }
+    @media (max-width: 500px) { main { margin: 0; padding: 20px; } h1 { font-size: 27px; } }
+  </style>
+</head>
+<body>
+<main>
+  <header><p>CodingBuddy / Open practice project</p>
+    <h1>A resource library for our classroom</h1>
+    <p>Find a note, read it, and try an exercise. You can edit this file in a text editor.</p>
+  </header>
+  <label for="search">Search resources</label>
+  <input id="search" type="search" placeholder="Try variables, HTML…">
+  <nav aria-label="Topics">
+    <button type="button" data-topic="all" aria-pressed="true">All topics</button>
+    <button type="button" data-topic="python" aria-pressed="false">Python</button>
+    <button type="button" data-topic="web" aria-pressed="false">Web</button>
+    <button type="button" data-topic="thinking" aria-pressed="false">Thinking</button>
+  </nav>
+  <p id="count" aria-live="polite"></p><ul id="results"></ul>
+  <section id="note" hidden><h2 id="title"></h2><p id="content"></p><p id="task"></p></section>
+  <footer>Your turn: find the resources array in this source and add a useful note. Save the file, then reload the page.</footer>
+</main>
+<script>
+// Your library data. Add another object here to add a note.
+const resources = [
+  {
+    "topic": "python",
+    "title": "Variables: give information a name",
+    "description": "Start with names, values, and a small calculation.",
+    "note": "A variable helps a program remember a value. With books = 3, the name books holds the value 3. Add a book with books = books + 1. Choose a name that makes your program understandable to someone else.",
+    "exercise": "Create a books variable with a value of 3. Add 2 books, then print the new count with print(books)."
+  },
+  {
+    "topic": "python",
+    "title": "Lists: keep related things together",
+    "description": "Keep resources together instead of remembering each one.",
+    "note": "A list can hold several items: titles = [\"Variables\", \"Lists\"]. Use for title in titles: to go through the items. A small library can start with just a few lines of code.",
+    "exercise": "Add a lesson title to the list. Use a loop to print each title on its own line."
+  },
+  {
+    "topic": "web",
+    "title": "HTML: give a page a readable structure",
+    "description": "Put headings, paragraphs, and links in the right places.",
+    "note": "HTML describes a page’s structure. Use h1 for its main heading, p for a paragraph, and a for a link. Clear labels and a sensible reading order help a new visitor find what they need.",
+    "exercise": "Make a page about a resource you like. Give it a clear title and explain what it helps the reader do."
+  },
+  {
+    "topic": "thinking",
+    "title": "Debugging: change one thing at a time",
+    "description": "Observe the result, try a hypothesis, and check again.",
+    "note": "When a result surprises you, write down what you expected and what actually happened. Test one small part of the program. Change one thing at a time so you can tell what helped.",
+    "exercise": "Search for a word that is not in the library. What should the interface explain? Write a message that helps someone try again."
+  }
+];
+
+const search = document.getElementById("search");
+const results = document.getElementById("results");
+let topic = "all";
+function normalize(value) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase().trim();
+}
+function render() {
+  const term = normalize(search.value);
+  const matches = resources.filter((resource) =>
+    (topic === "all" || resource.topic === topic) &&
+    normalize(resource.title + " " + resource.description + " " + resource.topic).includes(term)
+  );
+  results.replaceChildren();
+  document.getElementById("count").textContent = matches.length + " notes";
+  if (!matches.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No matching notes. Try a shorter word, or choose all topics.";
+    results.append(empty);
+  }
+  matches.forEach((resource) => {
+    const row = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    const title = document.createElement("strong");
+    title.textContent = resource.title;
+    const description = document.createElement("small");
+    description.textContent = resource.description;
+    button.append(title, description);
+    button.addEventListener("click", () => {
+      document.getElementById("note").hidden = false;
+      document.getElementById("title").textContent = resource.title;
+      document.getElementById("content").textContent = resource.note;
+      document.getElementById("task").textContent = resource.exercise;
+    });
+    row.append(button);
+    results.append(row);
+  });
+}
+search.addEventListener("input", render);
+document.querySelectorAll("[data-topic]").forEach((button) => {
+  button.addEventListener("click", () => {
+    topic = button.dataset.topic;
+    document.querySelectorAll("[data-topic]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+    render();
+  });
+});
+render();
+</script>
+</body>
+</html>

@@ -1,3 +1,5 @@
+"use client";
+import { useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import type { Category } from "@/lib/catalog";
@@ -5,6 +7,8 @@ import { LEVEL_LABEL } from "@/lib/format";
 import { buttonClass } from "@/components/ui/button";
 import { bandIndex } from "@/lib/price-bands";
 import { PriceBand } from "./price-band";
+import { UiText } from "@/components/language-provider";
+import { translate, type Locale } from "@/lib/translations";
 
 export type FilterState = {
   q?: string;
@@ -33,19 +37,23 @@ export function CourseFilters({
   action,
   categories,
   state,
+  locale = "vi",
 }: {
   action: string;
   categories: Category[];
   state: FilterState;
+  locale?: Locale;
 }) {
   const active = activeFilterCount(state);
+  const [expanded, setExpanded] = useState(false);
   const band = bandIndex(state.priceVndMin, state.priceVndMax);
+  const text = (vi: string, en: string) => translate(locale, vi, en);
 
   return (
     <form method="get" action={action} className="grid gap-6">
       <div className="grid gap-2">
         <label className="text-sm font-semibold" htmlFor="q">
-          Tìm khóa học
+          <UiText value="Tìm khóa học" en="Search courses" />
         </label>
         <div className="flex gap-2">
           <input
@@ -54,7 +62,10 @@ export function CourseFilters({
             type="search"
             defaultValue={state.q ?? ""}
             className="control"
-            placeholder="Ví dụ: lap trinh"
+            placeholder={text(
+              "Ví dụ: Python, tủ sách…",
+              "Try Python, book sharing…",
+            )}
             maxLength={100}
           />
           <button
@@ -62,27 +73,33 @@ export function CourseFilters({
             className={buttonClass("primary", "md", "lg:hidden")}
           >
             <Search aria-hidden="true" className="size-5" strokeWidth={1.75} />
-            <span className="sr-only">Tìm khóa học</span>
+            <span className="sr-only">
+              <UiText value="Tìm khóa học" en="Search courses" />
+            </span>
           </button>
         </div>
       </div>
 
-      <details className="panel p-4 lg:hidden">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 font-semibold">
-          <SlidersHorizontal
-            aria-hidden="true"
-            className="size-5"
-            strokeWidth={1.75}
-          />
-          Bộ lọc{active > 0 ? ` (${active})` : ""}
-        </summary>
-        <div className="mt-4 grid gap-6">
-          <FilterGroups categories={categories} state={state} band={band} />
-          <Actions action={action} active={active} />
-        </div>
-      </details>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls="course-filter-groups"
+        onClick={() => setExpanded((value) => !value)}
+        className="mobile-filter-toggle flex min-h-11 items-center gap-2 rounded-md border border-border px-3 font-semibold lg:hidden"
+      >
+        <SlidersHorizontal
+          aria-hidden="true"
+          className="size-5"
+          strokeWidth={1.75}
+        />
+        <UiText value="Bộ lọc" en="Filters" />
+        {active > 0 ? ` (${active})` : ""}
+      </button>
 
-      <div className="hidden lg:grid lg:gap-6">
+      <div
+        id="course-filter-groups"
+        className={`${expanded ? "grid" : "hidden"} gap-6 lg:grid`}
+      >
         <FilterGroups categories={categories} state={state} band={band} />
         <Actions action={action} active={active} />
       </div>
@@ -96,11 +113,11 @@ function Actions({ action, active }: { action: string; active: number }) {
   return (
     <div className="flex flex-wrap gap-3">
       <button type="submit" className={buttonClass("primary")}>
-        Áp dụng bộ lọc
+        <UiText value="Áp dụng bộ lọc" en="Apply filters" />
       </button>
       {active > 0 && (
         <Link href={action} className={buttonClass("ghost")}>
-          Xóa bộ lọc
+          <UiText value="Xóa bộ lọc" en="Clear filters" />
         </Link>
       )}
     </div>
@@ -119,7 +136,9 @@ function FilterGroups({
   return (
     <>
       <fieldset className="grid gap-1 border-0 p-0">
-        <legend className="mb-1 text-sm font-semibold">Danh mục</legend>
+        <legend className="mb-1 text-sm font-semibold">
+          <UiText value="Danh mục" en="Topic" />
+        </legend>
         {categories.map((category) => (
           <label
             key={category.id}
@@ -132,7 +151,7 @@ function FilterGroups({
               defaultChecked={state.category.includes(category.slug)}
               className="size-5 accent-primary-strong"
             />
-            {category.name}
+            <UiText value={category.name} />
             <span className="ml-auto text-muted-foreground">
               {category.courseCount}
             </span>
@@ -141,7 +160,9 @@ function FilterGroups({
       </fieldset>
 
       <fieldset className="grid gap-1 border-0 p-0">
-        <legend className="mb-1 text-sm font-semibold">Trình độ</legend>
+        <legend className="mb-1 text-sm font-semibold">
+          <UiText value="Trình độ" en="Level" />
+        </legend>
         {(Object.keys(LEVEL_LABEL) as (keyof typeof LEVEL_LABEL)[]).map(
           (level) => (
             <label
@@ -155,13 +176,23 @@ function FilterGroups({
                 defaultChecked={state.level.includes(level)}
                 className="size-5 accent-primary-strong"
               />
-              {LEVEL_LABEL[level]}
+              <UiText
+                value={LEVEL_LABEL[level]}
+                en={
+                  {
+                    BEGINNER: "Beginner",
+                    INTERMEDIATE: "Intermediate",
+                    ADVANCED: "Advanced",
+                    ALL_LEVELS: "All levels",
+                  }[level]
+                }
+              />
             </label>
           ),
         )}
       </fieldset>
 
-      <PriceBand defaultIndex={band} />
+      <PriceBand key={band} defaultIndex={band} />
     </>
   );
 }

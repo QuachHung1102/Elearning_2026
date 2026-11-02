@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import { ChevronLeft, ChevronRight, CircleCheck, Circle } from "lucide-react";
 import Link from "next/link";
@@ -20,11 +21,13 @@ type NavLink = { href: string; title: string } | null;
 function navItem(link: NavLink, direction: "prev" | "next") {
   const label = direction === "prev" ? "Trước" : "Sau";
   const Icon = direction === "prev" ? ChevronLeft : ChevronRight;
-  const icon = <Icon aria-hidden="true" className="size-5" strokeWidth={1.75} />;
+  const icon = (
+    <Icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
+  );
   const body = (
     <>
       {direction === "prev" && icon}
-      {label}
+      <UiText value={label} />
       {direction === "next" && icon}
     </>
   );
@@ -197,7 +200,11 @@ export function LessonActions({
         className={compact ? "w-12 px-0!" : "min-w-0 flex-1 lg:flex-none"}
       >
         {compact && pending === "toggle" ? null : completed ? (
-          <CircleCheck aria-hidden="true" className="size-5 text-primary-text" strokeWidth={1.75} />
+          <CircleCheck
+            aria-hidden="true"
+            className="size-5 text-primary-text"
+            strokeWidth={1.75}
+          />
         ) : (
           <Circle aria-hidden="true" className="size-5" strokeWidth={1.75} />
         )}
@@ -218,7 +225,9 @@ export function LessonActions({
       onClick={advance}
       className="min-w-0 flex-1 lg:flex-none"
     >
-      <span className="truncate">Đánh dấu hoàn thành và học tiếp</span>
+      <span className="truncate">
+        <UiText value="Đánh dấu hoàn thành và học tiếp" />
+      </span>
       <ChevronRight aria-hidden="true" className="size-5" strokeWidth={1.75} />
     </Button>
   );

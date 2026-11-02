@@ -1,3 +1,4 @@
+import { UiText } from "@/components/language-provider";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -24,7 +25,8 @@ function CourseProgressSummary({
     <div className="grid gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <span className="font-semibold tabular-nums">
-          {progress.completedLessons}/{progress.totalLessons} bài
+          {progress.completedLessons}/{progress.totalLessons}
+          <UiText value="bài" />
         </span>
         <SyncChip
           announce={announce}
@@ -77,8 +79,15 @@ export default async function PlayerLayout({
             href={back.href}
             className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-2 text-sm font-medium hover:bg-muted"
           >
-            <ArrowLeft aria-hidden="true" className="size-5" strokeWidth={1.75} />
-            <span className="sr-only">Quay lại {back.label}</span>
+            <ArrowLeft
+              aria-hidden="true"
+              className="size-5"
+              strokeWidth={1.75}
+            />
+            <span className="sr-only">
+              <UiText value="Quay lại" />
+              {back.label}
+            </span>
           </Link>
           <p className="min-w-0 flex-1 truncate font-heading font-semibold md:text-xl">
             {course.title}
@@ -105,7 +114,10 @@ export default async function PlayerLayout({
             mode={mode}
             progress={
               tracked ? (
-                <CourseProgressSummary progress={progress} title={course.title} />
+                <CourseProgressSummary
+                  progress={progress}
+                  title={course.title}
+                />
               ) : undefined
             }
           />
@@ -152,7 +164,7 @@ export default async function PlayerLayout({
             id="course-outline-title"
             className="px-4 pt-4 font-heading text-lg font-semibold"
           >
-            Nội dung khóa học
+            <UiText value="Nội dung khóa học" />
           </h2>
           {tracked && (
             <div className="border-b border-border p-4">

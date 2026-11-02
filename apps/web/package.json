@@ -15,11 +15,11 @@
     "hls.js": "^1.7.3",
     "lucide-react": "^1.39.0",
     "marked": "^18.0.12",
-    "next": "16.3.3",
+    "next": "16.4.3",
     "qrcode.react": "^4.2.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "sanitize-html": "^2.17.7"
+    "sanitize-html": "^2.18.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -29,10 +29,10 @@
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.1",
     "eslint": "^9",
-    "eslint-config-next": "16.3.3",
+    "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   },
   "packageManager": "pnpm@11.24.0"
 }

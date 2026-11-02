@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import {
   Captions,
@@ -173,7 +174,9 @@ export function VideoPlayer({
     playback &&
     playbackEngine(
       playback.kind,
-      document.createElement("video").canPlayType("application/vnd.apple.mpegurl"),
+      document
+        .createElement("video")
+        .canPlayType("application/vnd.apple.mpegurl"),
     );
 
   // HLS where the element cannot play it: hls.js, loaded only then, feeds the
@@ -267,7 +270,10 @@ export function VideoPlayer({
 
   useEffect(() => {
     const hidden = () => {
-      if (document.visibilityState === "hidden" && (video.current?.currentTime ?? 0) > 0) {
+      if (
+        document.visibilityState === "hidden" &&
+        (video.current?.currentTime ?? 0) > 0
+      ) {
         save();
         flushNow();
       }
@@ -344,9 +350,14 @@ export function VideoPlayer({
       case "seek-to-end":
         return seek(element.duration);
       case "volume-by": {
-        element.volume = Math.min(1, Math.max(0, element.volume + command.delta));
+        element.volume = Math.min(
+          1,
+          Math.max(0, element.volume + command.delta),
+        );
         element.muted = false;
-        return announce(`Âm lượng ${Math.round(element.volume * 100)} phần trăm`);
+        return announce(
+          `Âm lượng ${Math.round(element.volume * 100)} phần trăm`,
+        );
       }
       case "toggle-mute":
         element.muted = !element.muted;
@@ -364,11 +375,19 @@ export function VideoPlayer({
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement;
-    if (TYPING.has(target.tagName) || event.ctrlKey || event.metaKey || event.altKey) {
+    if (
+      TYPING.has(target.tagName) ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey
+    ) {
       return;
     }
     // Space and Enter on a focused control press that control.
-    if (target.tagName === "BUTTON" && (event.key === " " || event.key === "Enter")) {
+    if (
+      target.tagName === "BUTTON" &&
+      (event.key === " " || event.key === "Enter")
+    ) {
       return;
     }
     const command = commandForKey(event.key);
@@ -379,7 +398,10 @@ export function VideoPlayer({
 
   function scrubTo(event: PointerEvent<HTMLDivElement>) {
     const box = event.currentTarget.getBoundingClientRect();
-    const fraction = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+    const fraction = Math.min(
+      1,
+      Math.max(0, (event.clientX - box.left) / box.width),
+    );
     seek(fraction * (video.current?.duration ?? 0));
   }
 
@@ -428,7 +450,9 @@ export function VideoPlayer({
       onKeyDown={onKeyDown}
       className={`${track ? "top-[61px]" : "top-[57px]"} z-10 bg-foreground text-primary-foreground max-md:[@media(min-height:600px)]:sticky lg:mx-8 lg:mt-6 lg:max-w-[900px] lg:overflow-hidden lg:rounded-lg xl:max-w-[1000px] ${fullscreen ? "flex h-full flex-col" : ""}`}
     >
-      <div className={`relative ${fullscreen ? "min-h-0 flex-1" : "aspect-video"}`}>
+      <div
+        className={`relative ${fullscreen ? "min-h-0 flex-1" : "aspect-video"}`}
+      >
         {playback && (
           <video
             key={attempt}
@@ -446,9 +470,10 @@ export function VideoPlayer({
               const target = resumeTo.current;
               resumeTo.current = null;
               if (target) {
-                element.currentTime = retried.current || playWhenReady.current
-                  ? Math.min(target, element.duration)
-                  : resumeAt(target, element.duration);
+                element.currentTime =
+                  retried.current || playWhenReady.current
+                    ? Math.min(target, element.duration)
+                    : resumeAt(target, element.duration);
               }
               setCurrent(element.currentTime);
               loadedAt.current = element.currentTime;
@@ -464,7 +489,10 @@ export function VideoPlayer({
               // Real progress past where this URL started: the next failure
               // earns its own silent retry. Resetting on load alone would loop
               // a failure that repeats at the same frame through token requests.
-              if (retried.current && element.currentTime - loadedAt.current > 3) {
+              if (
+                retried.current &&
+                element.currentTime - loadedAt.current > 3
+              ) {
                 retried.current = false;
               }
               if (!reachedCompletion(element.currentTime, element.duration)) {
@@ -568,7 +596,10 @@ export function VideoPlayer({
               <Play aria-hidden="true" className="size-5" strokeWidth={1.75} />
             )}
           </button>
-          <span className="flex-1 whitespace-nowrap px-1 text-xs tabular-nums" aria-hidden="true">
+          <span
+            className="flex-1 whitespace-nowrap px-1 text-xs tabular-nums"
+            aria-hidden="true"
+          >
             {formatTimecode(current)}
             {/* Only the current time on a phone, so every control fits. */}
             <span className="max-sm:hidden"> / {formatTimecode(duration)}</span>
@@ -581,13 +612,21 @@ export function VideoPlayer({
             aria-pressed={muted}
           >
             {muted ? (
-              <VolumeX aria-hidden="true" className="size-5" strokeWidth={1.75} />
+              <VolumeX
+                aria-hidden="true"
+                className="size-5"
+                strokeWidth={1.75}
+              />
             ) : (
-              <Volume2 aria-hidden="true" className="size-5" strokeWidth={1.75} />
+              <Volume2
+                aria-hidden="true"
+                className="size-5"
+                strokeWidth={1.75}
+              />
             )}
           </button>
           <label className="sr-only" htmlFor={`rate-${lessonId}`}>
-            Tốc độ phát
+            <UiText value="Tốc độ phát" />
           </label>
           <select
             id={`rate-${lessonId}`}
@@ -608,7 +647,11 @@ export function VideoPlayer({
             aria-label="Phụ đề"
             aria-pressed={captions}
           >
-            <Captions aria-hidden="true" className="size-5" strokeWidth={1.75} />
+            <Captions
+              aria-hidden="true"
+              className="size-5"
+              strokeWidth={1.75}
+            />
           </button>
           <button
             type="button"
@@ -618,7 +661,11 @@ export function VideoPlayer({
             aria-label="Phím tắt"
             aria-haspopup="dialog"
           >
-            <Keyboard aria-hidden="true" className="size-5" strokeWidth={1.75} />
+            <Keyboard
+              aria-hidden="true"
+              className="size-5"
+              strokeWidth={1.75}
+            />
           </button>
           <button
             type="button"
@@ -627,9 +674,17 @@ export function VideoPlayer({
             aria-label={fullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}
           >
             {fullscreen ? (
-              <Minimize aria-hidden="true" className="size-5" strokeWidth={1.75} />
+              <Minimize
+                aria-hidden="true"
+                className="size-5"
+                strokeWidth={1.75}
+              />
             ) : (
-              <Maximize aria-hidden="true" className="size-5" strokeWidth={1.75} />
+              <Maximize
+                aria-hidden="true"
+                className="size-5"
+                strokeWidth={1.75}
+              />
             )}
           </button>
         </div>
@@ -646,7 +701,7 @@ export function VideoPlayer({
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id={`shortcuts-${lessonId}`} className="text-xl font-semibold">
-            Phím tắt
+            <UiText value="Phím tắt" />
           </h2>
           <form method="dialog">
             <button
@@ -661,8 +716,12 @@ export function VideoPlayer({
         <table className="mt-4 w-full text-left text-sm">
           <thead className="sr-only">
             <tr>
-              <th scope="col">Phím</th>
-              <th scope="col">Hành động</th>
+              <th scope="col">
+                <UiText value="Phím" />
+              </th>
+              <th scope="col">
+                <UiText value="Hành động" />
+              </th>
             </tr>
           </thead>
           <tbody>

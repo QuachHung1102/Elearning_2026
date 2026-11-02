@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import { LogOut } from "lucide-react";
 import { useState } from "react";
@@ -23,7 +24,7 @@ export function LogoutButton() {
       }}
     >
       <LogOut aria-hidden="true" className="size-4" strokeWidth={1.75} />
-      Đăng xuất
+      <UiText value="Đăng xuất" />
     </button>
   );
 }

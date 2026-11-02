@@ -1,3 +1,4 @@
+import { UiText } from "@/components/language-provider";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ResetPasswordForm } from "@/components/auth-forms";
@@ -20,10 +21,10 @@ export default async function ResetPasswordPage({
         <>
           <div className="grid gap-2">
             <h1 tabIndex={-1} className="text-4xl font-bold">
-              Đặt lại mật khẩu
+              <UiText value="Đặt lại mật khẩu" />
             </h1>
             <p className="text-muted-foreground">
-              Chọn mật khẩu mới cho tài khoản của bạn.
+              <UiText value="Chọn mật khẩu mới cho tài khoản của bạn." />
             </p>
           </div>
           <ResetPasswordForm token={token} />
@@ -34,7 +35,7 @@ export default async function ResetPasswordPage({
           description="Mở lại liên kết trong email, hoặc xin một liên kết mới."
           actions={
             <Link href="/forgot-password" className={buttonClass("primary")}>
-              Xin liên kết mới
+              <UiText value="Xin liên kết mới" />
             </Link>
           }
         />

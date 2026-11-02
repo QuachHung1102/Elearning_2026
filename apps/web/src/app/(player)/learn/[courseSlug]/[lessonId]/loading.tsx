@@ -1,10 +1,13 @@
+import { UiText } from "@/components/language-provider";
 import { Skeleton } from "@/components/ui/feedback";
 
 /** Same frame as the lesson: 16:9 player, meta, title, six uneven lines. */
 export default function LessonLoading() {
   return (
     <div aria-busy="true" className="flex flex-col">
-      <span className="sr-only">Đang tải…</span>
+      <span className="sr-only">
+        <UiText value="Đang tải…" />
+      </span>
       <Skeleton className="aspect-video w-full rounded-none lg:mx-8 lg:mt-6 lg:w-auto lg:max-w-[900px] lg:rounded-lg xl:max-w-[1000px]" />
       <div className="grid gap-4 px-4 pt-6 md:px-6 lg:px-8">
         <Skeleton className="h-5 w-48" />

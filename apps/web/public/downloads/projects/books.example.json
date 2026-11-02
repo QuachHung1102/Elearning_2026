@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "title": "De Men Phieu Luu Ky",
+    "borrowed": false
+  },
+  {
+    "id": 2,
+    "title": "The Little Prince",
+    "borrowed": true
+  },
+  {
+    "id": 3,
+    "title": "A Brief History of Time",
+    "borrowed": false
+  }
+]

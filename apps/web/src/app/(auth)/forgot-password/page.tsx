@@ -1,3 +1,4 @@
+import { UiText } from "@/components/language-provider";
 import type { Metadata } from "next";
 import { ForgotPasswordForm } from "@/components/auth-forms";
 
@@ -8,10 +9,10 @@ export default function ForgotPasswordPage() {
     <section className="grid gap-8">
       <div className="grid gap-2">
         <h1 tabIndex={-1} className="text-4xl font-bold">
-          Quên mật khẩu
+          <UiText value="Quên mật khẩu" />
         </h1>
         <p className="text-muted-foreground">
-          Nhận liên kết đặt lại qua email của bạn.
+          <UiText value="Nhận liên kết đặt lại qua email của bạn." />
         </p>
       </div>
       <ForgotPasswordForm />

@@ -1,11 +1,19 @@
-# E-learning
+# The CodingBuddy
 
-Monorepo khởi đầu cho hệ thống bán khóa học trực tuyến:
+Website học Python qua các dự án thực tế dành cho học sinh 10–15 tuổi.
 
 - `apps/web`: Next.js
 - `apps/api`: NestJS + Prisma
 - `docs/PROJECT_PLAN.md`: phân tích chức năng và kiến trúc đã thống nhất
 - `docs/_STATUS.md`: trạng thái triển khai; `docs/_PLAN.md`: việc còn lại, chia task nhỏ
+
+## Danh mục dự án hiện tại
+
+Dự án tủ sách chia sẻ miễn phí tại `/trial/books`, có bốn video của Hải Nam, bài đọc và mã nguồn. Không cần đăng nhập. Chín dự án Python tiếp theo được niêm yết ở mức 100.000₫, 150.000₫ hoặc 200.000₫ và ghi rõ đang chuẩn bị; chưa mở đăng ký học. Danh mục và phạm vi nằm trong `apps/web/src/content/project-courses.json`.
+
+Video nằm tại `apps/web/public/videos/books/`. Tệp `content/book-videos.json` ghi tên gốc, thời lượng và checksum để kiểm tra nguồn. Chạy `pnpm --filter api exec tsx prisma/seed-project-courses.ts` sau seed demo để áp dụng danh mục mới vào cơ sở dữ liệu review tại `127.0.0.1:55435/template1`. Lệnh này lưu trữ các khóa cũ, giữ lịch sử quyền học và tiến độ, và không chạy với production.
+
+Xem `design/redesign/CATALOG-2026-10-28.md` để đọc phạm vi và học phí từng dự án. Tài liệu quay và kịch bản sản xuất được giữ riêng trên máy, không nằm trong repository website.
 
 ## Chạy local
 
@@ -21,7 +29,7 @@ corepack pnpm --filter api seed
 corepack pnpm dev
 ```
 
-Web chạy tại `http://localhost:3000`; API chạy tại `http://localhost:3001`.
+Web chạy tại `http://localhost:5000`; API chạy tại `http://localhost:3001`.
 
 Seed tạo năm tài khoản demo (admin, giảng viên, ba học viên); email và mật khẩu được ghi trong `apps/api/prisma/seed.ts`. Seed tự từ chối chạy khi `NODE_ENV=production`.
 
@@ -71,7 +79,7 @@ createdb -U elearning_test elearning_e2e                       # một lần, da
 corepack pnpm e2e:web
 ```
 
-Bốn luồng trong `apps/web/e2e/`: khách đăng nhập rồi học (tiến độ được lưu), học viên mới bị chặn ở bài trả phí, checkout demo (admin xác nhận ở `/admin/orders`), giảng viên tạo và xuất bản khóa học. Lệnh tự build rồi chạy API ở cổng 3201 và web (bản production, bật checkout) ở cổng 3200, nên không đụng tới bộ dev 3000/3001. Trước mỗi lần chạy, database được `prisma migrate deploy`, xóa đơn hàng, quyền học, tiến độ, phiên đăng nhập cùng các tài khoản/khóa học `e2e-`, rồi seed lại.
+Bốn luồng trong `apps/web/e2e/`: khách đăng nhập rồi học (tiến độ được lưu), học viên mới bị chặn ở bài trả phí, đăng ký trực tiếp qua trang liên hệ Nam (không tạo thanh toán online), giảng viên tạo và xuất bản khóa học. Lệnh tự build rồi chạy API ở cổng 3201 và web (bản production, bật lịch sử đơn cũ) ở cổng 3200, nên không đụng tới bộ dev 3000/3001. Trước mỗi lần chạy, database được `prisma migrate deploy`, xóa đơn hàng, quyền học, tiến độ, phiên đăng nhập cùng các tài khoản/khóa học `e2e-`, rồi seed lại.
 
 - `E2E_DATABASE_URL`: database dùng cho e2e, mặc định `postgresql://elearning_test:elearning_test@localhost:5432/elearning_e2e`. Không trỏ vào database dev hoặc production: dữ liệu trong đó bị xóa.
 - `E2E_REUSE_SERVERS=1`: dùng lại API/web đang chạy ở 3200/3201 thay vì build lại (phải chạy với cùng biến môi trường như `apps/web/e2e/env.ts`).
@@ -126,3 +134,6 @@ curl -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_
   -H "Authorization: Bearer $CLOUDFLARE_STREAM_API_TOKEN" -H "Content-Type: application/json" \
   --data '{"uid":"<UID>","requireSignedURLs":true}'
 ```
+
+
+Latest navigation revision: Community and its page/assets were removed. The practice tab (`/workshop`) now shows only the free four-video book-sharing tracker. The three-step strip beneath the homepage hero was removed. Paid project tiers: 100,000₫, 150,000₫, 200,000₫.

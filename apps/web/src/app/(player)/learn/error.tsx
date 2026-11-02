@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import Link from "next/link";
 import { Button, buttonClass } from "@/components/ui/button";
@@ -27,9 +28,11 @@ export default function LearnError({
         description="Kiểm tra kết nối rồi thử lại."
         actions={
           <>
-            <Button onClick={retry}>Thử lại</Button>
+            <Button onClick={retry}>
+              <UiText value="Thử lại" />
+            </Button>
             <Link href="/my-courses" className={buttonClass("outline")}>
-              Khóa học của tôi
+              <UiText value="Khóa học của tôi" />
             </Link>
           </>
         }

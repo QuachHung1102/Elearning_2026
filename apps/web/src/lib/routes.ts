@@ -6,9 +6,11 @@ export function homeFor(role: string): string {
   return role === "INSTRUCTOR" ? "/instructor" : LEARNER_HOME;
 }
 
-/** The API resource behind a public course or category page, else null. */
+/** Public catalog pages and direct-enrollment pages share course visibility. */
 export function catalogResource(pathname: string): string | null {
   const match = /^\/(courses|categories)\/([^/]+)$/.exec(pathname);
+  const directEnrollment = /^\/checkout\/([^/]+)$/.exec(pathname);
+  if (directEnrollment) return `/courses/${directEnrollment[1]}`;
   return match ? `/${match[1]}/${match[2]}` : null;
 }
 

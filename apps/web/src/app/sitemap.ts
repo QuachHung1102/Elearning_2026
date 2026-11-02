@@ -1,5 +1,10 @@
 import type { MetadataRoute } from "next";
-import { publicFetch, type Category, type CourseCard, type Paginated } from "@/lib/catalog";
+import {
+  publicFetch,
+  type Category,
+  type CourseCard,
+  type Paginated,
+} from "@/lib/catalog";
 import { collectPages } from "@/lib/pagination";
 import { SITE_URL } from "@/lib/site";
 
@@ -17,7 +22,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     publicFetch<{ items: Category[] }>("/categories"),
   ]);
 
-  const staticPages = ["", "/courses", "/about", "/contact"].map((path) => ({
+  const staticPages = [
+    "",
+    "/courses",
+    "/workshop",
+    "/about",
+    "/impact",
+    "/contact",
+  ].map((path) => ({
     url: `${SITE_URL}${path}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,

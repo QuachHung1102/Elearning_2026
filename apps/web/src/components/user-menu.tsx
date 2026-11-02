@@ -9,12 +9,12 @@ import { CHECKOUT_ENABLED } from "@/lib/orders";
 import { LogoutButton } from "./logout-button";
 import { whoAmI } from "@/lib/viewer";
 import { buttonClass } from "./ui/button";
+import { usePathname } from "next/navigation";
+import { useLanguage } from "./language-provider";
 
 /**
- * The header must not read cookies: doing so makes every marketing page
- * dynamic, and the catalog is meant to be prerendered and cached
- * (UX_PLAN.md §2.2). Who is signed in is resolved after hydration, inside a
- * slot with a reserved height so nothing shifts.
+ * Resolve the viewer after hydration, inside a reserved header slot.
+ * Public page content is rendered in the visitor's chosen language.
  */
 function useViewer() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -33,14 +33,19 @@ function useViewer() {
 }
 
 const GUEST_LINKS = [
-  ["Khóa học", "/courses"],
+  ["Lộ trình học", "/courses"],
+  ["Bài thực hành", "/workshop"],
   ["Giới thiệu", "/about"],
-  ["Liên hệ", "/contact"],
+  ["Dấu ấn sẻ chia", "/impact"],
+
 ] as const;
 
 const LEARNER_LINKS = [
   ["Khóa học", "/courses"],
   ["Khóa học của tôi", LEARNER_HOME],
+  ["Bài thực hành", "/workshop"],
+  ["Dấu ấn sẻ chia", "/impact"],
+
   ...(CHECKOUT_ENABLED ? ([["Đơn hàng", "/account/orders"]] as const) : []),
 ] as const;
 
@@ -51,37 +56,43 @@ const LEARNER_LINKS = [
  */
 export function MainNav({ className }: { className: string }) {
   const user = useViewer();
+  const { text } = useLanguage();
+  const pathname = usePathname();
   return (user ? LEARNER_LINKS : GUEST_LINKS).map(([label, href]) => (
-    <Link key={href} href={href} className={className}>
-      {label}
+    <Link
+      key={href}
+      href={href}
+      className={className}
+      aria-current={pathname === href ? "page" : undefined}
+      onClick={(event) =>
+        event.currentTarget.closest("details")?.removeAttribute("open")
+      }
+    >
+      {text(label, label === "Bài thực hành" ? "Practice lesson" : undefined)}
     </Link>
   ));
 }
 
 export function UserMenu({ variant }: { variant: "desktop" | "mobile" }) {
   const user = useViewer();
+  const { text } = useLanguage();
 
   if (user === undefined) {
-    return <div className="min-h-11 min-w-40" aria-hidden="true" />;
+    return <div className="min-h-11 min-w-24" aria-hidden="true" />;
   }
 
   if (!user) {
     return variant === "desktop" ? (
-      <div className="flex items-center gap-2">
-        <Link href="/login" className={buttonClass("ghost")}>
-          Đăng nhập
-        </Link>
-        <Link href="/register" className={buttonClass("primary")}>
-          Đăng ký
-        </Link>
-      </div>
+      <Link href="/login" className={buttonClass("outline")}>
+        {text("Đăng nhập")}
+      </Link>
     ) : (
       <div className="mt-2 grid grid-cols-2 gap-2">
         <Link href="/login" className={buttonClass("outline")}>
-          Đăng nhập
+          {text("Đăng nhập")}
         </Link>
         <Link href="/register" className={buttonClass("primary")}>
-          Đăng ký
+          {text("Đăng ký")}
         </Link>
       </div>
     );
@@ -98,26 +109,26 @@ export function UserMenu({ variant }: { variant: "desktop" | "mobile" }) {
           className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
           href="/account"
         >
-          Hồ sơ
+          {text("Hồ sơ")}
         </Link>
         <Link
           className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
           href="/account/password"
         >
-          Đổi mật khẩu
+          {text("Đổi mật khẩu")}
         </Link>
         <Link
           className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
           href="/account/sessions"
         >
-          Phiên đăng nhập
+          {text("Phiên đăng nhập")}
         </Link>
         {CHECKOUT_ENABLED && (
           <Link
             className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
             href="/account/orders"
           >
-            Đơn hàng
+            {text("Đơn hàng")}
           </Link>
         )}
         {user.role === "INSTRUCTOR" && (
@@ -125,7 +136,7 @@ export function UserMenu({ variant }: { variant: "desktop" | "mobile" }) {
             className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
             href="/instructor"
           >
-            Giảng viên
+            {text("Giảng viên")}
           </Link>
         )}
         {user.role === "ADMIN" && (
@@ -133,7 +144,7 @@ export function UserMenu({ variant }: { variant: "desktop" | "mobile" }) {
             className="flex min-h-11 items-center rounded-md px-3 text-sm hover:bg-muted"
             href="/admin"
           >
-            Quản trị
+            {text("Quản trị")}
           </Link>
         )}
         <div className="my-1 border-t border-border" />

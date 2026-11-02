@@ -1,3 +1,4 @@
+import { UiText } from "@/components/language-provider";
 import {
   AlertCircle,
   CheckCircle2,
@@ -38,7 +39,8 @@ export function ErrorSummary({
       className="rounded-lg border border-destructive/30 bg-destructive-subtle p-4 text-on-destructive-subtle"
     >
       <p className="font-semibold">
-        Vui lòng kiểm tra lại {entries.length} trường
+        <UiText value="Vui lòng kiểm tra lại" /> {entries.length}{" "}
+        <UiText value="trường" />
       </p>
       <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
         {entries.map(([name, message]) => (
@@ -47,7 +49,7 @@ export function ErrorSummary({
               className="inline-flex min-h-11 items-center underline"
               href={`#${fields[name].id}`}
             >
-              {fields[name].label}: {message}
+              <UiText value={fields[name].label} />: <UiText value={message} />
             </a>
           </li>
         ))}
@@ -92,7 +94,9 @@ export function Alert({
         strokeWidth={1.75}
       />
       <div className="grid min-w-0 flex-1 gap-1">
-        <p className="font-semibold">{title}</p>
+        <p className="font-semibold">
+          <UiText value={title} />
+        </p>
         {children && <div className="text-sm">{children}</div>}
       </div>
     </div>
@@ -121,10 +125,16 @@ export function ErrorState({
         className="size-10 text-destructive"
         strokeWidth={1.75}
       />
-      <Heading id="error-title" tabIndex={-1} className="text-3xl font-semibold">
-        {title}
+      <Heading
+        id="error-title"
+        tabIndex={-1}
+        className="text-3xl font-semibold"
+      >
+        <UiText value={title} />
       </Heading>
-      <p className="text-muted-foreground">{description}</p>
+      <p className="text-muted-foreground">
+        <UiText value={description} />
+      </p>
       {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
     </section>
   );
@@ -149,9 +159,13 @@ export function EmptyState({
         className="size-10 text-muted-foreground-strong"
         strokeWidth={1.75}
       />
-      <h2 className="text-xl font-semibold">{title}</h2>
+      <h2 className="text-xl font-semibold">
+        <UiText value={title} />
+      </h2>
       {description && (
-        <p className="text-muted-foreground-strong">{description}</p>
+        <p className="text-muted-foreground-strong">
+          <UiText value={description} />
+        </p>
       )}
       {action}
     </section>

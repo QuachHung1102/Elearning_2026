@@ -1,0 +1,41 @@
+{
+  "sourceFolder": "https://drive.google.com/drive/folders/1WJTSWpEjLzWLUgqtlqkKYu1dJPFCROO5",
+  "videos": [
+    {
+      "lesson": 1,
+      "originalName": "Lesson_01_TuSach.mp4",
+      "sourceFileId": "1DymhAPjhCzqS8dPhJNX9MojehuFq74YG",
+      "path": "apps/web/public/videos/books/lesson-01.mp4",
+      "bytes": 47955693,
+      "durationSeconds": 562,
+      "sha256": "d118b153a3aa77ee1d05db14ad9fa75cd7164cd7f50c933a0c0cd23d0d2e0143"
+    },
+    {
+      "lesson": 2,
+      "originalName": "Lesson_02_Tusach.mp4",
+      "sourceFileId": "1mRZea0_-rmp447KgtQ--uBQ4qyIadcmo",
+      "path": "apps/web/public/videos/books/lesson-02.mp4",
+      "bytes": 72427381,
+      "durationSeconds": 783,
+      "sha256": "6d63b39a3b9d94aa1ae86b01d36f5b5e7de7b05d120b2bf7ce43993dcbb7716a"
+    },
+    {
+      "lesson": 3,
+      "originalName": "Lesson03_TuSach.mp4",
+      "sourceFileId": "1iz30zK9mTptb32_lg2_e1PpanUwoR9hE",
+      "path": "apps/web/public/videos/books/lesson-03.mp4",
+      "bytes": 60732875,
+      "durationSeconds": 581,
+      "sha256": "907a3e6ae1b915f29c302cf87da2d1aebb217d9c7ab78bc70e5c10e410bbdd67"
+    },
+    {
+      "lesson": 4,
+      "originalName": "Lesson_04.mp4",
+      "sourceFileId": "1CK4PYH8KXAN_jBy_hlZQH2XPKaOfpcSJ",
+      "path": "apps/web/public/videos/books/lesson-04.mp4",
+      "bytes": 25930815,
+      "durationSeconds": 196,
+      "sha256": "da5a850454f7098018fa1842b36a9f9570d1ad3f4e3e852fcce63c901421e079"
+    }
+  ]
+}

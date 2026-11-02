@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import { LogOut, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -84,12 +85,17 @@ export function ProfileForm({ user }: { user: User }) {
         />
       </Field>
       <div>
-        <Button type="submit" loading={busy} disabled={!changed} className="w-full">
-          Lưu thay đổi
+        <Button
+          type="submit"
+          loading={busy}
+          disabled={!changed}
+          className="w-full"
+        >
+          <UiText value="Lưu thay đổi" />
         </Button>
         {!changed && (
           <p className="mt-2 text-sm text-muted-foreground">
-            Chưa có thay đổi để lưu.
+            <UiText value="Chưa có thay đổi để lưu." />
           </p>
         )}
       </div>
@@ -137,7 +143,7 @@ export function PasswordForm() {
   return (
     <form className="grid max-w-xl gap-6" onSubmit={submit} noValidate>
       <Alert variant="warning" title="Bạn sẽ đăng xuất khỏi mọi thiết bị">
-        Sau khi đổi mật khẩu, hãy đăng nhập lại bằng mật khẩu mới.
+        <UiText value="Sau khi đổi mật khẩu, hãy đăng nhập lại bằng mật khẩu mới." />
       </Alert>
       {status && <Alert variant="destructive" title={status} />}
       <ErrorSummary errors={errors} fields={passwordFields} />
@@ -167,7 +173,7 @@ export function PasswordForm() {
         error={errors.confirm}
       />
       <Button type="submit" loading={busy}>
-        Đổi mật khẩu
+        <UiText value="Đổi mật khẩu" />
       </Button>
     </form>
   );
@@ -230,7 +236,7 @@ export function SessionsTable({
         trigger={
           <Button variant="outline" size="sm">
             <LogOut aria-hidden="true" className="size-4" strokeWidth={1.75} />
-            Thu hồi
+            <UiText value="Thu hồi" />
           </Button>
         }
       />
@@ -257,13 +263,17 @@ export function SessionsTable({
             </div>
             <dl className="mt-4 grid gap-3 text-sm">
               <div>
-                <dt className="text-muted-foreground">Bắt đầu</dt>
+                <dt className="text-muted-foreground">
+                  <UiText value="Bắt đầu" />
+                </dt>
                 <dd className="mt-1 tabular-nums">
                   {dateTime.format(new Date(session.createdAt))}
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Hết hạn</dt>
+                <dt className="text-muted-foreground">
+                  <UiText value="Hết hạn" />
+                </dt>
                 <dd className="mt-1 tabular-nums">
                   {dateTime.format(new Date(session.expiresAt))}
                 </dd>
@@ -276,10 +286,18 @@ export function SessionsTable({
         <table className="w-full min-w-[36rem] text-left text-sm">
           <thead className="bg-muted text-muted-foreground-strong">
             <tr>
-              <th className="px-4 py-3 font-semibold">Bắt đầu</th>
-              <th className="px-4 py-3 font-semibold">Hết hạn</th>
-              <th className="px-4 py-3 font-semibold">Trạng thái</th>
-              <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
+              <th className="px-4 py-3 font-semibold">
+                <UiText value="Bắt đầu" />
+              </th>
+              <th className="px-4 py-3 font-semibold">
+                <UiText value="Hết hạn" />
+              </th>
+              <th className="px-4 py-3 font-semibold">
+                <UiText value="Trạng thái" />
+              </th>
+              <th className="px-4 py-3 text-right font-semibold">
+                <UiText value="Thao tác" />
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -294,11 +312,11 @@ export function SessionsTable({
                 <td className="px-4 py-3">
                   {session.isCurrent ? (
                     <span className="rounded-sm bg-primary-subtle px-2 py-1 text-xs font-semibold text-primary-on-subtle">
-                      Phiên này
+                      <UiText value="Phiên này" />
                     </span>
                   ) : (
                     <span className="text-muted-foreground">
-                      Đang hoạt động
+                      <UiText value="Đang hoạt động" />
                     </span>
                   )}
                 </td>
@@ -324,7 +342,7 @@ export function SessionsTable({
                 className="size-4"
                 strokeWidth={1.75}
               />
-              Đăng xuất tất cả thiết bị khác
+              <UiText value="Đăng xuất tất cả thiết bị khác" />
             </Button>
           }
         />

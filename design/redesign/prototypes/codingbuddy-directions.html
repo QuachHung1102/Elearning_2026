@@ -1,0 +1,336 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+#cb-directions { width:100%; container-type:inline-size; }
+#cb-directions .cb { --cb-paper:light-dark(#faf7ef,#242520); --cb-ink:light-dark(#252622,#f3f1e8); --cb-soft:light-dark(#ece9df,#34362f); --cb-muted:light-dark(#64665b,#b5b9aa); --cb-card:light-dark(#fffdf7,#2c2e27); --cb-line:light-dark(#d9d9cd,#4b4e43); --cb-orange:light-dark(#c94322,#ff9674); --cb-on-orange:light-dark(#fff9ed,#32231a); --cb-lime:light-dark(#d4e484,#cadc85); --cb-on-lime:#303923; --cb-blue:light-dark(#dce4f4,#35415b); --cb-on-blue:light-dark(#283d65,#e0e8fa); --cb-editor:light-dark(#282d28,#191e19); --cb-code:#e5edda; color:var(--cb-ink); background:var(--cb-paper); font:400 14px/1.7 'Be Vietnam Pro',sans-serif; min-height:1360px; overflow:clip; }
+#cb-directions .cb * { box-sizing:border-box; }
+#cb-directions .cb button,#cb-directions .cb input,#cb-directions .cb select {font:inherit;}
+#cb-directions .cb button {cursor:var(--cursor-interaction,pointer);}
+#cb-directions .cb button:focus-visible,#cb-directions .cb input:focus-visible,#cb-directions .cb select:focus-visible{outline:3px solid var(--cb-orange);outline-offset:4px;}
+#cb-directions .cb button {color:inherit;}
+#cb-directions .cb h1,#cb-directions .cb h2,#cb-directions .cb h3,#cb-directions .cb p {margin:0;}
+#cb-directions .cb h1,#cb-directions .cb h2,#cb-directions .cb h3 {text-wrap:balance;}
+#cb-directions .cb button:disabled{cursor:default;}
+#cb-directions .cb [hidden]{display:none!important;}
+#cb-directions .cb .wrap{width:100%;max-width:1120px;margin:auto;padding:0 42px;}
+#cb-directions .cb .topline{background:var(--cb-ink);color:var(--cb-paper);padding:7px 100px 7px 24px;text-align:center;font:500 10px/1.6 'Be Vietnam Pro',sans-serif;letter-spacing:.09em;text-transform:uppercase;}
+#cb-directions .cb .header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:22px;padding-bottom:22px;border-bottom:1px solid var(--cb-line);}
+#cb-directions .cb .brand{display:flex;align-items:center;gap:8px;border:0;background:none;padding:0;font:700 23px/1.1 'Space Grotesk',sans-serif;letter-spacing:-1.2px;white-space:nowrap;}
+#cb-directions .cb .brand small{display:block;text-align:left;font:500 9px/1.3 'Be Vietnam Pro',sans-serif;letter-spacing:2.3px;margin-bottom:2px;}
+#cb-directions .cb .brandmark{display:grid;place-items:center;width:34px;height:34px;background:var(--cb-orange);color:var(--cb-on-orange);border-radius:10px;letter-spacing:-3px;font:700 18px/1 'Space Grotesk',sans-serif;transform:rotate(-8deg);}
+#cb-directions .cb .nav{display:flex;gap:21px;align-items:center;}
+#cb-directions .cb .nav button{background:none;border:0;padding:8px 0;font-size:11px;white-space:nowrap;}
+#cb-directions .cb .nav button[aria-current=page]{color:var(--cb-orange);text-decoration:underline;text-underline-offset:6px;}
+#cb-directions .cb .header-actions{display:flex;align-items:center;gap:14px;}
+#cb-directions .cb .lang{display:flex;align-items:center;gap:2px;}
+#cb-directions .cb .lang button{background:transparent;border:0;font-size:10px;padding:6px;opacity:.55;}
+#cb-directions .cb .lang button[aria-pressed=true]{opacity:1;background:var(--cb-soft);border-radius:4px;}
+#cb-directions .cb .join{background:var(--cb-ink);color:var(--cb-paper);border:0;padding:10px 14px;border-radius:7px;font-size:11px;font-weight:600;white-space:nowrap;}
+#cb-directions .cb .hero{display:grid;grid-template-columns:1.05fr 1fr;gap:32px;padding-top:65px;padding-bottom:60px;align-items:center;}
+#cb-directions .cb .eyebrow{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:22px;}
+#cb-directions .cb .eyebrow:before{content:'';width:7px;height:7px;border-radius:100%;background:var(--cb-orange);}
+#cb-directions .cb h1{font-size:clamp(36px,5.5vw,66px);font-weight:800;line-height:1.17;letter-spacing:-2.5px;}
+#cb-directions .cb h1 em{font-style:normal;color:var(--cb-orange);position:relative;}
+#cb-directions .cb .hero-desc{max-width:350px;color:var(--cb-muted);font-size:13px;line-height:1.9;margin-top:22px;}
+#cb-directions .cb .actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:27px;}
+#cb-directions .cb .action{border:1px solid var(--cb-ink);background:var(--cb-ink);color:var(--cb-paper);padding:12px 19px;display:inline-flex;align-items:center;gap:17px;border-radius:7px;font-size:11px;font-weight:600;transition:transform .15s;}
+#cb-directions .cb .action:hover{transform:translateY(-2px);}
+#cb-directions .cb .action.orange{background:var(--cb-orange);border-color:var(--cb-orange);color:var(--cb-on-orange);}
+#cb-directions .cb .text-action{border:0;background:none;padding:9px 0;font-size:11px;display:flex;gap:8px;align-items:center;}
+#cb-directions .cb .hero-note{margin-top:20px;display:flex;align-items:center;gap:8px;color:var(--cb-muted);font-size:10px;}
+#cb-directions .cb .hero-note i{font-style:normal;color:var(--cb-orange);}
+#cb-directions .cb .scene{position:relative;min-width:0;min-height:380px;display:flex;align-items:center;justify-content:center;padding:40px 16px 0;}
+#cb-directions .cb .scene:before{content:'';position:absolute;width:340px;height:340px;border-radius:50%;background:var(--cb-lime);}
+#cb-directions .cb .hero-code{position:relative;width:100%;max-width:350px;background:var(--cb-editor);color:var(--cb-code);border-radius:12px;box-shadow:9px 12px 0 color-mix(in srgb,var(--cb-ink) 10%,transparent);transform:rotate(-3deg);margin-top:25px;}
+#cb-directions .cb .windowbar{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #4d5347;padding:12px 16px;font:400 10px/1.5 monospace;color:#bdc5b3;}
+#cb-directions .cb .dots{display:flex;gap:4px;}
+#cb-directions .cb .dots span{width:6px;height:6px;background:#a3ad94;border-radius:100%;}
+#cb-directions .cb .code-area{padding:20px;font:400 13px/2 monospace;white-space:pre-wrap;}
+#cb-directions .cb .code-comment{color:#a3b19a;}
+#cb-directions .cb .code-key{color:#e4b6fa;}
+#cb-directions .cb .code-string{color:#d3e785;}
+#cb-directions .cb .code-line{color:#75836d;margin-right:15px;user-select:none;}
+#cb-directions .cb .run-row{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 20px 18px;}
+#cb-directions .cb .run-button{border:0;background:#d3e785;color:#25341b;border-radius:5px;font-size:10px;padding:8px 13px;}
+#cb-directions .cb .run-row small{font-size:9px;color:#bdc5b3;}
+#cb-directions .cb .output{background:#20251e;color:#d3e785;border-radius:0 0 12px 12px;padding:14px 20px;min-height:52px;font:400 12px/1.8 monospace;}
+#cb-directions .cb .sticker{position:absolute;top:30px;right:-7px;background:var(--cb-card);border:1px solid var(--cb-line);padding:9px 13px;transform:rotate(9deg);font:600 11px/1.4 'Space Grotesk',sans-serif;box-shadow:2px 3px 0 var(--cb-line);}
+#cb-directions .cb .spark{position:absolute;left:1px;top:55px;font:400 60px/1 'Space Grotesk',sans-serif;color:var(--cb-orange);transform:rotate(12deg);}
+#cb-directions .cb .buddy{position:absolute;z-index:2;right:13px;bottom:-10px;width:91px;height:87px;border:3px solid var(--cb-ink);border-radius:24px 24px 22px 22px;background:var(--cb-orange);transform:rotate(9deg);box-shadow:4px 5px 0 color-mix(in srgb,var(--cb-ink) 14%,transparent);}
+#cb-directions .cb .buddy:before{content:'';position:absolute;top:-16px;left:41px;width:3px;height:15px;background:var(--cb-ink);}
+#cb-directions .cb .buddy:after{content:'';position:absolute;top:-22px;left:35px;width:15px;height:15px;background:var(--cb-lime);border:3px solid var(--cb-ink);border-radius:50%;}
+#cb-directions .cb .buddy-face{background:var(--cb-paper);border:2px solid var(--cb-ink);border-radius:11px;margin:19px 10px 0;height:37px;display:flex;justify-content:space-around;align-items:center;padding:0 10px;}
+#cb-directions .cb .buddy-eye{width:6px;height:11px;border-radius:8px;background:var(--cb-ink);}
+#cb-directions .cb .buddy-mouth{width:17px;height:7px;border-bottom:2px solid var(--cb-ink);border-radius:0 0 20px 20px;margin:6px auto;}
+#cb-directions .cb .tape{display:flex;align-items:center;justify-content:space-around;gap:16px;padding:17px 26px;background:var(--cb-lime);color:var(--cb-on-lime);border-top:1px solid color-mix(in srgb,var(--cb-on-lime) 20%,transparent);border-bottom:1px solid color-mix(in srgb,var(--cb-on-lime) 20%,transparent);font:600 11px/1.5 'Space Grotesk',sans-serif;letter-spacing:.5px;flex-wrap:wrap;}
+#cb-directions .cb .tape b{font-weight:400;}
+#cb-directions .cb .section{padding-top:55px;padding-bottom:55px;}
+#cb-directions .cb .section-head{display:flex;justify-content:space-between;align-items:end;gap:15px;margin-bottom:27px;}
+#cb-directions .cb .tiny{font:500 10px/1.6 monospace;color:var(--cb-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:9px;}
+#cb-directions .cb h2{font-size:30px;line-height:1.3;letter-spacing:-1.2px;font-weight:700;}
+#cb-directions .cb .section-desc{max-width:430px;font-size:12px;color:var(--cb-muted);margin-top:12px;}
+#cb-directions .cb .course-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:19px;}
+#cb-directions .cb .learning-path{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;list-style:none;padding:24px 0 30px;margin:0;border-top:1px solid var(--cb-line);}
+#cb-directions .cb .learning-path li{min-width:0;}
+#cb-directions .cb .learning-path .step{font:500 12px/1.5 monospace;color:var(--cb-orange);}
+#cb-directions .cb .learning-path h3{font-size:16px;margin-top:10px;}
+#cb-directions .cb .learning-path p{font-size:12px;color:var(--cb-muted);line-height:1.85;}
+#cb-directions .cb .application-label{font:500 11px/1.7 monospace;color:var(--cb-muted);margin:14px 0 19px;letter-spacing:.4px;}
+#cb-directions .cb .course{background:var(--cb-card);border:1px solid var(--cb-line);border-radius:11px;overflow:hidden;text-align:left;padding:0;transition:transform .2s,box-shadow .2s;}
+#cb-directions .cb .course:hover{transform:translateY(-4px);box-shadow:4px 5px 0 var(--cb-line);}
+#cb-directions .cb .course-art{height:140px;padding:18px;display:flex;align-items:center;justify-content:center;position:relative;font:500 50px/1 'Space Grotesk',sans-serif;letter-spacing:-5px;}
+#cb-directions .cb .course-art.python{background:var(--cb-blue);color:var(--cb-on-blue);}
+#cb-directions .cb .course-art.web{background:var(--cb-lime);color:var(--cb-on-lime);}
+#cb-directions .cb .course-art.ai{background:var(--cb-soft);color:var(--cb-ink);}
+#cb-directions .cb .course-art .mini-label{position:absolute;left:14px;top:12px;font:500 9px/1.4 monospace;letter-spacing:0;}
+#cb-directions .cb .code-symbol{background:color-mix(in srgb,currentColor 8%,transparent);border:1px solid color-mix(in srgb,currentColor 35%,transparent);padding:12px 20px;border-radius:10px;transform:rotate(-6deg);}
+#cb-directions .cb .art-windows{display:grid;grid-template-columns:1fr 1.3fr;gap:5px;border:2px solid currentColor;padding:12px 8px 8px;border-radius:8px;transform:rotate(5deg);width:110px;height:71px;position:relative;}
+#cb-directions .cb .art-windows:before{content:'•••';position:absolute;font-size:11px;letter-spacing:2px;left:8px;top:1px;}
+#cb-directions .cb .art-windows span{background:color-mix(in srgb,currentColor 30%,transparent);border-radius:2px;}
+#cb-directions .cb .ai-grid{display:grid;grid-template-columns:repeat(3,18px);gap:7px;transform:rotate(-10deg);}
+#cb-directions .cb .ai-grid span{width:18px;height:18px;border-radius:50%;background:var(--cb-orange);opacity:.55;}
+#cb-directions .cb .ai-grid span:nth-child(2n){background:var(--cb-ink);opacity:1;}
+#cb-directions .cb .course-body{padding:18px 17px 16px;}
+#cb-directions .cb .course-tag{color:var(--cb-orange);font-size:9px;font-weight:600;letter-spacing:.4px;}
+#cb-directions .cb h3{font-size:16px;line-height:1.5;letter-spacing:-.4px;font-weight:600;margin:6px 0 8px;}
+#cb-directions .cb .course p{font-size:11px;line-height:1.8;color:var(--cb-muted);}
+#cb-directions .cb .course-bottom{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:17px;padding-top:12px;border-top:1px solid var(--cb-line);font-size:10px;}
+#cb-directions .cb .course-bottom span:last-child{color:var(--cb-orange);font-size:17px;}
+#cb-directions .cb .mission{background:var(--cb-blue);color:var(--cb-on-blue);padding:30px 35px;border-radius:12px;display:grid;grid-template-columns:.8fr 1.2fr;gap:35px;align-items:center;margin-top:12px;}
+#cb-directions .cb .mission h2{font-size:26px;}
+#cb-directions .cb .mission p{font-size:12px;line-height:1.9;}
+#cb-directions .cb .mission .tiny{color:inherit;opacity:.75;}
+#cb-directions .cb .mission .text-action{font-weight:600;}
+#cb-directions .cb .mission-number{display:none;}
+#cb-directions .cb .footer{border-top:1px solid var(--cb-line);padding-top:22px;padding-bottom:25px;display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:45px;}
+#cb-directions .cb .footer p{font-size:9px;color:var(--cb-muted);}
+#cb-directions .cb .footer .brand{font-size:17px;}
+#cb-directions .cb .footer .brandmark{width:25px;height:25px;font-size:13px;}
+#cb-directions .cb .catalog-hero{padding-top:45px;padding-bottom:30px;}
+#cb-directions .cb .catalog-hero h1{font-size:45px;}
+#cb-directions .cb .filter-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:26px;}
+#cb-directions .cb .chip{border:1px solid var(--cb-line);background:var(--cb-card);border-radius:7px;padding:8px 13px;font-size:10px;}
+#cb-directions .cb .chip[aria-pressed=true]{background:var(--cb-ink);color:var(--cb-paper);border-color:var(--cb-ink);}
+#cb-directions .cb .searchbox{display:flex;margin:20px 0 0;max-width:420px;gap:8px;}
+#cb-directions .cb .searchbox input{width:100%;min-width:0;border:1px solid var(--cb-line);background:var(--cb-card);color:var(--cb-ink);border-radius:6px;padding:11px 13px;font-size:12px;}
+#cb-directions .cb .result-count{font-size:11px;color:var(--cb-muted);margin:0 0 18px;}
+#cb-directions .cb .empty{padding:45px 0;color:var(--cb-muted);}
+#cb-directions .cb .detail{padding-top:35px;padding-bottom:50px;}
+#cb-directions .cb .back{background:none;border:0;color:var(--cb-muted);padding:10px 0;font-size:11px;}
+#cb-directions .cb .detail-layout{display:grid;grid-template-columns:1.1fr .9fr;gap:38px;margin-top:25px;align-items:start;}
+#cb-directions .cb .detail h1{font-size:40px;line-height:1.25;}
+#cb-directions .cb .detail p{margin-top:15px;color:var(--cb-muted);font-size:12px;}
+#cb-directions .cb .project-preview{background:var(--cb-lime);color:var(--cb-on-lime);border-radius:12px;padding:35px 25px;min-height:230px;display:grid;align-content:center;justify-items:center;gap:13px;text-align:center;}
+#cb-directions .cb .project-preview .code-symbol{font-size:44px;}
+#cb-directions .cb .project-preview p{color:inherit;font-size:11px;}
+#cb-directions .cb .lesson-list{margin:35px 0 0;padding:0;list-style:none;}
+#cb-directions .cb .lesson-list li{border-bottom:1px solid var(--cb-line);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 0;font-size:12px;}
+#cb-directions .cb .lesson-list button{border:0;background:none;color:var(--cb-orange);padding:8px;font-size:11px;}
+#cb-directions .cb .lab-page{padding-top:45px;padding-bottom:50px;}
+#cb-directions .cb .lab-layout{display:grid;grid-template-columns:.75fr 1.25fr;gap:36px;margin-top:32px;}
+#cb-directions .cb .lesson-nav{border-top:1px solid var(--cb-line);padding-top:10px;}
+#cb-directions .cb .lesson-nav p{font-size:12px;padding:12px 0;border-bottom:1px solid var(--cb-line);}
+#cb-directions .cb .lesson-nav p:first-child{color:var(--cb-orange);}
+#cb-directions .cb .lab-code{background:var(--cb-editor);color:var(--cb-code);border-radius:10px;overflow:hidden;}
+#cb-directions .cb .lab-code label{display:flex;gap:10px;align-items:center;justify-content:space-between;font:400 11px/1.7 monospace;padding:0 20px 15px;}
+#cb-directions .cb .lab-code input{width:100px;color:#e5edda;accent-color:#d3e785;}
+#cb-directions .cb .explain{background:var(--cb-blue);color:var(--cb-on-blue);border-radius:9px;padding:18px;margin-top:18px;font-size:12px;}
+#cb-directions .cb .about-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:40px;align-items:center;margin:35px 0;}
+#cb-directions .cb .founder-art{min-height:270px;background:var(--cb-soft);border-radius:12px;position:relative;display:flex;justify-content:center;align-items:center;}
+#cb-directions .cb .founder-art .buddy{position:relative;right:auto;bottom:auto;width:125px;height:120px;border-radius:32px;transform:rotate(-7deg);}
+#cb-directions .cb .founder-art .buddy-face{height:52px;margin:27px 15px 0;}
+#cb-directions .cb .founder-art .buddy-mouth{margin:10px auto;}
+#cb-directions .cb .founder-art .sticker{top:auto;bottom:20px;right:15px;}
+#cb-directions .cb .about-copy p{font-size:12px;line-height:1.9;margin-top:16px;color:var(--cb-muted);}
+#cb-directions .cb .about-copy .signature{font:600 24px/1.4 'Space Grotesk',sans-serif;color:var(--cb-orange);transform:rotate(-4deg);margin-top:22px;}
+#cb-directions .cb .preview-label{font:400 10px/1.7 monospace;color:var(--cb-muted);padding:13px 0;}
+#cb-directions .cb[data-world=control]{--cb-paper:light-dark(#f0f2ed,#161d19);--cb-ink:light-dark(#17372c,#e4ecdf);--cb-soft:light-dark(#e0e5db,#233127);--cb-muted:light-dark(#516654,#adbdac);--cb-card:light-dark(#fafcf6,#1c2820);--cb-line:light-dark(#bccabb,#3e5041);--cb-orange:light-dark(#2d6242,#b6de86);--cb-on-orange:light-dark(#f3ffe9,#172315);--cb-lime:light-dark(#c9dfb3,#b6de86);--cb-blue:light-dark(#dbe6de,#263d30);--cb-on-blue:light-dark(#294633,#d4e3d0);font-family:'Space Grotesk','Be Vietnam Pro',sans-serif;}
+#cb-directions .cb[data-world=control] .topline{background:var(--cb-soft);color:var(--cb-ink);text-align:left;}
+#cb-directions .cb[data-world=control] .brandmark{border-radius:3px;transform:none;}
+#cb-directions .cb[data-world=control] .hero{grid-template-columns:.85fr 1.15fr;padding-top:50px;padding-bottom:40px;}
+#cb-directions .cb[data-world=control] h1{font:600 clamp(35px,4.8vw,58px)/1.1 'Space Grotesk','Be Vietnam Pro',sans-serif;letter-spacing:-2px;}
+#cb-directions .cb[data-world=control] .scene{padding:0;min-height:350px;}
+#cb-directions .cb[data-world=control] .scene:before{border-radius:0;background-image:linear-gradient(var(--cb-line) 1px,transparent 1px),linear-gradient(90deg,var(--cb-line) 1px,transparent 1px);background-color:transparent;background-size:24px 24px;width:100%;height:100%;opacity:.4;}
+#cb-directions .cb[data-world=control] .hero-code{transform:none;max-width:390px;border:1px solid var(--cb-line);border-radius:5px;margin:0;box-shadow:8px 8px 0 var(--cb-soft);}
+#cb-directions .cb[data-world=control] .hero-desc{font-size:13px;}
+#cb-directions .cb[data-world=control] .sticker{top:-8px;right:5px;border-radius:2px;transform:none;font-family:monospace;box-shadow:none;}
+#cb-directions .cb[data-world=control] .spark{display:none;}
+#cb-directions .cb[data-world=control] .buddy{background:var(--cb-lime);border-radius:7px;transform:none;bottom:-12px;width:69px;height:65px;}
+#cb-directions .cb[data-world=control] .buddy-face{margin-top:12px;height:28px;}
+#cb-directions .cb[data-world=control] .buddy-mouth{margin-top:4px;}
+#cb-directions .cb[data-world=control] .tape{background:var(--cb-ink);color:var(--cb-paper);font-family:monospace;font-size:10px;justify-content:space-between;}
+#cb-directions .cb[data-world=control] .course-grid{grid-template-columns:1fr;gap:0;border-top:1px solid var(--cb-line);}
+#cb-directions .cb[data-world=control] .course{border:0;border-bottom:1px solid var(--cb-line);border-radius:0;background:none;display:grid;grid-template-columns:120px 1fr;gap:23px;padding:20px 0;}
+#cb-directions .cb[data-world=control] .course:hover{transform:translateX(3px);box-shadow:none;}
+#cb-directions .cb[data-world=control] .course-art{height:130px;border-radius:4px;font-size:32px;}
+#cb-directions .cb[data-world=control] .course-body{padding:0;}
+#cb-directions .cb[data-world=control] .course-bottom{padding:0;border:0;margin-top:12px;}
+#cb-directions .cb[data-world=control] .mission{grid-template-columns:1fr 1.5fr;background:var(--cb-soft);border-radius:4px;border-left:4px solid var(--cb-orange);padding:27px;}
+#cb-directions .cb[data-world=control] .mission h2{font-size:24px;}
+#cb-directions .cb[data-world=control] .section{padding-top:35px;padding-bottom:35px;}
+#cb-directions .cb[data-world=control] .footer{margin-top:25px;}
+@container(max-width:760px){
+ #cb-directions .cb .wrap{padding-left:25px;padding-right:25px;}
+ #cb-directions .cb .nav{gap:13px;}
+ #cb-directions .cb .nav button{font-size:10px;}
+ #cb-directions .cb .join{display:none;}
+ #cb-directions .cb .header{gap:10px;}
+ #cb-directions .cb .hero{gap:17px;padding-top:45px;}
+ #cb-directions .cb h1{font-size:44px;}
+ #cb-directions .cb .scene:before{width:270px;height:270px;}
+ #cb-directions .cb .code-area{font-size:11px;padding:17px;}
+ #cb-directions .cb .run-row{padding-left:17px;padding-right:17px;}
+ #cb-directions .cb .hero-desc{font-size:12px;}
+ #cb-directions .cb .hero-code{min-width:0;}
+ #cb-directions .cb .sticker{right:0;font-size:10px;}
+ #cb-directions .cb .course-grid{gap:12px;}
+ #cb-directions .cb .course-body{padding:13px;}
+ #cb-directions .cb .course-art{height:120px;}
+ #cb-directions .cb h2{font-size:25px;}
+ #cb-directions .cb h3{font-size:14px;}
+ #cb-directions .cb .mission{padding:25px;gap:25px;}
+}
+@container(max-width:580px){
+ #cb-directions .cb{min-height:1800px;}
+ #cb-directions .cb .wrap{padding-left:20px;padding-right:20px;}
+ #cb-directions .cb .topline{text-align:left;font-size:9px;padding-left:20px;}
+ #cb-directions .cb .brand{font-size:21px;}
+ #cb-directions .cb .header{flex-wrap:wrap;padding-top:18px;padding-bottom:12px;}
+ #cb-directions .cb .header-actions{margin-left:auto;}
+ #cb-directions .cb .nav{order:3;width:100%;justify-content:space-between;gap:8px;padding-top:5px;}
+ #cb-directions .cb .nav button{font-size:11px;min-height:40px;}
+ #cb-directions .cb .lang button{min-height:40px;min-width:35px;}
+ #cb-directions .cb .hero,#cb-directions .cb[data-world=control] .hero{grid-template-columns:1fr;gap:5px;padding-top:35px;padding-bottom:35px;}
+ #cb-directions .cb h1{font-size:48px;letter-spacing:-2px;}
+ #cb-directions .cb .hero-desc{max-width:100%;font-size:12px;}
+ #cb-directions .cb .eyebrow{margin-bottom:17px;}
+ #cb-directions .cb .scene{min-height:350px;padding:25px 10px 10px;}
+ #cb-directions .cb .scene:before{width:285px;height:285px;}
+ #cb-directions .cb .code-area{font-size:12px;}
+ #cb-directions .cb .sticker{right:0;top:30px;}
+ #cb-directions .cb .buddy{bottom:0;}
+ #cb-directions .cb .spark{font-size:48px;top:30px;}
+ #cb-directions .cb .tape{font-size:10px;padding:13px 15px;gap:10px;}
+ #cb-directions .cb .tape b{display:none;}
+ #cb-directions .cb .section{padding-top:35px;padding-bottom:35px;}
+ #cb-directions .cb .section-head{align-items:start;flex-direction:column;gap:8px;}
+ #cb-directions .cb h2{font-size:27px;}
+ #cb-directions .cb .course-grid{grid-template-columns:1fr;gap:17px;}
+ #cb-directions .cb .learning-path{grid-template-columns:1fr;gap:20px;}
+ #cb-directions .cb .course-art{height:170px;}
+ #cb-directions .cb .course-body{padding:19px;}
+ #cb-directions .cb h3{font-size:18px;}
+ #cb-directions .cb .course p{font-size:12px;}
+ #cb-directions .cb .mission{grid-template-columns:1fr;gap:18px;padding:25px;}
+ #cb-directions .cb .footer{align-items:start;flex-direction:column;}
+ #cb-directions .cb .catalog-hero h1{font-size:38px;}
+ #cb-directions .cb .detail-layout,#cb-directions .cb .lab-layout,#cb-directions .cb .about-grid{grid-template-columns:1fr;gap:25px;}
+ #cb-directions .cb .lesson-nav{display:none;}
+ #cb-directions .cb .detail h1{font-size:33px;}
+ #cb-directions .cb[data-world=control] .scene{min-height:310px;margin-top:25px;}
+ #cb-directions .cb[data-world=control] .course{grid-template-columns:76px 1fr;gap:15px;}
+ #cb-directions .cb[data-world=control] .course-art{height:100%;min-height:130px;padding:9px;font-size:24px;}
+ #cb-directions .cb[data-world=control] .mini-label{font-size:8px;left:6px;}
+ #cb-directions .cb[data-world=control] .art-windows{width:55px;height:48px;padding:12px 4px 4px;}
+ #cb-directions .cb[data-world=control] .code-symbol{padding:8px;}
+ #cb-directions .cb[data-world=control] .ai-grid{grid-template-columns:repeat(3,10px);gap:5px;}
+ #cb-directions .cb[data-world=control] .ai-grid span{width:10px;height:10px;}
+ #cb-directions .cb[data-world=control] h3{font-size:16px;}
+ #cb-directions .cb[data-world=control] .mission{grid-template-columns:1fr;}
+}
+@media(prefers-reduced-motion:reduce){#cb-directions .cb *{transition:none!important;scroll-behavior:auto!important;}}
+</style>
+<div id="cb-directions" class="viz-carousel" aria-label="CodingBuddy design directions">
+  <section data-variant="Maker’s Notebook" aria-label="Maker’s Notebook concept">
+    <div class="cb" data-world="notebook" aria-label="CodingBuddy Maker’s Notebook"></div>
+  </section>
+  <section data-variant="Mission Control" aria-label="Mission Control concept" hidden>
+    <div class="cb" data-world="control" aria-label="CodingBuddy Mission Control"></div>
+  </section>
+</div>
+<script>
+(() => {
+ const root=document.getElementById('cb-directions');
+ const copy={
+ vi:{strip:'Một góc nhỏ dành cho những bộ óc tò mò.',nav:['Khóa học','Phòng lab','Câu chuyện'],join:'Bắt đầu học ↗',eye:'DÀNH CHO NHÀ SÁNG TẠO 10–15 TUỔI',title:'Ý tưởng bé.<br>Khả năng<br><em>vô hạn.</em>',controlTitle:'Tò mò.<br>Thử nghiệm.<br><em>Tự tay tạo ra.</em>',desc:'Biến “máy tính làm được gì?” thành “mình làm được rồi!” Học lập trình qua những dự án nhỏ, cùng một người bạn đồng hành.',cta:'Tìm dự án đầu tiên',try:'Thử một dòng code',note:'Không cần biết code trước. Chỉ cần tò mò.',sticker:'lỗi một chút.<br>giỏi thêm chút.',run:'▶ Chạy thử',ready:'sẵn sàng khi bạn sẵn sàng',output:'Xin chào, nhà sáng tạo! ✦',tape:['HỌC BẰNG CÁCH LÀM','SAI CŨNG LÀ TIẾN BỘ','CODE VỚI MỘT NGƯỜI BẠN'],sectionEye:'01 / NHỮNG ĐIỂM BẮT ĐẦU',sectionTitle:'Học một chút. Làm được nhiều.',all:'Khám phá khóa học ↗',courseDesc:'Chọn thứ bạn muốn tạo ra. Kiến thức sẽ đến trên đường đi.',project:'Dự án minh họa',beginner:'Cho người mới bắt đầu',explore:'Khám phá',missionEye:'CODE ĐỂ MỞ THÊM CƠ HỘI',missionTitle:'Bạn học một điều mới.<br>Cơ hội đi xa thêm một chút.',missionCopy:'CodingBuddy được xây dựng với mong muốn đưa việc học công nghệ đến gần hơn với trẻ em ở cộng đồng dân tộc thiểu số. Lớp học, thiết bị và những người bạn mới — đó là điều dự án hướng tới.',missionLink:'Đọc câu chuyện của dự án ↗',footer:'Một ý tưởng của Hải Nam. Một nơi để bạn bắt đầu.',demo:'BẢN THIẾT KẾ • Khóa học và bài học là nội dung minh họa.',catalogTitle:'Hôm nay, bạn<br>muốn <em>tạo ra gì?</em>',catalogDesc:'Một trò chơi? Một trang web? Một ý tưởng chưa có tên? Bắt đầu từ đây.',filters:['Tất cả','Python','Web','AI'],search:'Tìm dự án hoặc kỹ năng…',results:'dự án minh họa',none:'Chưa tìm thấy dự án. Thử một từ khóa khác nhé.',back:'← Quay lại các dự án',detailEyebrow:'HỌC BẰNG MỘT DỰ ÁN CỦA BẠN',learn:'Vào bài học mẫu',outcome:'SẢN PHẨM BẠN SẼ TẠO',curriculum:'Từng bước một, cùng Buddy.',lessonItems:['Chào thế giới lập trình','Thử thay đổi một dòng code','Thêm ý tưởng của riêng bạn'],sample:'Học thử ↗',labEye:'PHÒNG LAB / VÒNG LẶP',labTitle:'Một dòng code.<br><em>Nhiều ngôi sao.</em>',labText:'Thay đổi số hàng, rồi chạy thử. Mỗi lần lặp tạo thêm một ngôi sao.',rows:'Số hàng',labRun:'▶ Chạy đoạn code',labIdle:'Bấm “Chạy đoạn code” để xem kết quả.',explain:'Bạn vừa dùng vòng lặp: máy tính lặp lại một việc nhỏ để tạo thành một kết quả lớn hơn.',lessonNav:['01  Làm quen với vòng lặp','02  Thử thay đổi số hàng','03  Tạo một hình của riêng bạn'],aboutEye:'NGƯỜI BẠN Ở PHÍA BÊN KIA MÀN HÌNH',aboutTitle:'Chào bạn,<br>mình là <em>Hải Nam.</em>',aboutText:'Mình thích robot, những ý tưởng kỳ quặc và khoảnh khắc một đoạn code cuối cùng cũng chạy. CodingBuddy bắt đầu từ mong muốn chia sẻ cảm giác đó với những bạn nhỏ hơn.',aboutText2:'Ở đây, bạn được đặt câu hỏi, thử sai, rồi thử tiếp. Mình muốn việc học lập trình giống như có một người bạn cùng làm — một người cũng từng gặp đúng cái lỗi đó.',aboutSign:'Cùng làm thứ gì đó nhé.',founderSticker:'lập trình × tò mò × sẻ chia',contact:'Nói chuyện với Buddy',contactText:'Trong bản thiết kế này, nút liên hệ mở câu chuyện của dự án. Biểu mẫu thật sẽ được kết nối khi triển khai.'},
+ en:{strip:'A little corner for curious minds.',nav:['Courses','The lab','Our story'],join:'Let’s get building ↗',eye:'FOR CURIOUS MAKERS AGED 10–15',title:'Small ideas.<br>Big<br><em>possibilities.</em>',controlTitle:'Get curious.<br>Experiment.<br><em>Make it yours.</em>',desc:'Turn “what can computers do?” into “look what I made!” Learn to code through small, hands-on projects, with a buddy by your side.',cta:'Find your first project',try:'Try a line of code',note:'No coding experience needed. Just curiosity.',sticker:'make mistakes.<br>make cool stuff.',run:'▶ Run code',ready:'ready when you are',output:'Hello, future maker! ✦',tape:['LEARN BY MAKING','MISTAKES ARE PROGRESS','CODE WITH A BUDDY'],sectionEye:'01 / YOUR STARTING POINTS',sectionTitle:'A little learning. A lot of making.',all:'Explore the courses ↗',courseDesc:'Choose something you want to make. Pick up the skills along the way.',project:'Illustrative project',beginner:'Beginner friendly',explore:'Explore',missionEye:'CODE THAT OPENS DOORS',missionTitle:'Learn something new.<br>Help possibility travel further.',missionCopy:'CodingBuddy aims to make technology education more accessible to children in ethnic minority communities. More learning, more devices, more people to build with — that’s the direction we’re working toward.',missionLink:'The story behind the project ↗',footer:'An idea by Hải Nam. A place for your first one.',demo:'DESIGN CONCEPT • Courses and lessons are illustrative.',catalogTitle:'What do you<br>want to <em>make?</em>',catalogDesc:'A game? A website? An idea without a name yet? Start right here.',filters:['All projects','Python','Web','AI'],search:'Find a project or skill…',results:'illustrative projects',none:'No matching projects yet. Try another word.',back:'← Back to projects',detailEyebrow:'LEARN THROUGH SOMETHING YOU MAKE',learn:'Open the sample lesson',outcome:'WHAT YOU’LL MAKE',curriculum:'One small step at a time.',lessonItems:['Say hello to programming','Change one line of code','Make the idea your own'],sample:'Try it ↗',labEye:'THE LAB / LOOPS',labTitle:'One line of code.<br><em>A sky full of stars.</em>',labText:'Change the number of rows, then run the code. Every loop adds another star.',rows:'Rows',labRun:'▶ Run this code',labIdle:'Press “Run this code” to see the result.',explain:'You just used a loop: repeating a small action to create something bigger.',lessonNav:['01  Meet your first loop','02  Change the number of rows','03  Make a pattern of your own'],aboutEye:'THE FRIEND ON THE OTHER SIDE OF THE SCREEN',aboutTitle:'Hey,<br>I’m <em>Hải Nam.</em>',aboutText:'I like robots, odd ideas, and the moment a piece of code finally works. CodingBuddy started with a wish to share that feeling with younger students.',aboutText2:'Here, you can ask questions, get things wrong, and try again. I want learning to code to feel like making something with a friend — someone who’s probably run into that exact same bug.',aboutSign:'Let’s make something.',founderSticker:'code × curiosity × community',contact:'Say hello to Buddy',contactText:'In this design concept, contact opens the project story. The real contact form will connect during implementation.'}
+ };
+ Object.assign(copy.vi,{
+  strip:'Học công nghệ để giúp ích.',nav:['Lộ trình học','Thử code','Câu chuyện'],join:'Xem lộ trình ↗',
+  title:'Học code.<br>Làm điều<br><em>có ích.</em>',controlTitle:'Hiểu vấn đề.<br>Học công cụ.<br><em>Làm điều có ích.</em>',
+  desc:'Cùng học lập trình, tìm hiểu những vấn đề quanh mình và làm các dự án nhỏ giúp ích cho người khác. Bắt đầu từ nền tảng, tiến từng bước cùng CodingBuddy.',
+  cta:'Xem lộ trình học',try:'Thử một bài học',sticker:'bắt đầu nhỏ.<br>nghĩ cho người dùng.',output:'2 cuốn sách để chia sẻ.',
+  tape:['HIỂU VẤN ĐỀ','HỌC QUA THỰC HÀNH','LÀM ĐIỀU CÓ ÍCH'],
+  sectionEye:'01 / TỪ KIẾN THỨC ĐẾN ỨNG DỤNG',sectionTitle:'Kỹ năng mới. Một mục đích rõ ràng.',all:'Xem lộ trình học ↗',
+  courseDesc:'Học nền tảng, rồi áp dụng vào một vấn đề cụ thể. Đây là những hướng dự án có thể phát triển cùng người học.',
+  project:'Ý tưởng ứng dụng',beginner:'Gợi ý sau phần nền tảng',explore:'Xem ý tưởng',
+  catalogTitle:'Từ bài học nhỏ<br>đến <em>dự án có ích.</em>',
+  catalogDesc:'Một lộ trình học tập có hướng dẫn: học kiến thức nền tảng, dùng kiến thức ấy để giải quyết một vấn đề, rồi cải tiến qua phản hồi.',
+  detailEyebrow:'Ý TƯỞNG ỨNG DỤNG / CHƯA PHẢI KHÓA HỌC ĐANG MỞ',learn:'Thử một bài học nền tảng',outcome:'VẤN ĐỀ NHỎ, ỨNG DỤNG CỤ THỂ',
+  curriculum:'Từ hiểu vấn đề đến làm thử.',lessonItems:['Tìm hiểu người cần dùng và khó khăn của họ','Học công cụ và làm một phiên bản đơn giản','Nhờ người dùng thử rồi cải tiến'],sample:'Thử code ↗',
+  missionEye:'Ý NGHĨA NẰM Ở CÁCH TA DÙNG CÔNG NGHỆ',missionTitle:'Học để tự làm.<br>Làm để giúp người khác.',
+  missionCopy:'CodingBuddy hướng tới việc giúp học sinh dùng công nghệ để tạo ra điều có ích, đồng thời mở rộng cơ hội học tập cho trẻ em ở cộng đồng dân tộc thiểu số. Giá trị của một dự án bắt đầu từ người mà nó giúp được.',
+  aboutText:'Mình thích robot và khoảnh khắc một đoạn code cuối cùng cũng chạy. Nhưng điều khiến mình muốn đi xa hơn là khi công nghệ giúp một người học dễ hơn, tiếp cận thông tin tốt hơn hoặc giải quyết một khó khăn cụ thể.',
+  aboutText2:'Đó là hướng mình muốn xây dựng cho CodingBuddy: cùng học những điều cơ bản, quan sát vấn đề quanh mình và làm thử một giải pháp. Dự án có thể nhỏ. Điều quan trọng là hiểu mình làm cho ai và nó giúp được gì.',
+  aboutSign:'Cùng học. Cùng làm điều có ích.',
+  demo:'BẢN THIẾT KẾ • Lộ trình và ý tưởng dự án đang được đề xuất.',
+  pathTitle:['Quan sát một vấn đề','Học công cụ cần thiết','Làm thử và cải tiến'],
+  pathText:['Bắt đầu từ lớp học, gia đình hoặc cộng đồng. Ai đang gặp khó khăn gì?','Học những kiến thức lập trình cơ bản rồi áp dụng từng phần vào dự án.','Tạo một phiên bản nhỏ, nhờ người dùng thử và lắng nghe điều cần thay đổi.'],
+  applicationLabel:'VÍ DỤ ỨNG DỤNG / ĐỊNH HƯỚNG ĐỀ XUẤT'
+ });
+ Object.assign(copy.en,{
+  strip:'Learn technology. Put it to good use.',nav:['Learning path','Try coding','Our story'],join:'See the learning path ↗',
+  title:'Learn to code.<br>Make something<br><em>that helps.</em>',controlTitle:'Understand.<br>Build.<br><em>Make it useful.</em>',
+  desc:'Learn the fundamentals, look closely at a problem around you, and build a small project that helps someone. One guided step at a time, with CodingBuddy.',
+  cta:'See the learning path',try:'Try a sample lesson',sticker:'start small.<br>think about people.',output:'2 books ready to share.',
+  tape:['UNDERSTAND THE PROBLEM','LEARN BY DOING','BUILD SOMETHING USEFUL'],
+  sectionEye:'01 / FROM KNOWLEDGE TO APPLICATION',sectionTitle:'New skills. A clear purpose.',all:'See the learning path ↗',
+  courseDesc:'Learn the fundamentals, then apply them to a specific problem. These are possible project directions to develop with students.',
+  project:'Application idea',beginner:'An idea to apply the fundamentals',explore:'Explore the idea',
+  catalogTitle:'From small lessons<br>to <em>useful projects.</em>',
+  catalogDesc:'A guided learning path: build the foundations, apply them to a problem, and improve your project through feedback.',
+  detailEyebrow:'APPLICATION IDEA / NOT A CURRENT COURSE OFFERING',learn:'Try a foundational lesson',outcome:'A SMALL PROBLEM. A PRACTICAL APPLICATION.',
+  curriculum:'From understanding to a first attempt.',lessonItems:['Understand who needs it and what they find difficult','Learn the tools and make a simple first version','Ask someone to try it, then improve it'],sample:'Try code ↗',
+  missionEye:'WHAT MATTERS IS HOW WE USE TECHNOLOGY',missionTitle:'Learn to build.<br>Build to help someone.',
+  missionCopy:'CodingBuddy aims to help students put technology to good use while expanding learning opportunities for children in ethnic minority communities. A project’s value starts with the people it helps.',
+  aboutText:'I like robots and the moment a piece of code finally works. What makes me want to go further is seeing technology help someone learn, find information, or work through a specific difficulty.',
+  aboutText2:'That’s the direction I want for CodingBuddy: learn the basics together, notice a problem around us, and try a solution. The project can be small. What matters is understanding who it’s for and how it helps.',
+  aboutSign:'Learn together. Build something useful.',
+  demo:'DESIGN CONCEPT • The learning path and project ideas are proposals.',
+  pathTitle:['Notice a problem','Learn the tools','Try it and improve it'],
+  pathText:['Look at your classroom, family, or community. Who needs help with what?','Learn core coding concepts and apply them to the project, one part at a time.','Build a small first version, ask someone to try it, and listen to what needs to change.'],
+  applicationLabel:'POSSIBLE APPLICATIONS / PROPOSED DIRECTIONS'
+ });
+ const projects=[
+  {id:'python',type:'Python',art:'python',symbol:'{ py }',title:{vi:'Giúp lớp mình trao đổi sách.',en:'Help your class share books.'},desc:{vi:'Dùng danh sách và tìm kiếm để làm công cụ đơn giản: ai có sách muốn chia sẻ, ai đang cần tìm sách?',en:'Use lists and search to make a simple tool: who has a book to share, and who is looking for one?'},outcome:{vi:'Một danh sách trao đổi sách giúp các bạn tìm sách dễ hơn. Ý tưởng minh họa để vận dụng Python cơ bản.',en:'A book-sharing list that helps classmates find books. An illustrative use of basic Python.'}},
+  {id:'web',type:'Web',art:'web',symbol:'',title:{vi:'Làm hướng dẫn kỹ năng số dễ hiểu.',en:'Make digital skills easier to learn.'},desc:{vi:'Tạo một trang hướng dẫn gửi email hoặc tìm thông tin, rồi nhờ người mới sử dụng máy tính thử làm theo.',en:'Build a guide to sending email or finding information, then ask a first-time computer user to try it.'},outcome:{vi:'Một trang hướng dẫn bằng HTML và CSS, viết cho người mới bắt đầu sử dụng máy tính.',en:'An HTML and CSS guide written for someone who is just starting to use a computer.'}}
+ ];
+ const buddy='<div class="buddy" aria-hidden="true"><div class="buddy-face"><span class="buddy-eye"></span><span class="buddy-eye"></span></div><div class="buddy-mouth"></div></div>';
+ const readSaved=()=>{const s=window.openai?.widgetState;return s?.modelContent||s||{};};
+ const saved=readSaved();
+ const state={lang:saved.language==='en'?'en':'vi',page:['home','courses','detail','lab','story'].includes(saved.page)?saved.page:'home',project:projects.some(p=>p.id===saved.selectedProject)?saved.selectedProject:'python',filter:'All',q:'',ran:false,rows:5};
+ const worlds=[...root.querySelectorAll('.cb')];
+ function brand(){return '<span class="brandmark" aria-hidden="true">&lt;/&gt;</span><span><small>THE</small>CodingBuddy<span style="color:var(--cb-orange)">.</span></span>';}
+ function art(p){if(p.art==='python')return '<span class="code-symbol">{ py }</span>';if(p.art==='web')return '<div class="art-windows" aria-hidden="true"><span></span><span></span></div>';return '<div class="ai-grid" aria-hidden="true">'+Array(9).fill('<span></span>').join('')+'</div>';}
+ function cards(c,items=projects){return '<div class="course-grid">'+items.map(p=>'<button type="button" class="course cursor-interaction" data-project="'+p.id+'"><div class="course-art '+p.art+'"><span class="mini-label">'+p.type+' / '+c.project+'</span>'+art(p)+'</div><div class="course-body"><span class="course-tag">'+c.beginner+'</span><h3>'+p.title[state.lang]+'</h3><p>'+p.desc[state.lang]+'</p><div class="course-bottom"><span>'+c.explore+' '+p.type+'</span><span aria-hidden="true">↗</span></div></div></button>').join('')+'</div>';}
+ function mission(c){return '<section class="mission"><div><div class="tiny">'+c.missionEye+'</div><h2>'+c.missionTitle+'</h2></div><div><p>'+c.missionCopy+'</p><button type="button" class="text-action cursor-interaction" data-page="story">'+c.missionLink+'</button></div></section>';}
+ function pathway(c){return '<ol class="learning-path">'+c.pathTitle.map((title,i)=>'<li><span class="step">0'+(i+1)+'</span><h3>'+title+'</h3><p>'+c.pathText[i]+'</p></li>').join('')+'</ol>';}
+ function home(c,world){
+  const sample=state.lang==='vi'?'cuốn sách để chia sẻ.':'books ready to share.';
+  return '<section class="wrap hero"><div><div class="eyebrow">'+c.eye+'</div><h1>'+(world==='control'?c.controlTitle:c.title)+'</h1><p class="hero-desc">'+c.desc+'</p><div class="actions"><button type="button" class="action orange cursor-interaction" data-page="courses">'+c.cta+' <span aria-hidden="true">↗</span></button><button type="button" class="text-action cursor-interaction" data-page="lab">'+c.try+' <span aria-hidden="true">→</span></button></div><div class="hero-note"><i aria-hidden="true">✳</i> '+c.note+'</div></div><div class="scene"><span class="spark" aria-hidden="true">✳</span><div class="hero-code"><div class="windowbar"><div class="dots" aria-hidden="true"><span></span><span></span><span></span></div><span>share_a_book.py</span><span>Python</span></div><div class="code-area"><span class="code-line">1</span><span class="code-comment"># '+(state.lang==='vi'?'Một ý tưởng cho lớp mình.':'An idea for our classroom.')+'</span><br><span class="code-line">2</span>books = <span class="code-string">2</span><br><span class="code-line">3</span><span class="code-key">print</span>(<span class="code-string">f"{books} '+sample+'"</span>)</div><div class="run-row"><small>'+c.ready+'</small><button class="run-button cursor-interaction" type="button" data-run="hello">'+c.run+'</button></div><div class="output" data-hello-output aria-live="polite">'+(state.ran?c.output:'&gt; _')+'</div></div><div class="sticker">'+c.sticker+'</div>'+buddy+'</div></section><div class="tape">'+c.tape.map(x=>'<span>'+x+'</span>').join('<b aria-hidden="true">✳</b>')+'</div><section class="wrap section"><div class="section-head"><div><div class="tiny">'+c.sectionEye+'</div><h2>'+c.sectionTitle+'</h2></div><button class="text-action cursor-interaction" data-page="courses" type="button">'+c.all+'</button></div>'+pathway(c)+'<p class="application-label">'+c.applicationLabel+'</p>'+cards(c)+'</section><div class="wrap">'+mission(c)+'</div>';
+ }
+ function catalog(c){return '<section class="wrap catalog-hero"><div class="eyebrow">'+c.sectionEye+'</div><h1>'+c.catalogTitle+'</h1><p class="section-desc">'+c.catalogDesc+'</p></section><section class="wrap section" style="padding-top:0">'+pathway(c)+'<p class="application-label">'+c.applicationLabel+'</p>'+cards(c)+'</section><div class="wrap">'+mission(c)+'</div>';}
+ function detail(c){const p=projects.find(x=>x.id===state.project)||projects[0];return '<section class="wrap detail"><button class="back cursor-interaction" type="button" data-page="courses">'+c.back+'</button><div class="detail-layout"><div><div class="eyebrow">'+c.detailEyebrow+'</div><h1>'+p.title[state.lang]+'</h1><p>'+p.desc[state.lang]+'</p><div class="actions"><button type="button" class="action orange cursor-interaction" data-page="lab">'+c.learn+' ↗</button></div></div><div class="project-preview"><div class="tiny">'+c.outcome+'</div>'+art(p)+'<p>'+p.outcome[state.lang]+'</p></div></div><div class="section-head" style="margin-top:45px"><h2>'+c.curriculum+'</h2></div><ol class="lesson-list">'+c.lessonItems.map((x,i)=>'<li><span>0'+(i+1)+' / '+x+'</span><button class="cursor-interaction" type="button" data-page="lab">'+c.sample+'</button></li>').join('')+'</ol><p class="preview-label">'+c.demo+'</p></section>';}
+ function lab(c){return '<section class="wrap lab-page"><div class="eyebrow">'+c.labEye+'</div><h1 style="font-size:40px">'+c.labTitle+'</h1><p class="section-desc">'+c.labText+'</p><div class="lab-layout"><aside class="lesson-nav">'+c.lessonNav.map(x=>'<p>'+x+'</p>').join('')+'<p class="preview-label">'+c.demo+'</p></aside><div><div class="lab-code"><div class="windowbar"><span>little_stars.py</span><span>Python</span></div><div class="code-area"><span class="code-key">for</span> row <span class="code-key">in</span> range(<span data-row-code>'+state.rows+'</span>):<br>    <span class="code-key">print</span>(<span class="code-string">"✦ "</span> * (row + 1))</div><label>'+c.rows+' <span data-row-count>'+state.rows+'</span><input data-rows type="range" min="2" max="7" value="'+state.rows+'" aria-label="'+c.rows+'"></label><div class="run-row"><small>Python / loops</small><button class="run-button cursor-interaction" type="button" data-run="stars">'+c.labRun+'</button></div><div class="output" data-stars-output aria-live="polite" style="min-height:180px;white-space:pre-wrap">'+c.labIdle+'</div></div><div class="explain">'+c.explain+'</div></div></div></section>';}
+ function story(c){return '<section class="wrap section"><div class="eyebrow">'+c.aboutEye+'</div><div class="about-grid"><div class="founder-art">'+buddy+'<div class="sticker">'+c.founderSticker+'</div></div><div class="about-copy"><h1 style="font-size:40px">'+c.aboutTitle+'</h1><p>'+c.aboutText+'</p><p>'+c.aboutText2+'</p><div class="signature">'+c.aboutSign+'</div></div></div>'+mission(c)+'<div class="actions"><button type="button" class="action orange cursor-interaction" data-page="courses">'+c.cta+' ↗</button></div><p class="preview-label">'+c.demo+'</p></section>';}
+ function render(){const c=copy[state.lang];worlds.forEach(w=>{const page=['courses','detail'].includes(state.page)?'courses':state.page;w.lang=state.lang;w.innerHTML='<div class="topline">'+c.strip+'</div><header class="header wrap"><button class="brand cursor-interaction" type="button" data-page="home" aria-label="CodingBuddy home">'+brand()+'</button><nav class="nav" aria-label="'+(state.lang==='vi'?'Điều hướng chính':'Main navigation')+'">'+['courses','lab','story'].map((x,i)=>'<button type="button" class="cursor-interaction" data-page="'+x+'" '+(page===x?'aria-current="page"':'')+'>'+c.nav[i]+'</button>').join('')+'</nav><div class="header-actions"><div class="lang" aria-label="Language"><button type="button" class="cursor-interaction" data-lang="vi" aria-pressed="'+(state.lang==='vi')+'">VI</button><span aria-hidden="true">/</span><button type="button" class="cursor-interaction" data-lang="en" aria-pressed="'+(state.lang==='en')+'">EN</button></div><button class="join cursor-interaction" type="button" data-page="courses">'+c.join+'</button></div></header><main>'+(state.page==='home'?home(c,w.dataset.world):state.page==='courses'?catalog(c):state.page==='detail'?detail(c):state.page==='lab'?lab(c):story(c))+'</main><footer class="footer wrap"><button type="button" class="brand cursor-interaction" data-page="home" aria-label="CodingBuddy home">'+brand()+'</button><div><p>'+c.footer+'</p><p>'+c.demo+'</p></div></footer>';const inp=w.querySelector('[data-search]');if(inp)inp.value=state.q;});}
+ function save(){if(window.openai?.setWidgetState)window.openai.setWidgetState({modelContent:{language:state.lang,page:state.page,selectedProject:state.project},privateContent:{rows:state.rows}}).catch(()=>{});}
+ root.addEventListener('click',e=>{const el=e.target.closest('button');if(!el)return;if(el.dataset.lang){state.lang=el.dataset.lang;render();save();}else if(el.dataset.page){state.page=el.dataset.page;render();save();}else if(el.dataset.project){state.project=el.dataset.project;state.page='detail';render();save();}else if(el.dataset.filter){state.filter=el.dataset.filter;render();save();}else if(el.dataset.run==='hello'){state.ran=true;worlds.forEach(w=>{const out=w.querySelector('[data-hello-output]');if(out)out.textContent=copy[state.lang].output;});}else if(el.dataset.run==='stars'){const w=el.closest('.cb');w.querySelector('[data-stars-output]').textContent=Array.from({length:state.rows},(_,i)=>'✦ '.repeat(i+1).trimEnd()).join('\n');}});
+ root.addEventListener('input',e=>{if(e.target.matches('[data-search]')){state.q=e.target.value;const w=e.target.closest('.cb');const c=copy[state.lang];const filtered=projects.filter(p=>(state.filter==='All'||p.type===state.filter)&&(p.title[state.lang]+' '+p.desc[state.lang]+' '+p.type).toLocaleLowerCase().includes(state.q.toLocaleLowerCase()));w.querySelector('[data-results]').innerHTML=filtered.length?cards(c,filtered):'<p class="empty">'+c.none+'</p>';w.querySelector('.result-count').textContent=filtered.length+' '+c.results;}if(e.target.matches('[data-rows]')){state.rows=Number(e.target.value);const w=e.target.closest('.cb');w.querySelector('[data-row-code]').textContent=state.rows;w.querySelector('[data-row-count]').textContent=state.rows;w.querySelector('[data-stars-output]').textContent=copy[state.lang].labIdle;save();}});
+ window.addEventListener('openai:set_globals',e=>{const s=e.detail?.globals?.widgetState;const data=s?.modelContent||s;if(data?.language&&['en','vi'].includes(data.language)){state.lang=data.language;render();}});
+ render();
+ const looks=new Map();
+ function applyLooks(){worlds.forEach(w=>{const look=looks.get(w);if(!look)return;w.style.setProperty('--cb-orange',look.accent);w.style.setProperty('--cb-on-orange','#fffdf3');w.querySelectorAll('.buddy').forEach(b=>{b.hidden=!look.showBuddy;});});}
+ new MutationObserver(applyLooks).observe(root,{subtree:true,childList:true});
+ if(globalThis.Tweak){worlds.forEach(w=>{const look={accent:w.dataset.world==='notebook'?'#c94322':'#2d6242',showBuddy:true};const tweak=new Tweak({container:w,onChange:()=>{looks.set(w,look);applyLooks();}});tweak.addColorPicker(look,'accent',{label:'Brand accent',reference:'--cb-orange'});tweak.addToggle(look,'showBuddy',{label:'Buddy character'});});}
+})();
+</script>

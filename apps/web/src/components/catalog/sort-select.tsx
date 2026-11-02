@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/components/language-provider";
 
 export const SORT_OPTIONS = [
   { label: "Phổ biến nhất", value: "enrollmentCount:desc" },
@@ -23,10 +24,11 @@ export function SortSelect({
   query: Record<string, string | string[] | undefined>;
 }) {
   const router = useRouter();
+  const { text } = useLanguage();
   return (
     <div className="flex items-center gap-2">
       <label className="text-sm font-semibold" htmlFor="sort">
-        Sắp xếp
+        {text("Sắp xếp", "Sort")}
       </label>
       <select
         id="sort"
@@ -36,7 +38,8 @@ export function SortSelect({
         onChange={(event) => {
           const params = new URLSearchParams();
           for (const [key, entry] of Object.entries(query)) {
-            if (entry === undefined || key === "sort" || key === "page") continue;
+            if (entry === undefined || key === "sort" || key === "page")
+              continue;
             for (const single of Array.isArray(entry) ? entry : [entry]) {
               if (single) params.append(key, single);
             }
@@ -47,13 +50,21 @@ export function SortSelect({
       >
         {SORT_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
-            {option.label}
+            {text(
+              option.label,
+              {
+                "enrollmentCount:desc": "Most enrolled",
+                "publishedAt:desc": "Newest first",
+                "priceVnd:asc": "Price: low to high",
+                "priceVnd:desc": "Price: high to low",
+              }[option.value],
+            )}
           </option>
         ))}
       </select>
       <noscript>
         <button type="submit" className="text-sm underline">
-          Áp dụng
+          {text("Áp dụng", "Apply")}
         </button>
       </noscript>
     </div>

@@ -1,4 +1,5 @@
 "use client";
+import { UiText } from "@/components/language-provider";
 
 import { LEARNER_HOME, homeFor } from "@/lib/routes";
 import type { User } from "@/lib/session";
@@ -38,12 +39,12 @@ export function DemoNotice() {
   if (process.env.NODE_ENV === "production") return null;
   return (
     <Alert variant="info" title="Đang chạy ở chế độ demo">
-      Email được ghi vào hộp thư trên máy. Quản trị viên có thể xem tại{" "}
+      <UiText value="Email được ghi vào hộp thư trên máy. Quản trị viên có thể xem tại" />{" "}
       <Link
         className="inline-flex min-h-11 items-center font-semibold underline"
         href="/api/v1/dev/mail"
       >
-        hộp thư dev
+        <UiText value="hộp thư dev" />
       </Link>
       .
     </Alert>
@@ -108,7 +109,7 @@ export function LoginForm({
     <form className="grid gap-6" onSubmit={submit} noValidate>
       {passwordChanged && (
         <Alert variant="success" title="Đã đổi mật khẩu">
-          Mọi phiên cũ đã được đăng xuất. Đăng nhập lại bằng mật khẩu mới.
+          <UiText value="Mọi phiên cũ đã được đăng xuất. Đăng nhập lại bằng mật khẩu mới." />
         </Alert>
       )}
       {message && <Alert variant="destructive" title={message} />}
@@ -142,19 +143,19 @@ export function LoginForm({
           className="inline-flex min-h-11 items-center justify-self-end text-sm font-semibold text-primary-text hover:underline"
           href="/forgot-password"
         >
-          Quên mật khẩu
+          <UiText value="Quên mật khẩu" />
         </Link>
       </div>
       <Button type="submit" size="lg" loading={busy} disabled={remaining > 0}>
         {remaining > 0 ? `Thử lại sau ${remaining} giây` : "Đăng nhập"}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
-        Chưa có tài khoản?{" "}
+        <UiText value="Chưa có tài khoản?" />{" "}
         <Link
           className="inline-flex min-h-11 items-center font-semibold text-primary-text hover:underline"
           href={`/register?next=${encodeURIComponent(next ?? LEARNER_HOME)}`}
         >
-          Đăng ký
+          <UiText value="Đăng ký" />
         </Link>
       </p>
     </form>
@@ -279,32 +280,32 @@ export function RegisterForm({ next }: { next: string }) {
         error={errors.confirm}
       />
       <Button type="submit" size="lg" loading={busy}>
-        Tạo tài khoản
+        <UiText value="Tạo tài khoản" />
       </Button>
       <p className="text-sm text-muted-foreground">
-        Khi tạo tài khoản, bạn đồng ý với{" "}
+        <UiText value="Khi tạo tài khoản, bạn đồng ý với" />{" "}
         <Link
           className="inline-flex min-h-11 items-center font-semibold text-primary-text hover:underline"
           href="/terms"
         >
-          Điều khoản sử dụng
+          <UiText value="Điều khoản sử dụng" />
         </Link>{" "}
-        và{" "}
+        <UiText value="và" />{" "}
         <Link
           className="inline-flex min-h-11 items-center font-semibold text-primary-text hover:underline"
           href="/privacy"
         >
-          Chính sách bảo mật
+          <UiText value="Chính sách bảo mật" />
         </Link>
         .
       </p>
       <p className="text-center text-sm text-muted-foreground">
-        Đã có tài khoản?{" "}
+        <UiText value="Đã có tài khoản?" />{" "}
         <Link
           className="inline-flex min-h-11 items-center font-semibold text-primary-text hover:underline"
           href={`/login?next=${encodeURIComponent(next)}`}
         >
-          Đăng nhập
+          <UiText value="Đăng nhập" />
         </Link>
       </p>
     </form>
@@ -342,12 +343,11 @@ export function ForgotPasswordForm() {
     return (
       <div className="grid gap-5">
         <Alert variant="success" title="Kiểm tra hộp thư của bạn">
-          Nếu email này đã đăng ký, chúng tôi vừa gửi liên kết đặt lại mật khẩu.
-          Liên kết dùng được trong 60 phút.
+          <UiText value="Nếu email này đã đăng ký, chúng tôi vừa gửi liên kết đặt lại mật khẩu. Liên kết dùng được trong 60 phút." />
         </Alert>
         <DemoNotice />
         <Link href="/login" className={buttonClass("outline", "lg")}>
-          Quay lại đăng nhập
+          <UiText value="Quay lại đăng nhập" />
         </Link>
       </div>
     );
@@ -371,13 +371,13 @@ export function ForgotPasswordForm() {
         />
       </Field>
       <Button type="submit" size="lg" loading={busy}>
-        Gửi liên kết đặt lại
+        <UiText value="Gửi liên kết đặt lại" />
       </Button>
       <Link
         className="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-primary-text hover:underline"
         href="/login"
       >
-        Quay lại đăng nhập
+        <UiText value="Quay lại đăng nhập" />
       </Link>
       <DemoNotice />
     </form>
@@ -425,11 +425,10 @@ export function ResetPasswordForm({ token }: { token: string }) {
     return (
       <div className="grid gap-5">
         <Alert variant="success" title="Đã đặt lại mật khẩu">
-          Mọi phiên đăng nhập cũ đã bị đăng xuất. Đăng nhập lại bằng mật khẩu
-          mới.
+          <UiText value="Mọi phiên đăng nhập cũ đã bị đăng xuất. Đăng nhập lại bằng mật khẩu mới." />
         </Alert>
         <Link href="/login" className={buttonClass("primary", "lg")}>
-          Đăng nhập
+          <UiText value="Đăng nhập" />
         </Link>
       </div>
     );
@@ -443,7 +442,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         description="Liên kết chỉ dùng được một lần và có hạn 60 phút."
         actions={
           <Link href="/forgot-password" className={buttonClass("primary")}>
-            Xin liên kết mới
+            <UiText value="Xin liên kết mới" />
           </Link>
         }
       />
@@ -472,7 +471,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         error={errors.confirm}
       />
       <Button type="submit" size="lg" loading={busy}>
-        Đặt mật khẩu mới
+        <UiText value="Đặt mật khẩu mới" />
       </Button>
     </form>
   );
@@ -511,7 +510,9 @@ export function VerifyEmail({ token }: { token: string }) {
           className="size-10 text-primary-text"
           strokeWidth={1.75}
         />
-        <p className="font-semibold">Đang xác minh…</p>
+        <p className="font-semibold">
+          <UiText value="Đang xác minh…" />
+        </p>
       </div>
     );
   }
@@ -519,10 +520,10 @@ export function VerifyEmail({ token }: { token: string }) {
     return (
       <div className="grid gap-5">
         <Alert variant="success" title="Email đã được xác minh">
-          Bạn có thể bắt đầu học ngay.
+          <UiText value="Bạn có thể bắt đầu học ngay." />
         </Alert>
         <Link href={LEARNER_HOME} className={buttonClass("primary", "lg")}>
-          Về khóa học của tôi
+          <UiText value="Về khóa học của tôi" />
         </Link>
       </div>
     );
@@ -585,7 +586,7 @@ export function ResendVerificationButton() {
       </Button>
       {message && (
         <p className="text-sm text-muted-foreground" role="status">
-          {message}
+          <UiText value={message} />
         </p>
       )}
     </div>

@@ -1,5 +1,9 @@
 # Kế hoạch UX/UI
 
+> Cập nhật 26/10/2026: theo yêu cầu mới của chủ dự án, đăng ký khóa trả phí chuyển sang liên hệ trực tiếp qua QR Zalo/thông tin liên hệ. Trang /checkout/[courseSlug] là trang liên hệ công khai, không tạo phiên thanh toán hay tự mở quyền học. Chủ dự án xác nhận rồi cấp quyền qua admin. Luồng checkout online bên dưới chỉ còn là tài liệu lịch sử; xem design/redesign/DIRECT-ENROLLMENT.md.
+
+> Cập nhật 25/10/2026: nhận diện E-learning, đối tượng người lớn, palette và bố cục marketplace trong tài liệu này là thiết kế cũ. Bản redesign CodingBuddy đang review local dùng PRODUCT.md trong apps/web và DESIGN.md ở thư mục gốc làm nguồn quy tắc hiện hành. Các hợp đồng chức năng, phân quyền, dữ liệu và bảo mật vẫn được giữ. Xem design/redesign/LOCAL-REVIEW.md. Chưa được phép upload hoặc triển khai.
+
 Tài liệu này bổ sung phần giao diện còn thiếu của [`PROJECT_PLAN.md`](./PROJECT_PLAN.md). Kiến trúc, mô hình thanh toán, bảo mật và hạ tầng đã được chốt ở đó và không được nhắc lại. Ở đây chỉ định nghĩa: token thiết kế, sitemap, trang, component, luồng, trạng thái, responsive, accessibility và quy ước microcopy.
 
 Tài liệu là đầu vào cho hai thứ: file thiết kế `design/elearning.pen` và phần hiện thực trong `apps/web`. Mọi giá trị trong đây là giá trị thi hành, không phải gợi ý.

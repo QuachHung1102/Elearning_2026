@@ -1,3 +1,4 @@
+import { UiText } from "@/components/language-provider";
 import { safeNext } from "@/lib/routes";
 import type { Metadata } from "next";
 import { RegisterForm } from "@/components/auth-forms";
@@ -15,10 +16,10 @@ export default async function RegisterPage({
     <section className="grid gap-8">
       <div className="grid gap-2">
         <h1 tabIndex={-1} className="text-4xl font-bold">
-          Tạo tài khoản
+          <UiText value="Tạo tài khoản" />
         </h1>
         <p className="text-muted-foreground">
-          Một tài khoản để giữ quyền học và tiến độ của bạn.
+          <UiText value="Một tài khoản để giữ quyền học và tiến độ của bạn." />
         </p>
       </div>
       <RegisterForm next={destination} />
