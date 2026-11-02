@@ -156,7 +156,6 @@
   color: #ff9674;
 }
 .hero-route {
-  border-top: 1px solid #4b4e43;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 26px;
@@ -413,7 +412,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 22px;
-  border-top: 1px solid #4b4e43;
   margin-top: 38px;
   padding-top: 25px;
   font-size: 12px;
@@ -424,7 +422,6 @@
   grid-template-columns: 217px minmax(0, 1fr);
   gap: 38px;
   padding: 35px 0 80px;
-  border-top: 1px solid #4b4e43;
   margin-top: 12px;
 }
 .catalog-filters {
@@ -498,7 +495,6 @@
 }
 .tutor-section {
   background: #2c2e27;
-  border-block: 1px solid #4b4e43;
 }
 .tutor-monogram {
   background: #35415b;
@@ -512,11 +508,9 @@
   color: #c9cbbf;
 }
 .purpose-section {
-  border-top: 1px solid #4b4e43;
 }
 .site-footer {
   background: #1d1f19;
-  border-top: 1px solid #4b4e43;
 }
 .site-footer .buddy-logo {
   font-size: 25px;
@@ -633,7 +627,6 @@
   }
   .catalog-filters {
     border-right: 0;
-    border-bottom: 1px solid #4b4e43;
     padding: 0 0 22px;
   }
   .catalog-filters > h2 {
